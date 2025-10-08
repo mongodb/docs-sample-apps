@@ -6,18 +6,12 @@
  * necessary indexes and sample data.
  */
 
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, Document } from 'mongodb';
 
 let client: MongoClient;
 let database: Db;
 
-/**
- * Establishes connection to MongoDB by using the connection string from environment variables
- * 
- * @returns Promise<Db> - The connected database instance
- * @throws Error if connection fails or if MONGODB_URI is not provided
- */
-export async function connectToDatabase(): Promise<Db> {
+async function _connectToDatabase(): Promise<Db> {
   // Return existing connection if already established
   // This prevents creating multiple connections unnecessarily
   if (database) {
@@ -54,6 +48,19 @@ export async function connectToDatabase(): Promise<Db> {
   }
 }
 
+let connect$: Promise<Db>;
+/**
+ * Establishes connection to MongoDB by using the connection string from environment variables
+ * 
+ * @returns Promise<Db> - The connected database instance
+ * @throws Error if connection fails or if MONGODB_URI is not provided
+ */
+export async function connectToDatabase(): Promise<Db> {
+    // connect$ only gets assigned exactly once on the first request, ensuring all subsequent requests use the same connect$ promise.
+    connect$ ??= _connectToDatabase();
+    return await connect$;
+}
+
 /**
  * Gets a reference to a specific collection in the database
  * 
@@ -61,7 +68,7 @@ export async function connectToDatabase(): Promise<Db> {
  * @returns Collection instance
  * @throws Error if database is not connected
  */
-export function getCollection(collectionName: string): Collection {
+export function getCollection<T extends Document>(collectionName: string): Collection<T> {
   if (!database) {
     throw new Error(
       'Database not connected.'

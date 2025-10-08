@@ -8,7 +8,7 @@
   "main": "dist/app.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/app.ts",
+    "start": "node dist/app.js",
     "dev": "ts-node src/app.ts",
     "test-setup": "ts-node src/test-setup.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -7,18 +7,16 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { MongoError } from 'mongodb';
+import { SuccessResponse, ErrorResponse } from '../types';
 
 /**
- * Interface for standardized error responses
+ * Custom ValidationError class for field validation errors
  */
-interface ErrorResponse {
-  success: false;
-  error: {
-    message: string;
-    code?: string;
-    details?: any;
-  };
-  timestamp: string;
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
 }
 
 /**
@@ -49,18 +47,16 @@ export function errorHandler(
   });
 
   // Determine the appropriate HTTP status code and error message
-  const errorResponse = createErrorResponse(err);
+  const errorDetails = parseErrorDetails(err);
+  
+  const response: ErrorResponse = createErrorResponse(
+    errorDetails.message,
+    errorDetails.code,
+    errorDetails.details
+  );
   
   // Send the error response
-  res.status(errorResponse.statusCode).json({
-    success: false,
-    error: {
-      message: errorResponse.message,
-      code: errorResponse.code,
-      details: errorResponse.details
-    },
-    timestamp: new Date().toISOString()
-  } as ErrorResponse);
+  res.status(errorDetails.statusCode).json(response);
 }
 
 /**
@@ -69,86 +65,62 @@ export function errorHandler(
  * @param err - The error to process
  * @returns Object containing status code, message, and optional details
  */
-function createErrorResponse(err: Error): {
-  statusCode: number;
-  message: string;
-  code?: string;
-  details?: any;
-} {
-  // Handle MongoDB-specific errors
-  if (err instanceof MongoError) {
-    return handleMongoError(err);
-  }
-  
-  // Handle validation errors (you can extend this for custom validation)
-  if (err.name === 'ValidationError') {
-    return {
-      statusCode: 400,
-      message: 'Invalid input data',
-      code: 'VALIDATION_ERROR',
-      details: err.message
-    };
-  }
-  
-  // Handle JSON parsing errors
-  if (err instanceof SyntaxError && 'body' in err) {
-    return {
-      statusCode: 400,
-      message: 'Invalid JSON in request body',
-      code: 'JSON_PARSE_ERROR'
-    };
-  }
-  
-  // Handle general application errors
-  return {
-    statusCode: 500,
-    message: 'An unexpected error occurred',
-    code: 'INTERNAL_SERVER_ERROR',
-    details: process.env.NODE_ENV === 'development' ? err.message : undefined
-  };
-}
-
 /**
- * Handles MongoDB-specific errors and returns appropriate responses
- * 
- * @param err - MongoDB error instance
- * @returns Object with status code and message
+ * Internal helper function to parse error details and determine HTTP status codes
  */
-function handleMongoError(err: MongoError): {
-  statusCode: number;
+function parseErrorDetails(err: Error): {
   message: string;
   code: string;
   details?: any;
+  statusCode: number;
 } {
-  switch (err.code) {
-    case 11000:
-      // Duplicate key error
-      return {
-        statusCode: 409,
-        message: 'Duplicate entry found',
-        code: 'DUPLICATE_KEY_ERROR',
-        details: 'A document with this data already exists'
-      };
-      
-    case 121:
-      // Document validation failed
-      return {
-        statusCode: 400,
-        message: 'Document validation failed',
-        code: 'DOCUMENT_VALIDATION_ERROR',
-        details: err.message
-      };
-      
-    default:
-      // Generic MongoDB error
-      return {
-        statusCode: 500,
-        message: 'Database operation failed',
-        code: 'MONGODB_ERROR',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      };
+  // MongoDB specific error handling
+  if (err instanceof MongoError) {
+    switch (err.code) {
+      case 11000:
+        return {
+          message: 'Duplicate key error',
+          code: 'DUPLICATE_KEY',
+          details: 'A document with this data already exists',
+          statusCode: 409
+        };
+      case 121:
+        // Document validation failed
+        return {
+          statusCode: 400,
+          message: 'Document validation failed',
+          code: 'DOCUMENT_VALIDATION_ERROR',
+          details: err.message
+        };
+      default:
+        return {
+          message: 'Database error',
+          code: 'DATABASE_ERROR',
+          details: err.code,
+          statusCode: 500
+        };
+    }
   }
+
+  // Validation errors
+  if (err.name === 'ValidationError') {
+    return {
+      message: 'Validation failed',
+      code: 'VALIDATION_ERROR',
+      details: err.message,
+      statusCode: 400
+    };
+  }
+
+  // Default error handling
+  return {
+    message: err.message || 'Internal server error',
+    code: 'INTERNAL_ERROR',
+    statusCode: 500
+  };
 }
+
+
 
 /**
  * Async wrapper function for route handlers
@@ -168,7 +140,11 @@ export function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+    try {
+        fn(req, res, next).catch(next);
+    } catch (error) {
+        next(error);
+    }
   };
 }
 
@@ -179,7 +155,7 @@ export function asyncHandler(
  * @param message - Optional success message
  * @returns Standardized success response object
  */
-export function createSuccessResponse(data: any, message?: string) {
+export function createSuccessResponse<T>(data: T, message?: string): SuccessResponse<T> {
   return {
     success: true,
     message: message || 'Operation completed successfully',
@@ -189,18 +165,39 @@ export function createSuccessResponse(data: any, message?: string) {
 }
 
 /**
+ * Creates a standardized error response
+ * 
+ * @param message - Error message
+ * @param code - Optional error code
+ * @param details - Optional error details
+ * @returns Standardized error response object
+ */
+export function createErrorResponse(message: string, code?: string, details?: any): ErrorResponse {
+  return {
+    success: false,
+    message,
+    error: {
+      message,
+      code,
+      details
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+/**
  * Validates that required fields are present in the request body
  * 
  * @param body - Request body object
  * @param requiredFields - Array of required field names
- * @throws Error if any required fields are missing
+ * @throws ValidationError if any required fields are missing
  */
 export function validateRequiredFields(body: any, requiredFields: string[]): void {
   const missingFields = requiredFields.filter(field => 
-    body[field] === undefined || body[field] === null || body[field] === ''
+    body[field] == null || body[field] === ''
   );
   
   if (missingFields.length > 0) {
-    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
   }
 }

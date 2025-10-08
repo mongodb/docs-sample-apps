@@ -147,18 +147,10 @@ export interface SearchQuery {
   sortOrder?: 'asc' | 'desc';
 }
 
-/**
- * Standard API response wrapper
- */
-export interface ApiResponse<T = any> {
-  success: boolean;
+export type SuccessResponse<T> = {
+  success: true;
   message?: string;
-  data?: T;
-  error?: {
-    message: string;
-    code?: string;
-    details?: any;
-  };
+  data: T;
   timestamp: string;
   pagination?: {
     page: number;
@@ -168,16 +160,15 @@ export interface ApiResponse<T = any> {
   };
 }
 
-/**
- * Type for MongoDB operation results
- */
-export interface OperationResult {
-  acknowledged: boolean;
-  insertedId?: ObjectId;
-  insertedIds?: ObjectId[];
-  modifiedCount?: number;
-  deletedCount?: number;
-  matchedCount?: number;
-  upsertedCount?: number;
-  upsertedId?: ObjectId;
+export type ErrorResponse = {
+  success: false;
+  message: string;
+  error: {
+    message: string;
+    code?: string;
+    details?: any;
+  };
+  timestamp: string;
 }
+
+export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
