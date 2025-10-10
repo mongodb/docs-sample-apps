@@ -9,7 +9,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectToDatabase, verifyRequirements } from './config/database';
+import { closeDatabaseConnection, connectToDatabase, verifyRequirements } from './config/database';
 import { errorHandler } from './utils/errorHandler';
 import moviesRouter from './routes/movies';
 
@@ -105,11 +105,13 @@ async function startServer() {
  */
 process.on('SIGINT', () => {
   console.log('\nReceived SIGINT. Shutting down...');
+  closeDatabaseConnection();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('\nReceived SIGTERM. Shutting down...');
+  closeDatabaseConnection();
   process.exit(0);
 });
 

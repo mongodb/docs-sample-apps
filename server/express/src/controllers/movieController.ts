@@ -24,6 +24,6 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
     res.json(createSuccessResponse(movies, `Found ${movies.length} movies`));
     
   } catch (error) {
-    throw new Error(`Failed to retrieve movies: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 }

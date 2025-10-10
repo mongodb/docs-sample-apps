@@ -1,5 +1,5 @@
 {
-  "name": "Sample Mflix Express.js Backend",
+  "name": "sample-mflix-express-backend",
   "version": "1.0.0",
   "description": "Express.js backend for MongoDB sample mflix application demonstrating CRUD operations, aggregations, search, and geospatial queries",
   "license": "Apache-2.0",

@@ -42,9 +42,7 @@ async function _connectToDatabase(): Promise<Db> {
     return database;
     
   } catch (error) {
-    throw new Error(
-      `Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw error;
   }
 }
 
