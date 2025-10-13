@@ -118,4 +118,18 @@ async function verifyMoviesCollection(db: Db): Promise<void> {
   if (movieCount === 0) {
     console.warn('Movies collection is empty. Please ensure sample_mflix data is loaded.');
   }
+
+  // Create text search index on plot field for full-text search
+  try {
+    await moviesCollection.createIndex(
+      { plot: 'text', title: 'text', fullplot: 'text' },
+      { 
+        name: 'text_search_index',
+        background: true
+      }
+    );
+    console.log('Text search index created for movies collection');
+  } catch (error) {
+    console.log('Could not create text search index.');
+  }
 }
