@@ -133,19 +133,32 @@ export interface UpdateMovieRequest {
 }
 
 /**
- * Interface for search query parameters
+ * Type for raw query parameters (Express passes all params as strings)
  */
-export interface SearchQuery {
+export type RawSearchQuery = {
   q?: string;
   genre?: string;
-  year?: number;
-  minRating?: number;
-  maxRating?: number;
-  limit?: number;
-  skip?: number;
+  year?: string;
+  minRating?: string;
+  maxRating?: string;
+  limit?: string;
+  skip?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
+  sortOrder?: string;
+};
+
+/**
+ * Type for MongoDB filter objects used in movie queries
+ */
+export type MovieFilter = {
+  $text?: { $search: string };
+  genres?: { $regex: RegExp };
+  year?: number;
+  'imdb.rating'?: {
+    $gte?: number;
+    $lte?: number;
+  };
+};
 
 export type SuccessResponse<T> = {
   success: true;

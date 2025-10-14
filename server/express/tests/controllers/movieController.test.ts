@@ -81,10 +81,22 @@ const mockCreateSuccessResponse = jest.fn((data: any, message: string) => ({
   timestamp: '2024-01-01T00:00:00.000Z'
 }));
 
+const mockCreateErrorResponse = jest.fn((message: string, code?: string, details?: any) => ({
+  success: false,
+  message,
+  error: {
+    message,
+    code,
+    details
+  },
+  timestamp: '2024-01-01T00:00:00.000Z'
+}));
+
 const mockValidateRequiredFields = jest.fn();
 
 jest.mock('../../src/utils/errorHandler', () => ({
   createSuccessResponse: mockCreateSuccessResponse,
+  createErrorResponse: mockCreateErrorResponse,
   validateRequiredFields: mockValidateRequiredFields
 }));
 
@@ -128,9 +140,19 @@ function expectSuccessResponse(mockCreateSuccessResponse: jest.Mock, data: any, 
   expect(mockCreateSuccessResponse).toHaveBeenCalledWith(data, message);
 }
 
-function expectErrorResponse(mockStatus: jest.Mock, mockJson: jest.Mock, statusCode: number, errorResponse: any) {
+function expectErrorResponse(mockStatus: jest.Mock, mockJson: jest.Mock, statusCode: number, errorMessage: string, errorCode: string) {
   expect(mockStatus).toHaveBeenCalledWith(statusCode);
-  expect(mockJson).toHaveBeenCalledWith(errorResponse);
+  expect(mockCreateErrorResponse).toHaveBeenCalledWith(errorMessage, errorCode);
+  expect(mockJson).toHaveBeenCalledWith({
+    success: false,
+    message: errorMessage,
+    error: {
+      message: errorMessage,
+      code: errorCode,
+      details: undefined
+    },
+    timestamp: '2024-01-01T00:00:00.000Z'
+  });
 }
 
 describe('Movie Controller Tests', () => {
@@ -183,15 +205,7 @@ describe('Movie Controller Tests', () => {
 
       await expect(
         getAllMovies(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(`Failed to retrieve movies: ${errorMessage}`);
-    });
-
-    it('should handle unknown errors', async () => {
-      mockToArray.mockRejectedValue('String error');
-
-      await expect(
-        getAllMovies(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow('Failed to retrieve movies: Unknown error');
+      ).rejects.toThrow(errorMessage);
     });
 
     it('should handle query parameters for filtering', async () => {
@@ -231,38 +245,20 @@ describe('Movie Controller Tests', () => {
     });
 
     it('should return 400 for invalid ObjectId format', async () => {
-      const INVALID_OBJECT_ID_ERROR = {
-        success: false,
-        error: {
-          message: 'Invalid movie ID format',
-          code: 'INVALID_OBJECT_ID'
-        },
-        timestamp: expect.any(String)
-      };
-      
       mockRequest = createMockRequest({ params: { id: INVALID_MOVIE_ID } });
 
       await getMovieById(mockRequest as Request, mockResponse as Response);
 
-      expectErrorResponse(mockStatus, mockJson, 400, INVALID_OBJECT_ID_ERROR);
+      expectErrorResponse(mockStatus, mockJson, 400, 'Invalid movie ID format', 'INVALID_OBJECT_ID');
     });
 
     it('should return 404 when movie not found', async () => {
-      const MOVIE_NOT_FOUND_ERROR = {
-        success: false,
-        error: {
-          message: 'Movie not found',
-          code: 'MOVIE_NOT_FOUND'
-        },
-        timestamp: expect.any(String)
-      };
-
       mockRequest = createMockRequest({ params: { id: TEST_MOVIE_ID } });
       mockFindOne.mockResolvedValue(null);
 
       await getMovieById(mockRequest as Request, mockResponse as Response);
 
-      expectErrorResponse(mockStatus, mockJson, 404, MOVIE_NOT_FOUND_ERROR);
+      expectErrorResponse(mockStatus, mockJson, 404, 'Movie not found', 'MOVIE_NOT_FOUND');
     });
 
     it('should handle database errors', async () => {
@@ -272,7 +268,7 @@ describe('Movie Controller Tests', () => {
 
       await expect(
         getMovieById(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(`Failed to retrieve movie: ${errorMessage}`);
+      ).rejects.toThrow(errorMessage);
     });
   });
 
@@ -320,7 +316,7 @@ describe('Movie Controller Tests', () => {
 
       await expect(
         createMovie(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow('Failed to create movie: Movie insertion was not acknowledged by the database');
+      ).rejects.toThrow('Movie insertion was not acknowledged by the database');
     });
   });
 
@@ -358,15 +354,7 @@ describe('Movie Controller Tests', () => {
 
       await createMoviesBatch(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Request body must be a non-empty array of movie objects',
-          code: 'INVALID_INPUT'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 400, 'Request body must be a non-empty array of movie objects', 'INVALID_INPUT');
     });
 
     it('should return 400 for empty array', async () => {
@@ -418,15 +406,7 @@ describe('Movie Controller Tests', () => {
 
       await updateMovie(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'No update data provided',
-          code: 'NO_UPDATE_DATA'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 400, 'No update data provided', 'NO_UPDATE_DATA');
     });
 
     it('should return 404 when movie not found', async () => {
@@ -471,15 +451,7 @@ describe('Movie Controller Tests', () => {
 
       await deleteMovie(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(404);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Movie not found',
-          code: 'MOVIE_NOT_FOUND'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 404, 'Movie not found', 'MOVIE_NOT_FOUND');
     });
 
     it('should handle database errors', async () => {
@@ -489,7 +461,7 @@ describe('Movie Controller Tests', () => {
 
       await expect(
         deleteMovie(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(`Failed to delete movie: ${errorMessage}`);
+      ).rejects.toThrow(errorMessage);
     });
   });
 
@@ -519,15 +491,7 @@ describe('Movie Controller Tests', () => {
 
       await updateMoviesBatch(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Both filter and update objects are required',
-          code: 'MISSING_REQUIRED_FIELDS'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 400, 'Both filter and update objects are required', 'MISSING_REQUIRED_FIELDS');
     });
 
     it('should return 400 when update is empty', async () => {
@@ -535,15 +499,7 @@ describe('Movie Controller Tests', () => {
 
       await updateMoviesBatch(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Update object cannot be empty',
-          code: 'EMPTY_UPDATE'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 400, 'Update object cannot be empty', 'EMPTY_UPDATE');
     });
   });
 
@@ -569,15 +525,7 @@ describe('Movie Controller Tests', () => {
 
       await deleteMoviesBatch(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Filter object is required and cannot be empty. This prevents accidental deletion of all documents.',
-          code: 'MISSING_FILTER'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 400, 'Filter object is required and cannot be empty. This prevents accidental deletion of all documents.', 'MISSING_FILTER');
     });
 
     it('should return 400 when filter is empty', async () => {
@@ -620,15 +568,7 @@ describe('Movie Controller Tests', () => {
 
       await findAndDeleteMovie(mockRequest as Request, mockResponse as Response);
 
-      expect(mockStatus).toHaveBeenCalledWith(404);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          message: 'Movie not found',
-          code: 'MOVIE_NOT_FOUND'
-        },
-        timestamp: expect.any(String)
-      });
+      expectErrorResponse(mockStatus, mockJson, 404, 'Movie not found', 'MOVIE_NOT_FOUND');
     });
 
     it('should handle database errors', async () => {
@@ -638,7 +578,7 @@ describe('Movie Controller Tests', () => {
 
       await expect(
         findAndDeleteMovie(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(`Failed to find and delete movie: ${errorMessage}`);
+      ).rejects.toThrow(errorMessage);
     });
   });
 });

@@ -130,6 +130,6 @@ async function verifyMoviesCollection(db: Db): Promise<void> {
     );
     console.log('Text search index created for movies collection');
   } catch (error) {
-    console.log('Could not create text search index.');
+    console.error('Could not create text search index:', error);
   }
 }
