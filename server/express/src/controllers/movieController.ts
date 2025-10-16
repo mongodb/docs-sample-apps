@@ -1,9 +1,9 @@
 /**
  * Movie Controller
- * 
+ *
  * This file contains all the business logic for movie operations.
  * Each method demonstrates different MongoDB operations using the Node.js driver.
- * 
+ *
  * Implemented operations:
  * - insertOne() - Create a single movie
  * - insertMany() - Create multiple movies
@@ -16,24 +16,28 @@
  * - findOneAndDelete() - Find and delete a movie in one operation
  */
 
-import { Request, Response } from 'express';
-import { ObjectId, Sort } from 'mongodb';
-import { getCollection } from '../config/database';
-import { createErrorResponse, createSuccessResponse, validateRequiredFields } from '../utils/errorHandler';
-import { 
-  Movie, 
-  CreateMovieRequest, 
+import { Request, Response } from "express";
+import { ObjectId, Sort } from "mongodb";
+import { getCollection } from "../config/database";
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  validateRequiredFields,
+} from "../utils/errorHandler";
+import {
+  Movie,
+  CreateMovieRequest,
   UpdateMovieRequest,
   RawSearchQuery,
-  MovieFilter
-} from '../types';
+  MovieFilter,
+} from "../types";
 
 /**
  * GET /api/movies
- * 
+ *
  * Retrieves multiple movies with optional filtering, sorting, and pagination.
  * Demonstrates the find() operation with various query options.
- * 
+ *
  * Query parameters:
  * - q: Text search query (searches title, plot, fullplot)
  * - genre: Filter by genre
@@ -46,8 +50,8 @@ import {
  * - sortOrder: Sort direction - asc or desc (default: asc)
  */
 export async function getAllMovies(req: Request, res: Response): Promise<void> {
-  const moviesCollection = getCollection('movies');
-  
+  const moviesCollection = getCollection("movies");
+
   // Extract and validate query parameters
   const {
     q,
@@ -55,10 +59,10 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
     year,
     minRating,
     maxRating,
-    limit = '20',
-    skip = '0',
-    sortBy = 'title',
-    sortOrder = 'asc'
+    limit = "20",
+    skip = "0",
+    sortBy = "title",
+    sortOrder = "asc",
   }: RawSearchQuery = req.query;
 
   // Build MongoDB query filter
@@ -73,7 +77,7 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
 
   // Genre filtering
   if (genre) {
-    filter.genres = { $regex: new RegExp(genre, 'i') };
+    filter.genres = { $regex: new RegExp(genre, "i") };
   }
 
   // Year filtering
@@ -84,34 +88,34 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
   // Rating range filtering
   // Demonstrates nested field queries (imdb.rating)
   if (minRating || maxRating) {
-    filter['imdb.rating'] = {};
+    filter["imdb.rating"] = {};
     if (minRating) {
-      filter['imdb.rating'].$gte = parseFloat(minRating);
+      filter["imdb.rating"].$gte = parseFloat(minRating);
     }
     if (maxRating) {
-      filter['imdb.rating'].$lte = parseFloat(maxRating);
+      filter["imdb.rating"].$lte = parseFloat(maxRating);
     }
   }
 
-// Parse and validate pagination parms for invalid inputs
-const limitNum = Math.min(
-  Math.max(
-    parseInt(limit) || 20,  // Default to 20 if invalid
-    1                       // Min 1 result
-  ),
-  100                       // Cap at 100 results for performance
-);
-const skipNum = Math.max(
-  parseInt(skip) || 0,      // Default to 0 if invalid
-  0                         // skip must be positive number
-);
+  // Parse and validate pagination parms for invalid inputs
+  const limitNum = Math.min(
+    Math.max(
+      parseInt(limit) || 20, // Default to 20 if invalid
+      1 // Min 1 result
+    ),
+    100 // Cap at 100 results for performance
+  );
+  const skipNum = Math.max(
+    parseInt(skip) || 0, // Default to 0 if invalid
+    0 // skip must be positive number
+  );
 
   // Build sort object
   // Demonstrates dynamic sorting based on user input
   const sort: Sort = {
-    [sortBy]: sortOrder === 'desc' ? -1 : 1
+    [sortBy]: sortOrder === "desc" ? -1 : 1,
   };
-  
+
   // Execute the find operation with all options
   const movies = await moviesCollection
     .find(filter)
@@ -126,45 +130,41 @@ const skipNum = Math.max(
 
 /**
  * GET /api/movies/:id
- * 
+ *
  * Retrieves a single movie by its ObjectId.
  * Demonstrates the findOne() operation.
  */
 export async function getMovieById(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  
+
   // Validate ObjectId format
   if (!ObjectId.isValid(id)) {
-    res.status(400).json(
-      createErrorResponse(
-        'Invalid movie ID format',
-        'INVALID_OBJECT_ID'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse("Invalid movie ID format", "INVALID_OBJECT_ID")
+      );
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use findOne() to get a single document by _id
   const movie = await moviesCollection.findOne({ _id: new ObjectId(id) });
 
   if (!movie) {
-    res.status(404).json(
-      createErrorResponse(
-        'Movie not found',
-        'MOVIE_NOT_FOUND'
-      )
-    );
+    res
+      .status(404)
+      .json(createErrorResponse("Movie not found", "MOVIE_NOT_FOUND"));
     return;
   }
 
-  res.json(createSuccessResponse(movie, 'Movie retrieved successfully'));
+  res.json(createSuccessResponse(movie, "Movie retrieved successfully"));
 }
 
 /**
  * POST /api/movies
- * 
+ *
  * Creates a single new movie document.
  * Demonstrates the insertOne() operation.
  */
@@ -173,78 +173,87 @@ export async function createMovie(req: Request, res: Response): Promise<void> {
 
   // Validate required fields
   // The title field is the minimum requirement for a movie
-  validateRequiredFields(movieData, ['title']);
+  validateRequiredFields(movieData, ["title"]);
 
-  const moviesCollection = getCollection('movies');
-
-  // Prepare the document for insertion
-  // Here you can add metadata or other fields that might be necessary
-  const movieDocument: Partial<Movie> = {
-    ...movieData
-  };
+  const moviesCollection = getCollection("movies");
 
   // Use insertOne() to create a single document
   // This operation returns information about the insertion including the new _id
-  const result = await moviesCollection.insertOne(movieDocument);
+  const result = await moviesCollection.insertOne(movieData);
 
   if (!result.acknowledged) {
-    throw new Error('Movie insertion was not acknowledged by the database');
+    throw new Error("Movie insertion was not acknowledged by the database");
   }
 
   // Retrieve the created document to return complete data
-  const createdMovie = await moviesCollection.findOne({ _id: result.insertedId });
+  const createdMovie = await moviesCollection.findOne({
+    _id: result.insertedId,
+  });
 
-  res.status(201).json(
-    createSuccessResponse(
-      createdMovie, 
-      `Movie '${movieData.title}' created successfully`
-    )
-  );
+  res
+    .status(201)
+    .json(
+      createSuccessResponse(
+        createdMovie,
+        `Movie '${movieData.title}' created successfully`
+      )
+    );
 }
 
 /**
  * POST /api/movies/batch
- * 
+ *
  * Creates multiple movie documents in a single operation.
  * Demonstrates the insertMany() operation.
  */
-export async function createMoviesBatch(req: Request, res: Response): Promise<void> {
+export async function createMoviesBatch(
+  req: Request,
+  res: Response
+): Promise<void> {
   const moviesData: CreateMovieRequest[] = req.body;
 
   // Validate that we have an array of movies
   if (!Array.isArray(moviesData) || moviesData.length === 0) {
-    res.status(400).json(
-      createErrorResponse(
-        'Request body must be a non-empty array of movie objects',
-        'INVALID_INPUT'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse(
+          "Request body must be a non-empty array of movie objects",
+          "INVALID_INPUT"
+        )
+      );
     return;
   }
 
   // Validate each movie has required fields
   moviesData.forEach((movie, index) => {
     try {
-      validateRequiredFields(movie, ['title']);
+      validateRequiredFields(movie, ["title"]);
     } catch (error) {
-      throw new Error(`Movie at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Movie at index ${index}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   });
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use insertMany() to create multiple documents
   const result = await moviesCollection.insertMany(moviesData);
 
   if (!result.acknowledged) {
-    throw new Error('Batch movie insertion was not acknowledged by the database');
+    throw new Error(
+      "Batch movie insertion was not acknowledged by the database"
+    );
   }
 
   res.status(201).json(
     createSuccessResponse(
       {
         insertedCount: result.insertedCount,
-        insertedIds: result.insertedIds
+        insertedIds: result.insertedIds,
       },
       `Successfully created ${result.insertedCount} movies`
     )
@@ -253,7 +262,7 @@ export async function createMoviesBatch(req: Request, res: Response): Promise<vo
 
 /**
  * PUT /api/movies/:id
- * 
+ *
  * Updates a single movie document.
  * Demonstrates the updateOne() operation.
  */
@@ -263,27 +272,23 @@ export async function updateMovie(req: Request, res: Response): Promise<void> {
 
   // Validate ObjectId format
   if (!ObjectId.isValid(id)) {
-    res.status(400).json(
-      createErrorResponse(
-        'Invalid movie ID format',
-        'INVALID_OBJECT_ID'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse("Invalid movie ID format", "INVALID_OBJECT_ID")
+      );
     return;
   }
 
   // Ensure we have something to update
   if (Object.keys(updateData).length === 0) {
-    res.status(400).json(
-      createErrorResponse(
-        'No update data provided',
-        'NO_UPDATE_DATA'
-      )
-    );
+    res
+      .status(400)
+      .json(createErrorResponse("No update data provided", "NO_UPDATE_DATA"));
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use updateOne() to update a single document
   // $set operator replaces the value of fields with specified values
@@ -293,17 +298,16 @@ export async function updateMovie(req: Request, res: Response): Promise<void> {
   );
 
   if (result.matchedCount === 0) {
-    res.status(404).json(
-      createErrorResponse(
-        'Movie not found',
-        'MOVIE_NOT_FOUND'
-      )
-    );
+    res
+      .status(404)
+      .json(createErrorResponse("Movie not found", "MOVIE_NOT_FOUND"));
     return;
   }
 
   // Retrieve the updated document to return complete data
-  const updatedMovie = await moviesCollection.findOne({ _id: new ObjectId(id) });
+  const updatedMovie = await moviesCollection.findOne({
+    _id: new ObjectId(id),
+  });
 
   res.json(
     createSuccessResponse(
@@ -315,48 +319,49 @@ export async function updateMovie(req: Request, res: Response): Promise<void> {
 
 /**
  * PATCH /api/movies
- * 
+ *
  * Updates multiple movies based on a filter.
  * Demonstrates the updateMany() operation.
  */
-export async function updateMoviesBatch(req: Request, res: Response): Promise<void> {
+export async function updateMoviesBatch(
+  req: Request,
+  res: Response
+): Promise<void> {
   const { filter, update } = req.body;
 
   // Validate input
   if (!filter || !update) {
-    res.status(400).json(
-      createErrorResponse(
-        'Both filter and update objects are required',
-        'MISSING_REQUIRED_FIELDS'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse(
+          "Both filter and update objects are required",
+          "MISSING_REQUIRED_FIELDS"
+        )
+      );
     return;
   }
 
   if (Object.keys(update).length === 0) {
-    res.status(400).json(
-      createErrorResponse(
-        'Update object cannot be empty',
-        'EMPTY_UPDATE'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse("Update object cannot be empty", "EMPTY_UPDATE")
+      );
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use updateMany() to update multiple documents
   // This is useful for bulk operations like updating all movies from a certain year
-  const result = await moviesCollection.updateMany(
-    filter,
-    { $set: update }
-  );
+  const result = await moviesCollection.updateMany(filter, { $set: update });
 
   res.json(
     createSuccessResponse(
       {
         matchedCount: result.matchedCount,
-        modifiedCount: result.modifiedCount
+        modifiedCount: result.modifiedCount,
       },
       `Update operation completed. Matched ${result.matchedCount} documents, modified ${result.modifiedCount} documents.`
     )
@@ -365,7 +370,7 @@ export async function updateMoviesBatch(req: Request, res: Response): Promise<vo
 
 /**
  * DELETE /api/movies/:id
- * 
+ *
  * Deletes a single movie document.
  * Demonstrates the deleteOne() operation.
  */
@@ -374,59 +379,60 @@ export async function deleteMovie(req: Request, res: Response): Promise<void> {
 
   // Validate ObjectId format
   if (!ObjectId.isValid(id)) {
-    res.status(400).json(
-      createErrorResponse(
-        'Invalid movie ID format',
-        'INVALID_OBJECT_ID'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse("Invalid movie ID format", "INVALID_OBJECT_ID")
+      );
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use deleteOne() to remove a single document
   const result = await moviesCollection.deleteOne({ _id: new ObjectId(id) });
 
   if (result.deletedCount === 0) {
-    res.status(404).json(
-      createErrorResponse(
-        'Movie not found',
-        'MOVIE_NOT_FOUND'
-      )
-    );
+    res
+      .status(404)
+      .json(createErrorResponse("Movie not found", "MOVIE_NOT_FOUND"));
     return;
   }
 
   res.json(
     createSuccessResponse(
       { deletedCount: result.deletedCount },
-      'Movie deleted successfully'
+      "Movie deleted successfully"
     )
   );
 }
 
 /**
  * DELETE /api/movies
- * 
+ *
  * Deletes multiple movies based on a filter.
  * Demonstrates the deleteMany() operation.
  */
-export async function deleteMoviesBatch(req: Request, res: Response): Promise<void> {
+export async function deleteMoviesBatch(
+  req: Request,
+  res: Response
+): Promise<void> {
   const { filter } = req.body;
 
   // Validate input
   if (!filter || Object.keys(filter).length === 0) {
-    res.status(400).json(
-      createErrorResponse(
-        'Filter object is required and cannot be empty. This prevents accidental deletion of all documents.',
-        'MISSING_FILTER'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse(
+          "Filter object is required and cannot be empty. This prevents accidental deletion of all documents.",
+          "MISSING_FILTER"
+        )
+      );
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use deleteMany() to remove multiple documents
   // This operation is useful for cleanup tasks like removing all movies from a certain year
@@ -442,47 +448,43 @@ export async function deleteMoviesBatch(req: Request, res: Response): Promise<vo
 
 /**
  * DELETE /api/movies/:id/find-and-delete
- * 
+ *
  * Finds and deletes a movie in a single atomic operation.
  * Demonstrates the findOneAndDelete() operation.
  */
-export async function findAndDeleteMovie(req: Request, res: Response): Promise<void> {
+export async function findAndDeleteMovie(
+  req: Request,
+  res: Response
+): Promise<void> {
   const { id } = req.params;
 
   // Validate ObjectId format
   if (!ObjectId.isValid(id)) {
-    res.status(400).json(
-      createErrorResponse(
-        'Invalid movie ID format',
-        'INVALID_OBJECT_ID'
-      )
-    );
+    res
+      .status(400)
+      .json(
+        createErrorResponse("Invalid movie ID format", "INVALID_OBJECT_ID")
+      );
     return;
   }
 
-  const moviesCollection = getCollection('movies');
+  const moviesCollection = getCollection("movies");
 
   // Use findOneAndDelete() to find and delete in a single atomic operation
   // This is useful when you need to return the deleted document
   // or ensure the document exists before deletion
-  const deletedMovie = await moviesCollection.findOneAndDelete(
-    { _id: new ObjectId(id) }
-  );
+  const deletedMovie = await moviesCollection.findOneAndDelete({
+    _id: new ObjectId(id),
+  });
 
   if (!deletedMovie) {
-    res.status(404).json(
-      createErrorResponse(
-        'Movie not found',
-        'MOVIE_NOT_FOUND'
-      )
-    );
+    res
+      .status(404)
+      .json(createErrorResponse("Movie not found", "MOVIE_NOT_FOUND"));
     return;
   }
 
   res.json(
-    createSuccessResponse(
-      deletedMovie,
-      'Movie found and deleted successfully'
-    )
+    createSuccessResponse(deletedMovie, "Movie found and deleted successfully")
   );
 }
