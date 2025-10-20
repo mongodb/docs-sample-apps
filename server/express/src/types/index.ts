@@ -1,15 +1,15 @@
 /**
  * TypeScript Type Definitions for MongoDB Documents
- * 
+ *
  * These interfaces define the structure of documents in the sample_mflix database.
  * They help ensure type safety when working with MongoDB operations.
  */
 
-import { ObjectId } from 'mongodb';
+import { ObjectId } from "mongodb";
 
 /**
  * Interface for Movie documents in the movies collection
- * 
+ *
  * This represents the structure of movie documents in the sample_mflix.movies collection.
  */
 export interface Movie {
@@ -75,7 +75,7 @@ export interface Theater {
       zipcode: string;
     };
     geo: {
-      type: 'Point';
+      type: "Point";
       coordinates: [number, number]; // [longitude, latitude]
     };
   };
@@ -133,19 +133,32 @@ export interface UpdateMovieRequest {
 }
 
 /**
- * Interface for search query parameters
+ * Type for raw query parameters (Express passes all params as strings)
  */
-export interface SearchQuery {
+export type RawSearchQuery = {
   q?: string;
   genre?: string;
-  year?: number;
-  minRating?: number;
-  maxRating?: number;
-  limit?: number;
-  skip?: number;
+  year?: string;
+  minRating?: string;
+  maxRating?: string;
+  limit?: string;
+  skip?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
+  sortOrder?: string;
+};
+
+/**
+ * Type for MongoDB filter objects used in movie queries
+ */
+export type MovieFilter = {
+  $text?: { $search: string };
+  genres?: { $regex: RegExp };
+  year?: number;
+  "imdb.rating"?: {
+    $gte?: number;
+    $lte?: number;
+  };
+};
 
 export type SuccessResponse<T> = {
   success: true;
@@ -158,7 +171,7 @@ export type SuccessResponse<T> = {
     total: number;
     pages: number;
   };
-}
+};
 
 export type ErrorResponse = {
   success: false;
@@ -169,6 +182,6 @@ export type ErrorResponse = {
     details?: any;
   };
   timestamp: string;
-}
+};
 
 export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
