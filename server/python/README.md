@@ -17,18 +17,12 @@ We're porting our Express backend to Python/FastAPI to achieve **functional pari
 
 ## Getting Setup
 0. Install Python if you don't already have it. (*Depending on your version of python, you might need to use python3 and pip3 vs python and pip*)
-1. Clone the main repo.
+1. Clone from my fork of the main repo.
     ```sh
-    https://github.com/mongodb/docs-sample-apps.git
+    https://github.com/tmcneil-mdb/docs-sample-apps.git
     ```
 
-2. Fetch all branches 
-
-    ```sh
-    git fetch --all
-    ```
-
-3. Checkout my branch 
+2. Checkout my branch 
     ```sh
     git checkout python-backend-setup
     ```
@@ -43,7 +37,7 @@ We're porting our Express backend to Python/FastAPI to achieve **functional pari
     ```
 6. Activate the virtual environment 
     ```sh
-    source .venv/bin/activate/
+    source .venv/bin/activate
     ```
 7. Navigate back to /python, install the required packages. 
     ```sh 
@@ -89,10 +83,10 @@ Once you have completed the tutorial, I would suggest exploring the code and jus
 ### Architecture
 |Layer|Purpose|Express Equivalent| Differences|
 |:---|:-------|:----------|:------|
-|Routes <br> `routers/movies.py`| Defines all /movies endpoints (GET, POST, PUT, etc.)| /controllers/movieController.ts |The movies.ts file inside the routes file in the Express backend it actually wiring up the endpoints. Fast handles this for us in the main.py in one line. ```app.include_router(movies.router, prefix="/api/movies", tags=["movies"])```|
-|Models <br> `models/models.py`| Pydantic schema for validating and serializing request/response data.| /types/index.ts|There are some differences in how the models are constructed. Take note on how nested classes are handled.|
-|Utils <br> `utils/errorHandler.py`| Centralized utilities for responses, error handling and MongoDB exception mapping.|utils/errorHandler.ts |Express requires devs to write exception handling and validation on their own. Pydanic handles the validation and exception handling is a bit cleaner in Fast. You will notice the most differences here.|
-|Database <br>`database/mongo_client.py`| Handles the connection to the db|/config/database.ts| *The current database file does not have feature parity with the Express version*|
+|Routes <br> `src/routers/movies.py`| Defines all /movies endpoints (GET, POST, PUT, etc.)| /controllers/movieController.ts |The movies.ts file inside the routes file in the Express backend it actually wiring up the endpoints. Fast handles this for us in the main.py in one line. ```app.include_router(movies.router, prefix="/api/movies", tags=["movies"])```|
+|Models <br> `src/models/models.py`| Pydantic schema for validating and serializing request/response data.| /types/index.ts|There are some differences in how the models are constructed. Take note on how nested classes are handled.|
+|Utils <br> `src/utils/errorHandler.py`| Centralized utilities for responses, error handling and MongoDB exception mapping.|utils/errorHandler.ts |Express requires devs to write exception handling and validation on their own. Pydanic handles the validation and exception handling is a bit cleaner in Fast. You will notice the most differences here.|
+|Database <br>`src/database/mongo_client.py`| Handles the connection to the db|/config/database.ts| *The current database file does not have feature parity with the Express version*|
 
 
 ## Feature Parity Status

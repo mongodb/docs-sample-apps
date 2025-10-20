@@ -1,12 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query
-from database.mongo_client import db
-from models.models import Movie, MovieFilter, SuccessResponse
+from src.database.mongo_client import db, get_collection
+from src.models.models import Movie, MovieFilter, SuccessResponse
 from typing import List
 from datetime import datetime
-from utils.errorHandler import create_success_response, create_error_response
+from src.utils.errorHandler import create_success_response, create_error_response
+
 
 router = APIRouter()
 
+
+#------------------------------------
+# Place get_movie_by_id endpoint here
+#------------------------------------
 
 """
     GET /api/movies/
@@ -28,6 +33,7 @@ router = APIRouter()
         SuccessResponse[List[Movie]]: A response object containing the list of movies and metadata.
 """
 
+# Not valid query filter, how can we clean the data before sending to Pydantic? Should we have this default values.
 @router.get("/", response_model=SuccessResponse[List[Movie]])
 async def get_all_movies(
     q:str = Query(default=None),
@@ -43,6 +49,7 @@ async def get_all_movies(
 
     # This variable naming might not be ideal, but it helps illustrate the point.
     filter = {}
+    movies_collection = get_collection("movies")
     if q:
         filter["$text"] = {"$search": q}    
     if genre:
@@ -68,18 +75,44 @@ async def get_all_movies(
     sort = [(sort_by, sort_order)]
 
     
-    cursor = db.movies.find(filter).sort(sort).skip(skip_num).limit(limit_num)    
+    cursor = movies_collection.find(filter).sort(sort).skip(skip_num).limit(limit_num)    
     movies = []
     async for movie in cursor:
         movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
         movies.append(movie)  
     return create_success_response(movies, f"Found {len(movies)} movies.")
 
+#------------------------------------
+# Place create_movie endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place create_movies_batch endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place update_movie endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place update_movies_by_batch endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place delete_movie endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place delete_movies_by_batch endpoint here
+#------------------------------------
+
+#------------------------------------
+# Place find_and_delete_movie endpoint here
+#------------------------------------
 
 
-
-
-
+# ---- Old testing endpoint
+'''
 # Testing the ErrorReponse Model
 @router.get("/error")
 async def test_error():
@@ -91,3 +124,4 @@ async def test_error():
                 code="TEST_ERROR",
                 details=str(e)
             )
+'''

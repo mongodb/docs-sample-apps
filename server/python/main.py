@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from routers import movies
-from utils.errorHandler import register_error_handlers
+from src.routers import movies
+from src.utils.errorHandler import register_error_handlers
 
 app = FastAPI()
 register_error_handlers(app)
@@ -11,7 +11,13 @@ app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
 
 
 
-# Health Check Endpoint
+
+
+#------------------------------------
+# Testing error endpoints. Will be removed later
+#------------------------------------
+
+'''
 @app.get("/")
 async def root():
     return {"message": "Backend is running!"}
@@ -25,3 +31,4 @@ async def test_duplicate():
 async def test_generic():
     from pymongo.errors import PyMongoError
     raise PyMongoError("This is a test generic pymongo error.")
+'''

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError, DuplicateKeyError, WriteError
 from datetime import datetime
 from typing import Any, Dict, Optional
-from models.models import ErrorDetails, ErrorResponse, SuccessResponse, T
+from src.models.models import ErrorDetails, ErrorResponse, SuccessResponse, T
 
 
 '''
