@@ -78,6 +78,22 @@ class Pagination(BaseModel):
     pages: int
 
 
+class CreateMovieRequest(BaseModel):
+    title: str
+    year: Optional[int] = None
+    plot: Optional[str]  = None
+    fullplot: Optional[str] = None
+    genres: Optional[list[str]]  = None
+    directors: Optional[list[str]]  = None
+    writers: Optional[list[str]]  = None
+    cast: Optional[list[str]]  = None
+    countries: Optional[list[str]]  = None
+    languages: Optional[list[str]]  = None
+    rated: Optional[str]  = None
+    runtime: Optional[int]  = None
+    poster: Optional[str]  = None    
+
+
 
 class SuccessResponse(BaseModel, Generic[T]):
     success: bool = True
