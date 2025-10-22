@@ -1,5 +1,4 @@
 
-import styles from "../page.module.css";
 import loadingStyles from "./loading.module.css";
 
 /**
@@ -10,8 +9,8 @@ import loadingStyles from "./loading.module.css";
  */
 export default function Loading() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
+    <div>
+      <main>
         <h1 className={loadingStyles.pageTitle}>Movies</h1>
         <div className={loadingStyles.loadingContainer}>
           <div className={loadingStyles.loadingSpinner}></div>

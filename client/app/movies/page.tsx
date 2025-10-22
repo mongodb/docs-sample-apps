@@ -1,4 +1,4 @@
-import styles from "../page.module.css";
+import pageStyles from "./page.module.css";
 import movieStyles from "./movies.module.css";
 import MovieCard from "../components/MovieCard";
 import { fetchMovies } from "../lib/api";
@@ -8,8 +8,8 @@ export default async function Movies() {
   const movies = await fetchMovies(APP_CONFIG.defaultMovieLimit);
 
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
+    <div className={pageStyles.page}>
+      <main className={pageStyles.main}>
         <h1 className={movieStyles.pageTitle}>Movies</h1>
         <p className={movieStyles.movieCount}>Displaying {movies.length} movies from the sample_mflix database</p>
         

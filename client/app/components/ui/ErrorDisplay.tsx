@@ -13,7 +13,7 @@ export default function ErrorDisplay({
 }: ErrorDisplayProps) {
   return (
     <div className="error-display">
-      <h2>Oops!</h2>
+      <h2>Error</h2>
       <p>{message}</p>
       {onRetry && (
         <button onClick={onRetry} type="button">
