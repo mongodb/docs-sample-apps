@@ -10,7 +10,7 @@ class Awards(BaseModel):
     nominations: Optional[int] = None
     text: Optional[str] = None
 
-class Imbd(BaseModel):
+class Imdb(BaseModel):
     rating: Optional[float] = None
     votes: Optional[int] = None
     id: Optional[int] = None    
@@ -21,7 +21,7 @@ class Movie(BaseModel):
     year: Optional[int] = None
     plot: Optional[str]  = None
     fullplot: Optional[str] = None
-    released: datetime  = None
+    released: Optional[datetime]  = None
     runtime: Optional[int]  = None
     poster: Optional[str]  = None
     genres: Optional[list[str]]  = None
@@ -32,7 +32,7 @@ class Movie(BaseModel):
     languages: Optional[list[str]]  = None
     rated: Optional[str]  = None
     awards: Optional[Awards] = None
-    imdb: Optional[Imbd] = None
+    imdb: Optional[Imdb] = None
 
     model_config = {
         "populate_by_name" : True

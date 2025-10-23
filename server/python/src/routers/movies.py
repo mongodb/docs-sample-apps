@@ -4,13 +4,14 @@ from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessRes
 from typing import List
 from datetime import datetime
 from src.utils.errorHandler import create_success_response, create_error_response
+import re
 
 '''
 This file contains all the business logic for movie operations.
 Each method demonstrates different MongoDB operations using the PyMongo driver.
 
 Implemented Endpoints:
-- GET /api/movies/ : Retrieve a list of movies with optional filtering, sorting,
+- GET /api/movies/ : Retrieve a list of movies with optional filter_dicting, sorting,
     and pagination.
 - POST /api/movies/batch : Create multiple movies in a single request.
 
@@ -20,6 +21,8 @@ router = APIRouter()
 #------------------------------------
 # Place get_movie_by_id endpoint here
 #------------------------------------
+
+
 
 """
     GET /api/movies/
@@ -45,50 +48,54 @@ router = APIRouter()
 # Validate the query parameters using FastAPI's Query functionality.
 async def get_all_movies(
     q:str = Query(default=None),
+    title: str = Query(default=None),
     genre:str = Query(default=None),
     year:int = Query(default=None),
     min_rating:float = Query(default=None),
     max_rating:float = Query(default=None),
-    limit_num:int = Query(default=20, ge=1, le=100),
-    skip_num:int = Query(default=0, ge=0),
+    limit:int = Query(default=20, ge=1, le=100),
+    skip:int = Query(default=0, ge=0),
     sort_by:str = Query(default="title"),
     sort_order:str = Query(default="asc")
 ):
-
-    # This variable naming might not be ideal as Python has a function named filter, but it helps illustrate the point.
-    filter = {}
     movies_collection = get_collection("movies")
+    filter_dict = {}
     if q:
-        filter["$text"] = {"$search": q}    
+        filter_dict["$text"] = {"$search": q} 
+    if title:
+        filter_dict["title"] = {"$regex": title, "$options": "i"}       
     if genre:
-        filter["genres"] = {"$regex": genre, "$options": "i"}
+        filter_dict["genres"] = {"$regex": genre, "$options": "i"}
     if year:
         # I personally got some dirty data in the year field, a 1995è. Should we guard against this?
-        filter["year"] = year
+        filter_dict["year"] = year
     if min_rating is not None or max_rating is not None:
         rating_filter = {}
         if min_rating is not None:
             rating_filter["$gte"] = min_rating
         if max_rating is not None:
             rating_filter["$lte"] = max_rating
-        filter["imdb.rating"] = rating_filter
+        filter_dict["imdb.rating"] = rating_filter
 
 
-    
-    filter = MovieFilter(**filter)
-
-    filter = filter.model_dump(by_alias=True, exclude_none=True)
 
     # Building the sort object based on user input
     sort_order = -1 if sort_order == "desc" else 1
     sort = [(sort_by, sort_order)]
 
     # Query the database with the constructed filter, sort, skip, and limit.
-    cursor = movies_collection.find(filter).sort(sort).skip(skip_num).limit(limit_num)    
+    cursor = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)    
     movies = []
     async for movie in cursor:
         movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
-        movies.append(movie)  
+        # Guarding against the dirty data in the year field.
+        if "year" in movie and not isinstance(movie["year"], int):
+            cleaned_year = re.sub(r"\D", "", str(movie["year"]))
+            try:
+                movie["year"] = int(cleaned_year) if cleaned_year else None
+            except ValueError:
+                movie["year"] = None
+        movies.append(movie)            
 
     # Return the results wrapped in a SuccessResponse    
     return create_success_response(movies, f"Found {len(movies)} movies.")
@@ -128,10 +135,6 @@ Request Body:
 '''
 
 @router.post("/batch")
-
-# We do not have to write explicit validation code here, Pydantic will handle it for us.
-# Invalid movies will result in a 422 response with details about the validation errors.
-
 async def create_movies_batch(movies: List[CreateMovieRequest]):
     movies_collection = get_collection("movies")
     movies_dicts = []

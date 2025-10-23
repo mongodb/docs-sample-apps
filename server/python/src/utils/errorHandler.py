@@ -1,7 +1,7 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError, DuplicateKeyError, WriteError
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from src.models.models import ErrorDetails, ErrorResponse, SuccessResponse, T
 
@@ -32,7 +32,8 @@ def create_success_response(data:T, message: Optional[str] = None) -> SuccessRes
     return SuccessResponse(
         message=message or "Operation completed successfully.",
         data=data,
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat() + "Z",
+        
     )
 
 
@@ -58,7 +59,7 @@ def create_error_response(message: str, code: Optional[str]=None, details: Optio
             code=code,
             details=details
         ),
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat() + "Z",
     )
 
 
