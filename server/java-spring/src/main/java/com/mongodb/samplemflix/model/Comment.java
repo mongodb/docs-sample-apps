@@ -10,12 +10,9 @@ import java.util.Date;
 
 /**
  * Domain model representing a comment document from the MongoDB comments collection.
- * 
+ * <p>
  * This class maps to the comments collection in the sample_mflix database.
  * Comments are user reviews/comments associated with movies.
- * 
- * The structure matches the TypeScript Comment interface from the Express backend
- * to ensure API compatibility.
  */
 @Data
 @Builder
@@ -55,4 +52,3 @@ public class Comment {
      */
     private Date date;
 }
-
