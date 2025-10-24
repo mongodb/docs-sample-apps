@@ -12,5 +12,5 @@ build/
 # TypeScript
 *.tsbuildinfo
 
-# Package Lock (optional - remove this line if you want to commit package-lock.json)
-# package-lock.json
+# Package Lock
+package-lock.json
