@@ -1,0 +1,33 @@
+/**
+ * Movies Card Styles
+ * 
+ * CSS Module for the movies card component.
+ * Provides responsive grid layout for the movies listing page.
+ */
+
+.moviesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.noMovies {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.pageTitle {
+  margin: 0 0 16px 0;
+  font-size: 32px;
+  color: #333;
+}
+
+.movieCount {
+  margin: 0 0 32px 0;
+  color: #666;
+  font-size: 16px;
+}
+
