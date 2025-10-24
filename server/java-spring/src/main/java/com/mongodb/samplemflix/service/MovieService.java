@@ -1,25 +1,34 @@
 package com.mongodb.samplemflix.service;
 
-import org.springframework.stereotype.Service;
+import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
+import org.bson.Document;
+
+import java.util.List;
+import java.util.Map;
 
 /**
- * Service layer for movie business logic.
- * 
- * This service handles:
- * - Business logic and validation
- * - Query construction (filters, sorts, pagination)
- * - Data transformation between DTOs and entities
- * - Error handling and exception throwing
- * 
- * TODO: Phase 5 - Implement all CRUD operations
- * TODO: Phase 5 - Add query building logic for filtering
- * TODO: Phase 5 - Implement pagination and sorting
- * TODO: Phase 5 - Add validation logic
+ * Service interface for movie business logic.
  */
-@Service
-public class MovieService {
-    
-    // TODO: Phase 5 - Inject MovieRepository
-    // TODO: Phase 5 - Implement service methods
-}
+public interface MovieService {
 
+    List<Movie> getAllMovies(MovieSearchQuery query);
+
+    Movie getMovieById(String id);
+
+    Movie createMovie(CreateMovieRequest request);
+
+    Map<String, Object> createMoviesBatch(List<CreateMovieRequest> requests);
+
+    Movie updateMovie(String id, UpdateMovieRequest request);
+
+    Map<String, Object> updateMoviesBatch(Document filter, Document update);
+
+    Map<String, Object> deleteMovie(String id);
+
+    Map<String, Object> deleteMoviesBatch(Document filter);
+
+    Movie findAndDeleteMovie(String id);
+}

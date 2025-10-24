@@ -11,14 +11,11 @@ import java.util.List;
 
 /**
  * Domain model representing a movie document from the MongoDB movies collection.
- *
+ * <p>
  * This class maps to the movies collection in the sample_mflix database.
  * It includes all fields from the movie documents including nested objects
  * for awards, IMDB ratings, and Tomatoes ratings.
- *
- * The structure matches the TypeScript Movie interface from the Express backend
- * to ensure API compatibility.
- *
+ * <p>
  * Note: We use Lombok annotations to reduce boilerplate code:
  * - @Data: Generates getters, setters, toString, equals, and hashCode
  * - @Builder: Provides a fluent builder pattern for object construction

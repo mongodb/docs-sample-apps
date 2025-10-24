@@ -13,17 +13,17 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * MongoDB configuration class for the Sample MFlix application.
- *
+ * <p>
  * This class configures the MongoDB client connection using the MongoDB Java Driver.
  * It creates singleton beans for MongoClient and MongoDatabase that will be injected
  * throughout the application.
- *
+ * <p>
  * Key features:
  * - Connection pooling with configurable settings (max 100 connections, min 10)
  * - Connection timeout configuration (10 seconds for connect and read)
  * - Graceful shutdown handling (managed by Spring's bean lifecycle)
  * - Connection string validation
- *
+ * <p>
  * The MongoClient is thread-safe and designed to be shared across the application.
  * Spring automatically manages the lifecycle and closes the client on shutdown.
  */

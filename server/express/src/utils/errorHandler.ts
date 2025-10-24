@@ -28,13 +28,13 @@ export class ValidationError extends Error {
  * @param err - The error that was thrown
  * @param req - Express request object
  * @param res - Express response object
- * @param next - Express next function
+ * @param _next - Express next function
  */
 export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   // Log the error for debugging purposes
   // In production, we recommend using a logging service

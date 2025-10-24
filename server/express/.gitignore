@@ -1,26 +1,16 @@
-# Dependencies
-node_modules/
-npm-debug.log*
-package-lock.json
+# =============================================================================
+# Express.js Backend - Specific Ignores
+# =============================================================================
+# Common patterns (node_modules, .env, .DS_Store, etc.) are in root .gitignore
+# This file only contains Express/TypeScript-specific patterns
+# =============================================================================
 
-# Environment variables
-.env
-
-# Build output
+# Build Output
 dist/
+build/
 
 # TypeScript
 *.tsbuildinfo
 
-# Logs
-logs
-*.log
-
-# Test coverage
-coverage/
-
-# Optional npm cache directory
-.npm
-
-# macOS
-.DS_Store
+# Package Lock (optional - remove this line if you want to commit package-lock.json)
+# package-lock.json

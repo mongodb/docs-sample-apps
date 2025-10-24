@@ -10,11 +10,10 @@ import java.time.Instant;
 
 /**
  * Success response wrapper for API responses.
- *
+ * <p>
  * This class wraps successful API responses with metadata like timestamp and pagination.
  * It uses a generic type parameter T to hold the response data.
- *
- * The structure matches the TypeScript SuccessResponse type from the Express backend:
+ * <p>
  * {
  *   success: true,
  *   message?: string,

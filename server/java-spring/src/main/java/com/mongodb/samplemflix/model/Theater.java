@@ -8,12 +8,9 @@ import org.bson.types.ObjectId;
 
 /**
  * Domain model representing a theater document from the MongoDB theaters collection.
- * 
+ * <p>
  * This class maps to the theaters collection in the sample_mflix database.
  * It includes location information with address and geospatial coordinates.
- * 
- * The structure matches the TypeScript Theater interface from the Express backend
- * to ensure API compatibility.
  */
 @Data
 @Builder
@@ -106,4 +103,3 @@ public class Theater {
         }
     }
 }
-

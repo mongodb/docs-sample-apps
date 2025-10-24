@@ -13,16 +13,16 @@ import jakarta.annotation.PostConstruct;
 
 /**
  * Database verification component that runs on application startup.
- *
+ * <p>
  * This component performs pre-flight checks to ensure the MongoDB database
  * is properly configured and contains the expected data and indexes.
- *
+ * <p>
  * Verification steps:
  * 1. Check if the movies collection exists
  * 2. Verify the collection contains documents
  * 3. Check for text search indexes on plot, title, and fullplot fields
  * 4. Create text search index if missing
- *
+ * <p>
  * This matches the behavior of the Express.js backend's verifyRequirements() function.
  * The verification is non-blocking - the application will start even if verification fails,
  * but warnings will be logged to help developers identify configuration issues.
@@ -43,10 +43,10 @@ public class DatabaseVerification {
 
     /**
      * Runs database verification checks after the bean is constructed.
-     *
+     * <p>
      * This method is called automatically by Spring after dependency injection
      * is complete. It performs all verification steps and logs the results.
-     *
+     * <p>
      * The method catches all exceptions to prevent application startup failure,
      * but logs errors to help developers identify issues.
      */

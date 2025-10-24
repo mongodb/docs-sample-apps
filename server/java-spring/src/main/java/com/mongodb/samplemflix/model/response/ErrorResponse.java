@@ -10,10 +10,9 @@ import java.time.Instant;
 
 /**
  * Error response wrapper for API error responses.
- *
+ * <p>
  * This class wraps error responses with error codes, messages, and metadata.
- *
- * The structure matches the TypeScript ErrorResponse type from the Express backend:
+ * <p>
  * {
  *   success: false,
  *   message: string,
