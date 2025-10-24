@@ -545,7 +545,6 @@ async def aggregate_movies_by_year():
     Reports directors sorted by number of movies directed.
     Query Parameters:
         limit (int, optional): Number of results to return (default: 20, max: 100).
-        min_movies (int, optional): Minimum number of movies to include director (default: 1).
     Returns:
         SuccessResponse[List[dict]]: A response object containing director statistics.
 """
