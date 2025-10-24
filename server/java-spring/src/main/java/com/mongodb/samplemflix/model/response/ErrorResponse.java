@@ -1,15 +1,80 @@
 package com.mongodb.samplemflix.model.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
 /**
  * Error response wrapper for API error responses.
- * 
+ *
  * This class wraps error responses with error codes, messages, and metadata.
- * 
- * TODO: Phase 3 - Implement error response structure
- * TODO: Phase 3 - Add error code, message, timestamp, path fields
+ *
+ * The structure matches the TypeScript ErrorResponse type from the Express backend:
+ * {
+ *   success: false,
+ *   message: string,
+ *   error: {
+ *     message: string,
+ *     code?: string,
+ *     details?: any
+ *   },
+ *   timestamp: string
+ * }
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse implements ApiResponse {
-    
-    // TODO: Phase 3 - Add fields: error, message, timestamp, path, etc.
-}
 
+    /**
+     * Always false for error responses.
+     */
+    @Builder.Default
+    private boolean success = false;
+
+    /**
+     * High-level error message.
+     */
+    private String message;
+
+    /**
+     * Detailed error information.
+     */
+    private ErrorDetails error;
+
+    /**
+     * ISO 8601 timestamp when the error occurred.
+     */
+    @Builder.Default
+    private String timestamp = Instant.now().toString();
+
+    /**
+     * Nested class for detailed error information.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ErrorDetails {
+        /**
+         * Detailed error message.
+         */
+        private String message;
+
+        /**
+         * Error code (e.g., "VALIDATION_ERROR", "NOT_FOUND").
+         */
+        private String code;
+
+        /**
+         * Additional error details (optional).
+         */
+        private Object details;
+    }
+}

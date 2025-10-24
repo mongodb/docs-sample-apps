@@ -38,17 +38,17 @@ public class MongoConfig {
 
     /**
      * Creates and configures the MongoDB client with connection pooling and timeout settings.
-     *
+     * <p>
      * Connection Pool Settings:
      * - Max pool size: 100 connections (handles high concurrent load)
      * - Min pool size: 10 connections (maintains ready connections)
      * - Max connection idle time: 60 seconds (releases idle connections)
      * - Max wait time: 10 seconds (time to wait for available connection)
-     *
+     * <p>
      * Socket Settings:
      * - Connect timeout: 10 seconds (time to establish connection)
      * - Read timeout: 10 seconds (time to wait for server response)
-     *
+     * <p>
      * The MongoClient is thread-safe and should be shared across the application.
      * Spring will automatically close this client when the application shuts down.
      *
@@ -94,10 +94,10 @@ public class MongoConfig {
 
     /**
      * Creates a reference to the MongoDB database.
-     *
+     * <p>
      * This bean provides access to the sample_mflix database and can be injected
      * into repositories and services throughout the application.
-     *
+     * <p>
      * The database name is configured in application.properties and defaults to "sample_mflix".
      *
      * @param mongoClient the MongoDB client (injected by Spring)
