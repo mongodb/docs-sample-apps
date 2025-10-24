@@ -1,15 +1,89 @@
 package com.mongodb.samplemflix.model.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
 /**
  * Data Transfer Object for updating an existing movie.
- * 
+ *
  * This DTO is used for PUT /api/movies/{id} requests.
  * All fields are optional since partial updates are allowed.
- * 
- * TODO: Phase 3 - Implement with optional fields
+ *
+ * The structure matches the TypeScript UpdateMovieRequest interface from the Express backend.
+ * Any field that is null will not be updated in the database.
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UpdateMovieRequest {
-    
-    // TODO: Phase 3 - Add fields (all optional)
-}
 
+    /**
+     * Movie title (optional).
+     */
+    private String title;
+
+    /**
+     * Release year (optional).
+     */
+    private Integer year;
+
+    /**
+     * Short plot summary (optional).
+     */
+    private String plot;
+
+    /**
+     * Full plot description (optional).
+     */
+    private String fullplot;
+
+    /**
+     * List of genres (optional).
+     */
+    private List<String> genres;
+
+    /**
+     * List of directors (optional).
+     */
+    private List<String> directors;
+
+    /**
+     * List of writers (optional).
+     */
+    private List<String> writers;
+
+    /**
+     * List of cast members (optional).
+     */
+    private List<String> cast;
+
+    /**
+     * List of countries (optional).
+     */
+    private List<String> countries;
+
+    /**
+     * List of languages (optional).
+     */
+    private List<String> languages;
+
+    /**
+     * Movie rating (optional).
+     */
+    private String rated;
+
+    /**
+     * Runtime in minutes (optional).
+     */
+    private Integer runtime;
+
+    /**
+     * Poster image URL (optional).
+     */
+    private String poster;
+}

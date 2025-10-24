@@ -208,60 +208,74 @@ spring.application.name=MongoDB Sample MFlix API
 
 ---
 
-### Phase 3: Model Layer Implementation (Days 3-4)
+### Phase 3: Model Layer Implementation (Days 3-4) ✅ COMPLETE
 
-#### 3.1 Domain Models
-- [ ] Create `Movie.java` entity class
-- [ ] Create `Theater.java` entity class
-- [ ] Create `Comment.java` entity class
-- [ ] Add BSON annotations for MongoDB mapping
-- [ ] Implement nested objects (Awards, IMDB, Tomatoes)
+#### 3.1 Domain Models ✅
+- [x] Create `Movie.java` entity class
+- [x] Create `Theater.java` entity class
+- [x] Create `Comment.java` entity class
+- [x] Add BSON annotations for MongoDB mapping (using Lombok)
+- [x] Implement nested objects (Awards, IMDB, Tomatoes)
 
-**Movie.java Structure:**
-```java
-@Document(collection = "movies")
-public class Movie {
-    @Id
-    private ObjectId id;
-    
-    private String title;
-    private Integer year;
-    private String plot;
-    private String fullplot;
-    private List<String> genres;
-    private List<String> directors;
-    private List<String> writers;
-    private List<String> cast;
-    private List<String> countries;
-    private List<String> languages;
-    private String rated;
-    private Integer runtime;
-    private String poster;
-    
-    private Awards awards;
-    private IMDB imdb;
-    private Tomatoes tomatoes;
-    private Integer metacritic;
-    private String type;
-    
-    // Nested classes for complex fields
-    public static class Awards { ... }
-    public static class IMDB { ... }
-    public static class Tomatoes { ... }
-}
-```
+**Movie.java Structure:** ✅
+- ✅ All fields from TypeScript Movie interface
+- ✅ Nested class: Awards (wins, nominations, text)
+- ✅ Nested class: Imdb (rating, votes, id)
+- ✅ Nested class: Tomatoes (viewer, critic, fresh, rotten, production, lastUpdated)
+- ✅ Nested classes: Tomatoes.Viewer and Tomatoes.Critic
+- ✅ Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor)
+- ✅ Comprehensive JavaDoc documentation
 
-#### 3.2 DTOs (Data Transfer Objects)
-- [ ] Create `CreateMovieRequest.java`
-- [ ] Create `UpdateMovieRequest.java`
-- [ ] Create `MovieSearchQuery.java`
-- [ ] Add validation annotations (@NotNull, @NotBlank, etc.)
+**Theater.java Structure:** ✅
+- ✅ All fields from TypeScript Theater interface
+- ✅ Nested class: Location (address, geo)
+- ✅ Nested class: Location.Address (street1, city, state, zipcode)
+- ✅ Nested class: Location.Geo (type, coordinates)
+- ✅ GeoJSON format support for geospatial queries
 
-#### 3.3 Response Models
-- [ ] Create generic `ApiResponse<T>` interface
-- [ ] Create `SuccessResponse<T>` class
-- [ ] Create `ErrorResponse` class
-- [ ] Add timestamp and metadata fields
+**Comment.java Structure:** ✅
+- ✅ All fields from TypeScript Comment interface
+- ✅ Fields: id, name, email, movieId, text, date
+
+#### 3.2 DTOs (Data Transfer Objects) ✅
+- [x] Create `CreateMovieRequest.java`
+- [x] Create `UpdateMovieRequest.java`
+- [x] Create `MovieSearchQuery.java`
+- [x] Add validation annotations (@NotBlank for required fields)
+
+**CreateMovieRequest.java:** ✅
+- ✅ Required field: title (with @NotBlank validation)
+- ✅ Optional fields: year, plot, fullplot, genres, directors, writers, cast, countries, languages, rated, runtime, poster
+
+**UpdateMovieRequest.java:** ✅
+- ✅ All fields optional (for partial updates)
+- ✅ Same fields as CreateMovieRequest
+
+**MovieSearchQuery.java:** ✅
+- ✅ Full-text search: q
+- ✅ Filters: genre, year, minRating, maxRating
+- ✅ Pagination: limit, skip
+- ✅ Sorting: sortBy, sortOrder
+
+#### 3.3 Response Models ✅
+- [x] Create generic `ApiResponse` interface
+- [x] Create `SuccessResponse<T>` class
+- [x] Create `ErrorResponse` class
+- [x] Add timestamp and metadata fields
+
+**ApiResponse Interface:** ✅
+- ✅ Methods: isSuccess(), getTimestamp()
+
+**SuccessResponse<T>:** ✅
+- ✅ Generic type parameter for data
+- ✅ Fields: success (true), message, data, timestamp, pagination
+- ✅ Nested class: Pagination (page, limit, total, pages)
+- ✅ @JsonInclude(NON_NULL) to exclude null fields
+
+**ErrorResponse:** ✅
+- ✅ Fields: success (false), message, error, timestamp
+- ✅ Nested class: ErrorDetails (message, code, details)
+- ✅ Matches Express backend error format
 
 ---
 
