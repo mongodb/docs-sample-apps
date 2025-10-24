@@ -29,7 +29,13 @@ export async function fetchMovies(limit: number = 50): Promise<Movie[]> {
     return result.data;
   } catch (error) {
     console.error('Error fetching movies:', error);
-    // Return empty array instead of throwing to prevent page crash
+    
+    // In development, throw the error to help with debugging
+    if (process.env.NODE_ENV === 'development') {
+      throw error;
+    }
+    
+    // In production, return empty array with logged error to prevent page crash
     return [];
   }
 }
