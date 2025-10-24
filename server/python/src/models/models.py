@@ -60,23 +60,11 @@ class RatingFilter(BaseModel):
     gte: Optional[float] = Field(None, alias="$gte")
     lte: Optional[float] = Field(None, alias="$lte")    
 
-class MovieFilter(BaseModel):
-    text: Optional[TextFilter] = Field(None, alias="$text")    
-    genres: Optional[RegexFilter] = None
-    year: Optional[int] = None
-    imdb_rating: Optional[RatingFilter] = Field(None, alias="imdb.rating")
-
-    model_config = {
-        "populate_by_name" : True
-    }
-
-
 class Pagination(BaseModel):
     page: int
     limit: int
     total: int
     pages: int
-
 
 class CreateMovieRequest(BaseModel):
     title: str
@@ -93,7 +81,35 @@ class CreateMovieRequest(BaseModel):
     runtime: Optional[int]  = None
     poster: Optional[str]  = None    
 
+class UpdateMovieRequest(BaseModel):
+    title: Optional[str] = None
+    year: Optional[int] = None
+    plot: Optional[str]  = None
+    fullplot: Optional[str] = None
+    genres: Optional[list[str]]  = None
+    directors: Optional[list[str]]  = None
+    writers: Optional[list[str]]  = None
+    cast: Optional[list[str]]  = None
+    countries: Optional[list[str]]  = None
+    languages: Optional[list[str]]  = None
+    rated: Optional[str]  = None
+    runtime: Optional[int]  = None
+    poster: Optional[str]  = None  
 
+class MovieFilter(BaseModel):
+    title: Optional[str] = None
+    year: Optional[int] = None
+    plot: Optional[str]  = None
+    fullplot: Optional[str] = None
+    genres: Optional[list[str]]  = None
+    directors: Optional[list[str]]  = None
+    writers: Optional[list[str]]  = None
+    cast: Optional[list[str]]  = None
+    countries: Optional[list[str]]  = None
+    languages: Optional[list[str]]  = None
+    rated: Optional[str]  = None
+    runtime: Optional[int]  = None
+    poster: Optional[str]  = None   
 
 class SuccessResponse(BaseModel, Generic[T]):
     success: bool = True
@@ -114,3 +130,19 @@ class ErrorResponse(BaseModel):
     error: ErrorDetails
     timestamp: str
     
+
+
+"""
+I don't think we need this any more but we will see.
+
+class MovieFilter(BaseModel):
+    text: Optional[TextFilter] = Field(None, alias="$text")    
+    genres: Optional[RegexFilter] = None
+    year: Optional[int] = None
+    imdb_rating: Optional[RatingFilter] = Field(None, alias="imdb.rating")
+
+    model_config = {
+        "populate_by_name" : True
+    }
+
+"""
