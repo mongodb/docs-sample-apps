@@ -69,6 +69,8 @@ PORT=3001
 CORS_ORIGIN=http://localhost:3000
 ```
 
+> **Note**: This project uses [spring-dotenv](https://github.com/paulschwarz/spring-dotenv) to automatically load `.env` files, similar to Node.js applications. The `.env` file will be loaded automatically when you run the application.
+
 ### 3. Load Sample Data
 
 If you haven't already, load the `sample_mflix` database into your MongoDB instance:
