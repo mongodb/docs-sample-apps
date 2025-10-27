@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Query, Body, HTTPException
-from src.database.mongo_client import db, get_collection
+from fastapi import APIRouter, Query
+from src.database.mongo_client import get_collection
 from src.models.models import CreateMovieRequest, Movie, SuccessResponse
 from typing import List
 from datetime import datetime
