@@ -7,7 +7,7 @@ on:
 
 jobs:
   notify_slack_on_alert:
-    if: github.event.action == 'created' || github.event.action == 'reopened'
+    # if: github.event.action == 'created' || github.event.action == 'reopened'
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack Notification
