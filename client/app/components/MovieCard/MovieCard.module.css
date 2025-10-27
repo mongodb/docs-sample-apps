@@ -1,7 +1,7 @@
 /**
- * Movies Page Styles
+ * Movies Card Styles
  * 
- * CSS Module for the movies page component.
+ * CSS Module for the movies card component.
  * Provides responsive grid layout and movie card styling.
  */
 
@@ -39,6 +39,7 @@
 
 .moviePoster img {
   border-radius: 4px;
+  object-fit: cover;
 }
 
 .posterPlaceholder {
@@ -86,6 +87,7 @@
 }
 
 .detailsButton {
+  display: block;
   width: 100%;
   background: #0066cc;
   color: white;
@@ -95,6 +97,8 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
+  text-align: center;
   transition: background-color 0.2s ease;
 }
 

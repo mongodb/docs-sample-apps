@@ -5,7 +5,8 @@
 export const APP_CONFIG = {
   name: 'MFlix',
   description: 'Browse movies from the sample MFlix database',
-  defaultMovieLimit: 50,
+  defaultMovieLimit: 20,
+  maxMovieLimit: 100,
   imageFormats: ['image/avif', 'image/webp'],
 } as const;
 
