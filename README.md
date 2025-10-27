@@ -42,18 +42,18 @@ to a target repository for each sample app. For configuration details, refer to
 
 ### Branching Model
 
-For development, work from the `develop` branch. Make incremental PRs containing
-new features and bug fixes to `develop`, *not* `main`.
+For development, work from the `development` branch. Make incremental PRs
+containing new features and bug fixes to `development`, *not* `main`.
 
 When all development work is complete, *then* create a release PR from
-`develop` to `main`. Upon merging to `main,` the copier tool runs automatically.
-It creates a new PR in the target repository, which must be tested and merged
-manually.
+`development` to `main`. Upon merging to `main,` the copier tool runs
+automatically. It creates a new PR in the target repository, which must be
+tested and merged manually.
 
 ### Deleting Files
 
-If a PR from `develop` to `main` deletes any files, this creates a new entry in
-the `deprecated_examples.json` file. This entry resembles:
+If a PR from `development` to `main` deletes any files, this creates a new
+entry in the `deprecated_examples.json` file. This entry resembles:
 
 ```json
 {
@@ -72,9 +72,9 @@ references before deleting files.
 
 ## Release Process
 
-When you merge a release PR from `develop` to `main`, the copier tool creates a
-new PR in the target repository. This PR must be tested and merged manually.
-This is an intentional design choice to ensure:
+When you merge a release PR from `development` to `main`, the copier tool
+creates a new PR in the target repository. This PR must be tested and merged
+manually. This is an intentional design choice to ensure:
 
 - The sample app still functions as expected after copying.
 - Any documentation references are updated as part of the release process.
