@@ -69,10 +69,3 @@ export interface MoviesApiResponse {
     pages: number;
   };
 }
-
-/**
- * Props interface for MovieCard component
- */
-export interface MovieCardProps {
-  movie: Movie;
-}

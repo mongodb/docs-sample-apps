@@ -262,3 +262,53 @@ export async function createMoviesBatch(moviesData: Omit<Movie, '_id'>[]): Promi
     };
   }
 }
+
+/**
+ * Delete multiple movies in a batch operation
+ */
+export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: boolean; error?: string; deletedCount?: number }> {
+  try {
+    // Create filter to match the movie IDs
+    // Note: The server will handle ObjectId conversion
+    const filter = {
+      _id: {
+        $in: movieIds
+      }
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ filter }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to delete movies: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { 
+      success: true, 
+      deletedCount: result.data.deletedCount
+    };
+  } catch (error) {
+    console.error('Error deleting movies batch:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while deleting movies' 
+    };
+  }
+}

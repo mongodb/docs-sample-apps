@@ -14,6 +14,148 @@
   gap: 16px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.selectionControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selectAllButton {
+  padding: 0.5rem 1rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selectAllButton:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.batchDeleteButton {
+  padding: 0.5rem 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batchDeleteButton:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.batchDeleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirmationOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.confirmationDialog {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.confirmationTitle {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+.confirmationMessage {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.confirmationActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.cancelButton {
+  padding: 0.75rem 1.5rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.cancelButton:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.confirmDeleteButton {
+  padding: 0.75rem 1.5rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.confirmDeleteButton:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.confirmDeleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .pageTitle {
   margin: 0;
   font-size: 32px;
@@ -93,6 +235,15 @@
     gap: 12px;
   }
 
+  .headerActions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .selectionControls {
+    justify-content: center;
+  }
+
   .pageTitle {
     font-size: 28px;
     text-align: center;
@@ -101,6 +252,20 @@
   .addButton {
     width: 100%;
     padding: 0.875rem 1rem;
+  }
+
+  .confirmationDialog {
+    margin: 20px;
+    padding: 1.5rem;
+  }
+
+  .confirmationActions {
+    flex-direction: column;
+  }
+
+  .cancelButton,
+  .confirmDeleteButton {
+    width: 100%;
   }
 }
 
@@ -112,5 +277,16 @@
   .addButton {
     padding: 0.75rem 1rem;
     font-size: 0.9rem;
+  }
+
+  .selectionControls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .selectAllButton,
+  .batchDeleteButton {
+    width: 100%;
+    padding: 0.75rem 1rem;
   }
 }

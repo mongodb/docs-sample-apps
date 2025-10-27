@@ -434,9 +434,23 @@ export async function deleteMoviesBatch(
 
   const moviesCollection = getCollection("movies");
 
+  // Handle ObjectId conversion for _id fields in $in queries
+  let processedFilter = { ...filter };
+  if (filter._id && filter._id.$in && Array.isArray(filter._id.$in)) {
+    // Convert string IDs to ObjectId instances
+    processedFilter._id = {
+      $in: filter._id.$in.map((id: string) => {
+        if (ObjectId.isValid(id)) {
+          return new ObjectId(id);
+        }
+        throw new Error(`Invalid ObjectId: ${id}`);
+      })
+    };
+  }
+
   // Use deleteMany() to remove multiple documents
   // This operation is useful for cleanup tasks like removing all movies from a certain year
-  const result = await moviesCollection.deleteMany(filter);
+  const result = await moviesCollection.deleteMany(processedFilter);
 
   res.json(
     createSuccessResponse(

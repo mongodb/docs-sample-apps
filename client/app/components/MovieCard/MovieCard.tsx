@@ -3,23 +3,49 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import movieStyles from "./MovieCard.module.css";
-import { MovieCardProps } from "../../types/movie";
+import { Movie } from "../../types/movie";
 import { ROUTES } from "../../lib/constants";
 
 /**
  * Movie Card Client Component
  * 
  * This component handles the interactive parts of the movie card,
- * such as image error handling, while the parent remains a Server Component.
+ * such as image error handling and selection checkbox.
  */
-export default function MovieCard({ movie }: MovieCardProps) {
+
+interface MovieCardProps {
+  movie: Movie;
+  isSelected?: boolean;
+  onSelectionChange?: (movieId: string, isSelected: boolean) => void;
+  showCheckbox?: boolean;
+}
+
+export default function MovieCard({ movie, isSelected = false, onSelectionChange, showCheckbox = false }: MovieCardProps) {
   const handleImageError = () => {
     // This will be handled by the Image component's onError prop
     console.warn(`Failed to load poster for: ${movie.title}`);
   };
 
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onSelectionChange) {
+      onSelectionChange(movie._id, e.target.checked);
+    }
+  };
+
   return (
-    <div className={movieStyles.movieCard}>
+    <div className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''}`}>
+      {showCheckbox && (
+        <div className={movieStyles.selectionCheckbox}>
+          <input
+            type="checkbox"
+            id={`select-${movie._id}`}
+            checked={isSelected}
+            onChange={handleCheckboxChange}
+            className={movieStyles.checkbox}
+          />
+        </div>
+      )}
+      
       <div className={movieStyles.moviePoster}>
         {movie.poster ? (
           <Image
