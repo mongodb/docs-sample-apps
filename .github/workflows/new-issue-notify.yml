@@ -1,0 +1,29 @@
+name: Issue Opened Slack Notification
+
+# This workflow runs only when a new issue is opened.
+on:
+  issues:
+    types: [opened]
+
+
+jobs:
+  notify_slack_on_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification for New Issue
+        run: |
+          MESSAGE_TEXT="*📢 New Issue Opened in ${{ github.repository }} 📢*\n\n*Issue Title:* ${{ github.event.issue.title }}\n*Opened By:* ${{ github.event.issue.user.login }}\n\n*View Issue:* ${{ github.event.issue.html_url }}"
+
+          SLACK_PAYLOAD=$(jq -n \
+            --arg text "${MESSAGE_TEXT}" \
+            '{
+              "channel": "#docs-devdocs-notifications",
+              "username": "Issue Notifier",
+              "icon_emoji": ":mega:",
+              "text": $text
+            }')
+
+          curl -X POST \
+               -H 'Content-type: application/json' \
+               --data "$SLACK_PAYLOAD" \
+               ${{ secrets.SLACK_WEBHOOK }}
