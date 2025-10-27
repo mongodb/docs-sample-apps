@@ -19,7 +19,6 @@ jobs:
           SLACK_USERNAME: Dependabot Alert
           SLACK_ICON_EMOJI: ":dependabot:"
 
-          MSG_MINIMAL: true
           SLACK_MESSAGE: |
             *🚨 Dependabot Security Alert ${{(github.event.action == 'created' && 'Created') || 'Reopened'}} 🚨*
 
