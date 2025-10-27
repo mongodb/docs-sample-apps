@@ -17,8 +17,6 @@ on:
         required: true
         default: 'created'
 
-# NOTE: The SLACK_WEBHOOK_URL secret must be defined in repository settings.
-
 jobs:
   notify_slack_on_alert:
     # if: github.event.action == 'created' || github.event.action == 'reopened'
@@ -43,7 +41,7 @@ jobs:
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
-               ${{ secrets.SLACK_WEBHOOK_URL }}
+               ${{ secrets.SLACK_WEBHOOK }}
         env:
           # jq is a required tool for this method, but is pre-installed on GitHub runners.
           JQ_VERSION: 1.6
