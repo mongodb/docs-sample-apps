@@ -90,3 +90,175 @@ export async function fetchMovieById(id: string): Promise<Movie | null> {
     return null;
   }
 }
+
+/**
+ * Update a movie by ID
+ */
+export async function updateMovie(id: string, updateData: Partial<Movie>): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Validate the ID format
+    if (!id || id.length !== 24) {
+      return { success: false, error: 'Invalid movie ID format' };
+    }
+
+    // Remove the _id field from update data if present
+    const { _id, ...dataToUpdate } = updateData;
+
+    const response = await fetch(`${API_BASE_URL}/api/movies/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dataToUpdate),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to update movie: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating movie:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while updating movie' 
+    };
+  }
+}
+
+/**
+ * Delete a movie by ID
+ */
+export async function deleteMovie(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Validate the ID format
+    if (!id || id.length !== 24) {
+      return { success: false, error: 'Invalid movie ID format' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/movies/${id}`, {
+      method: 'DELETE',
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to delete movie: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting movie:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while deleting movie' 
+    };
+  }
+}
+
+/**
+ * Create a new movie
+ */
+export async function createMovie(movieData: Omit<Movie, '_id'>): Promise<{ success: boolean; error?: string; movieId?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(movieData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to create movie: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { 
+      success: true, 
+      movieId: result.data._id || result.data.insertedId 
+    };
+  } catch (error) {
+    console.error('Error creating movie:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while creating movie' 
+    };
+  }
+}
+
+/**
+ * Create multiple movies in a batch operation
+ */
+export async function createMoviesBatch(moviesData: Omit<Movie, '_id'>[]): Promise<{ success: boolean; error?: string; insertedCount?: number; insertedIds?: string[] }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/movies/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(moviesData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to create movies: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { 
+      success: true, 
+      insertedCount: result.data.insertedCount,
+      insertedIds: result.data.insertedIds ? Object.values(result.data.insertedIds) : []
+    };
+  } catch (error) {
+    console.error('Error creating movies batch:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while creating movies' 
+    };
+  }
+}

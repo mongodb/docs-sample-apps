@@ -33,6 +33,28 @@
   text-decoration: underline;
 }
 
+.successMessage {
+  background-color: #d1edff;
+  border: 1px solid #b8e6ff;
+  color: #0c5aa6;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.errorMessage {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 500;
+}
+
 .movieDetails {
   display: grid;
   grid-template-columns: 400px 1fr;
