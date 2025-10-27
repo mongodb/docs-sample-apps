@@ -36,10 +36,19 @@ router = APIRouter()
 @router.get("/{id}", response_model=SuccessResponse[Movie])
 async def get_movie_by_id(id: str):
     # Validate ObjectId format
-    object_id = ObjectId(id)
+    try:
+        object_id = ObjectId(id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid movie ID format")
 
-    # Use findOne() to get a single document by _id
-    movie = await db.movies.find_one({"_id": object_id})
+    movies_collection = get_collection("movies")
+    try:
+        movie = await movies_collection.find_one({"_id": object_id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+
+    if movie is None:
+        raise HTTPException(status_code=400, detail="Movie not found")
 
     movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
     
@@ -105,7 +114,10 @@ async def get_all_movies(
     cursor = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)    
     movies = []
     async for movie in cursor:
+        if movie is None:
+            raise HTTPException(status_code=400, detail="Movie not found")
         movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
+
         # Ensure that the year field contains int value.
         if "year" in movie and not isinstance(movie["year"], int):
             cleaned_year = re.sub(r"\D", "", str(movie["year"]))
@@ -126,24 +138,35 @@ async def get_all_movies(
     POST /api/movies/
     Create a new movie.
     Request Body:
-        title (str): The title of the movie.
-        genre (str): The genre of the movie.
-        year (int): The year the movie was released.
-        min_rating (float): The minimum IMDB rating.
-        max_rating (float): The maximum IMDB rating.
+        movie (CreateMovieRequest): A movie object containing the movie data.
+            See CreateMovieRequest model for available fields.
     Returns:
         SuccessResponse[Movie]: A response object containing the created movie data.
 """
 
-@router.post("/", response_model=SuccessResponse[CreateMovieRequest], status_code=201)
+@router.post("/", response_model=SuccessResponse[Movie], status_code=201)
 async def create_movie(movie: CreateMovieRequest):
     # Pydantic will automatically validate the structure
     movie_data = movie.model_dump(by_alias=True, exclude_none=True)
     
-    result = await db.movies.insert_one(movie_data)
-
-    # Retrieve the created document to return complete data
-    created_movie = await db.movies.find_one({"_id": result.inserted_id})
+    movies_collection = get_collection("movies")
+    try:
+        result = await movies_collection.insert_one(movie_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+    
+    # Verify that the document was created before querying it
+    if not result.acknowledged:
+        raise HTTPException(status_code=500, detail="Failed to create movie")
+    
+    try:
+        # Retrieve the created document to return complete data
+        created_movie = await movies_collection.find_one({"_id": result.inserted_id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+    
+    if created_movie is None:
+        raise HTTPException(status_code=500, detail="Movie was created but could not be retrieved")
 
     created_movie["_id"] = str(created_movie["_id"]) # Convert ObjectId to string
     
@@ -219,13 +242,24 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
 
 @router.delete("/{id}", response_model=SuccessResponse[dict])
 async def delete_movie_by_id(id: str):
-    object_id = ObjectId(id)
+    try:
+        object_id = ObjectId(id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid movie ID format")
 
-    # Use deleteOne() to remove a single document
-    result = await db.movies.delete_one({"_id": object_id})
+    movies_collection = get_collection("movies")
+    try:
+        # Use deleteOne() to remove a single document
+        result = await movies_collection.delete_one({"_id": object_id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
 
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Movie not found")
+        return create_error_response(
+            message="Movie not found",
+            code="MOVIE_NOT_FOUND", 
+            details=f"No movie found with ID: {id}"
+        )
     
     return create_success_response(
         {"deletedCount": result.deleted_count}, 
@@ -252,16 +286,26 @@ async def delete_movie_by_id(id: str):
 
 @router.delete("/{id}/find-and-delete", response_model=SuccessResponse[Movie])
 async def find_and_delete_movie(id: str):
-    object_id = ObjectId(id)
+    try:
+        object_id = ObjectId(id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid movie ID format")
 
+    movies_collection = get_collection("movies")
     # Use find_one_and_delete() to find and delete in a single atomic operation
     # This is useful when you need to return the deleted document
     # or ensure the document exists before deletion
-    deleted_movie = await db.movies.find_one_and_delete({"_id": object_id})
+    try:
+        deleted_movie = await movies_collection.find_one_and_delete({"_id": object_id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
 
     if deleted_movie is None:
-        raise HTTPException(status_code=404, detail="Movie not found")
-
+        return create_error_response(
+            message="Movie not found",
+            code="MOVIE_NOT_FOUND", 
+            details=f"No movie found with ID: {id}"
+        )
     deleted_movie["_id"] = str(deleted_movie["_id"]) # Convert ObjectId to string
     
     return create_success_response(deleted_movie, "Movie found and deleted successfully")
@@ -269,12 +313,11 @@ async def find_and_delete_movie(id: str):
 async def execute_aggregation(pipeline: list) -> list:
     """Helper function to execute aggregation pipeline and return results"""
     print(f"Executing pipeline: {pipeline}")  # Debug logging
-    print(f"Database name: {db.name if hasattr(db, 'name') else 'unknown'}")
-    print(f"Collection name: movies")
     
-    # For motor (async MongoDB driver), we need to await the aggregate call
-    cursor = await db.movies.aggregate(pipeline)
-    results = await cursor.to_list(length=None)  # Convert cursor to list
+    movies_collection = get_collection("movies")
+    # For the async Pymongo driver, we need to await the aggregate call
+    cursor = await movies_collection.aggregate(pipeline)
+    results = await cursor.to_list(length=None)  # Convert cursor to list to collect all data at once rather than processing data per document
     
     print(f"Aggregation returned {len(results)} results")  # Debug logging
     if len(results) <= 3:  # Log first few results for debugging
