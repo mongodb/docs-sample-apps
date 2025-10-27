@@ -1,0 +1,31 @@
+name: Security Vulnerability Slack Notification
+
+# This workflow runs whenever a Dependabot alert is created or reopened.
+on:
+  dependabot_alert:
+    types: [created, reopened]
+
+jobs:
+  notify_slack_on_alert:
+    if: github.event.action == 'created' || github.event.action == 'reopened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+          SLACK_CHANNEL: '#docs-devdocs-notifications'
+          SLACK_USERNAME: Dependabot Alert
+          SLACK_ICON_EMOJI: ":dependabot:"
+
+          MSG_MINIMAL: true
+          SLACK_MESSAGE: |
+            *🚨 Dependabot Security Alert ${{(github.event.action == 'created' && 'Created') || 'Reopened'}} 🚨*
+
+            *Repository:* ${{ github.repository }}
+            *Vulnerability:* ${{ github.event.alert.security_vulnerability.package.ecosystem }}/${{ github.event.alert.security_vulnerability.package.name }}
+            *Severity:* ${{ github.event.alert.security_vulnerability.severity }}
+            *Summary:* ${{ github.event.alert.security_advisory.summary }}
+
+            *View Details:* ${{ github.event.alert.html_url }}
