@@ -8,6 +8,7 @@ on:
 jobs:
   notify_slack_on_alert:
     runs-on: ubuntu-latest
+    if: github.event_name == 'dependabot_alert'
     steps:
       - name: Send Slack Notification via Direct Curl Payload
         run: |
