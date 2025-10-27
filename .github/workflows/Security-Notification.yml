@@ -2,46 +2,31 @@ name: Security Vulnerability Slack Notification
 
 # This workflow runs whenever a Dependabot alert is created or reopened.
 on:
-  workflow_dispatch:
-    inputs:
-      vulnerability_summary:
-        description: 'Vulnerability Summary'
-        required: true
-        default: 'Test vulnerability found in package-a'
-      alert_url:
-        description: 'Alert URL'
-        required: true
-        default: 'https://github.com/placeholder/alert/test-123'
-      action_type:
-        description: 'Action Type (created or reopened)'
-        required: true
-        default: 'created'
+  dependabot_alert:
+    types: [created, reopened]
 
 jobs:
   notify_slack_on_alert:
-    # if: github.event.action == 'created' || github.event.action == 'reopened'
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack Notification via Direct Curl Payload
         run: |
-          MESSAGE_TEXT="*🧪 Test Dependabot Alert - ${{ github.event.inputs.action_type }} 🧪*\n\n*Repository:* ${{ github.repository }}\n*Test Summary:* ${{ github.event.inputs.vulnerability_summary }}\n\n*View Details:* ${{ github.event.inputs.alert_url }}\n\n:bell: Notification sent to #docs-devdocs-notifications"
+          MESSAGE_TEXT="*🚨 Dependabot Alert: ${{ github.event.action }} 🚨*\n\n*Vulnerability:* ${{ github.event.alert.security_vulnerability.package.ecosystem }} package *${{ github.event.alert.security_vulnerability.package.name }}*\n*Severity:* ${{ github.event.alert.security_vulnerability.severity }}\n*Repository:* ${{ github.repository }}\n\n*View Details:* ${{ github.event.alert.html_url }}"
           
-          # 2. Construct the full JSON payload
           SLACK_PAYLOAD=$(jq -n \
             --arg text "${MESSAGE_TEXT}" \
             '{
               "channel": "#docs-devdocs-notifications",
-              "username": "Dependabot Test Alert",
-              "icon_emoji": ":dependabot:",
+              "username": "Dependabot Notifier",
+              "icon_emoji": ":lock:",
               "text": $text
             }')
 
-          # 3. Send the request directly to the webhook URL
-          # Using 'jq' to properly construct and escape the JSON ensures compatibility.
+          # 3. Send the request directly to the webhook URL stored as a secret
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
                ${{ secrets.SLACK_WEBHOOK }}
         env:
-          # jq is a required tool for this method, but is pre-installed on GitHub runners.
+          # jq is pre-installed on GitHub runners and is used to safely build the JSON payload.
           JQ_VERSION: 1.6
