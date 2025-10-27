@@ -39,16 +39,28 @@ async def get_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
     except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid movie ID format")
+        return create_error_response(
+            message="Invalid movie ID format",
+            code="INTERNAL_SERVER_ERROR",
+            details=f"The provided ID '{id}' is not a valid ObjectId"
+        )
 
     movies_collection = get_collection("movies")
     try:
         movie = await movies_collection.find_one({"_id": object_id})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
 
     if movie is None:
-        raise HTTPException(status_code=400, detail="Movie not found")
+        return create_error_response(
+            message="Movie not found",
+            code="INTERNAL_SERVER_ERROR",
+            details=f"No movie found with ID: {id}"
+        )
 
     movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
     
@@ -111,21 +123,28 @@ async def get_all_movies(
     sort = [(sort_by, sort_order)]
 
     # Query the database with the constructed filter, sort, skip, and limit.
-    cursor = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)    
-    movies = []
-    async for movie in cursor:
-        if movie is None:
-            raise HTTPException(status_code=400, detail="Movie not found")
-        movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
+    try:
+        cursor = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)    
+        movies = []
+        async for movie in cursor:
+            if movie is None:
+                continue  # Skip null movies instead of raising exception
+            movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
 
-        # Ensure that the year field contains int value.
-        if "year" in movie and not isinstance(movie["year"], int):
-            cleaned_year = re.sub(r"\D", "", str(movie["year"]))
-            try:
-                movie["year"] = int(cleaned_year) if cleaned_year else None
-            except ValueError:
-                movie["year"] = None
-        movies.append(movie)            
+            # Ensure that the year field contains int value.
+            if "year" in movie and not isinstance(movie["year"], int):
+                cleaned_year = re.sub(r"\D", "", str(movie["year"]))
+                try:
+                    movie["year"] = int(cleaned_year) if cleaned_year else None
+                except ValueError:
+                    movie["year"] = None
+            movies.append(movie)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
 
     # Return the results wrapped in a SuccessResponse    
     return create_success_response(movies, f"Found {len(movies)} movies.")
@@ -153,20 +172,36 @@ async def create_movie(movie: CreateMovieRequest):
     try:
         result = await movies_collection.insert_one(movie_data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
     
     # Verify that the document was created before querying it
     if not result.acknowledged:
-        raise HTTPException(status_code=500, detail="Failed to create movie")
+        return create_error_response(
+            message="Failed to create movie",
+            code="INTERNAL_SERVER_ERROR",
+            details="The database did not acknowledge the insert operation"
+        )
     
     try:
         # Retrieve the created document to return complete data
         created_movie = await movies_collection.find_one({"_id": result.inserted_id})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
     
     if created_movie is None:
-        raise HTTPException(status_code=500, detail="Movie was created but could not be retrieved")
+        return create_error_response(
+            message="Movie creation verification failed",
+            code="INTERNAL_SERVER_ERROR",
+            details="Movie was created but could not be retrieved for verification"
+        )
 
     created_movie["_id"] = str(created_movie["_id"]) # Convert ObjectId to string
     
@@ -208,7 +243,16 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
     movies_dicts = []
     for movie in movies:
         movies_dicts.append(movie.model_dump(exclude_unset=True, exclude_none=True))
-    result = await movies_collection.insert_many(movies_dicts)
+    
+    try:
+        result = await movies_collection.insert_many(movies_dicts)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during batch creation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+    
     return create_success_response({
         "insertedCount": len(result.inserted_ids),
         "insertedIds": [str(_id) for _id in result.inserted_ids]
@@ -245,19 +289,27 @@ async def delete_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
     except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid movie ID format")
+        return create_error_response(
+            message="Invalid movie ID format",
+            code="INTERNAL_SERVER_ERROR",
+            details=f"The provided ID '{id}' is not a valid ObjectId"
+        )
 
     movies_collection = get_collection("movies")
     try:
         # Use deleteOne() to remove a single document
         result = await movies_collection.delete_one({"_id": object_id})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
 
     if result.deleted_count == 0:
         return create_error_response(
             message="Movie not found",
-            code="MOVIE_NOT_FOUND", 
+            code="INTERNAL_SERVER_ERROR", 
             details=f"No movie found with ID: {id}"
         )
     
@@ -289,7 +341,11 @@ async def find_and_delete_movie(id: str):
     try:
         object_id = ObjectId(id)
     except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid movie ID format")
+        return create_error_response(
+            message="Invalid movie ID format",
+            code="INTERNAL_SERVER_ERROR",
+            details=f"The provided ID '{id}' is not a valid ObjectId"
+        )
 
     movies_collection = get_collection("movies")
     # Use find_one_and_delete() to find and delete in a single atomic operation
@@ -298,12 +354,16 @@ async def find_and_delete_movie(id: str):
     try:
         deleted_movie = await movies_collection.find_one_and_delete({"_id": object_id})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+        return create_error_response(
+            message="Database error occurred",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
 
     if deleted_movie is None:
         return create_error_response(
             message="Movie not found",
-            code="MOVIE_NOT_FOUND", 
+            code="INTERNAL_SERVER_ERROR", 
             details=f"No movie found with ID: {id}"
         )
     deleted_movie["_id"] = str(deleted_movie["_id"]) # Convert ObjectId to string
@@ -326,63 +386,8 @@ async def execute_aggregation(pipeline: list) -> list:
     
     return results
 
-
 """
-    GET /api/movies/aggregate/by-genre
-    Aggregate movies by genre with statistics using MongoDB aggregation pipeline.
-    Demonstrates grouping values from multiple documents and performing operations on grouped data.
-    Returns:
-        SuccessResponse[List[dict]]: A response object containing aggregated genre statistics.
-"""
-
-@router.get("/aggregate/by-genre", response_model=SuccessResponse[List[dict]])
-async def aggregate_movies_by_genre():
-    # Define an aggregation pipeline with match, unwind, group, and sort stages
-    pipeline = [
-        # Clean data: ensure year is an integer
-        {
-            "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
-            }
-        },
-        {"$unwind": "$genres"},
-        {
-            "$group": {
-                "_id": "$genres",
-                "count": {"$sum": 1},
-                "avgRating": {"$avg": "$imdb.rating"},
-                "minYear": {"$min": "$year"},
-                "maxYear": {"$max": "$year"},
-                "totalVotes": {"$sum": "$imdb.votes"}
-            }
-        },
-        {"$sort": {"count": -1}},
-        {
-            "$project": {
-                "genre": "$_id",
-                "movieCount": "$count",
-                "averageRating": {"$round": ["$avgRating", 2]},
-                "yearRange": {
-                    "min": "$minYear",
-                    "max": "$maxYear"
-                },
-                "totalVotes": "$totalVotes",
-                "_id": 0
-            }
-        }
-    ]
-
-    # Execute the aggregation
-    results = await execute_aggregation(pipeline)
-    
-    return create_success_response(
-        results, 
-        f"Aggregated statistics for {len(results)} genres"
-    )
-
-
-"""
-    GET /api/movies/aggregate/recent-commented
+    GET /api/movies/reportingByComments
     Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
     Joins movies with comments collection to show recent comment activity.
     Query Parameters:
@@ -392,7 +397,7 @@ async def aggregate_movies_by_genre():
         SuccessResponse[List[dict]]: A response object containing movies with their most recent comments.
 """
 
-@router.get("/aggregate/recent-commented", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByComments", response_model=SuccessResponse[List[dict]])
 async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
     movie_id: str = Query(default=None)
@@ -412,7 +417,11 @@ async def aggregate_movies_recent_commented(
             object_id = ObjectId(movie_id)
             pipeline[0]["$match"]["_id"] = object_id
         except Exception:
-            raise HTTPException(status_code=400, detail="Invalid movie_id format")
+            return create_error_response(
+                message="Invalid movie ID format",
+                code="INTERNAL_SERVER_ERROR",
+                details="The provided movie_id is not a valid ObjectId"
+            )
     
     # Add lookup and additional pipeline stages
     pipeline.extend([
@@ -451,7 +460,7 @@ async def aggregate_movies_recent_commented(
             "$sort": {"mostRecentCommentDate": -1}
         },
         {
-            "$limit": 50 if movie_id else 20
+            "$limit": limit
         },
         {
             "$project": {
@@ -478,8 +487,15 @@ async def aggregate_movies_recent_commented(
     ])
 
     # Execute the aggregation
-    results = await execute_aggregation(pipeline)
-    
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+
     # Convert ObjectId to string for response
     for result in results:
         if "_id" in result:
@@ -495,14 +511,14 @@ async def aggregate_movies_recent_commented(
 
 
 """
-    GET /api/movies/aggregate/by-year
+    GET /api/movies/reportingByYear
     Aggregate movies by year with average rating and movie count.
     Reports yearly statistics including average rating and total movies per year.
     Returns:
         SuccessResponse[List[dict]]: A response object containing yearly movie statistics.
 """
 
-@router.get("/aggregate/by-year", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByYear", response_model=SuccessResponse[List[dict]])
 async def aggregate_movies_by_year():
     # Define aggregation pipeline to group movies by year
     pipeline = [
@@ -574,7 +590,14 @@ async def aggregate_movies_by_year():
     ]
 
     # Execute the aggregation
-    results = await execute_aggregation(pipeline)
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
     
     return create_success_response(
         results, 
@@ -583,7 +606,7 @@ async def aggregate_movies_by_year():
 
 
 """
-    GET /api/movies/aggregate/directors
+    GET /api/movies/reportingByDirectors
     Aggregate directors with the most movies and their statistics.
     Reports directors sorted by number of movies directed.
     Query Parameters:
@@ -592,7 +615,7 @@ async def aggregate_movies_by_year():
         SuccessResponse[List[dict]]: A response object containing director statistics.
 """
 
-@router.get("/aggregate/directors", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByDirectors", response_model=SuccessResponse[List[dict]])
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
 ):
@@ -632,7 +655,14 @@ async def aggregate_directors_most_movies(
     ]
 
     # Execute the aggregation
-    results = await execute_aggregation(pipeline)
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
     
     return create_success_response(
         results, 
