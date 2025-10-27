@@ -2,7 +2,7 @@ name: Security Vulnerability Slack Notification
 
 # This workflow runs whenever a Dependabot alert is created or reopened.
 on:
-  dependabot_alert:
+  workflow_dispatch:
     types: [created, reopened]
 
 jobs:
