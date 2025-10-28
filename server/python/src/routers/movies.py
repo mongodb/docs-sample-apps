@@ -165,7 +165,7 @@ async def get_all_movies(
 
 @router.post("/", response_model=SuccessResponse[Movie], status_code=201)
 async def create_movie(movie: CreateMovieRequest):
-    # Pydantic will automatically validate the structure
+    # Pydantic automatically validates the structure
     movie_data = movie.model_dump(by_alias=True, exclude_none=True)
     
     movies_collection = get_collection("movies")
@@ -423,8 +423,29 @@ async def aggregate_movies_recent_commented(
                 details="The provided movie_id is not a valid ObjectId"
             )
     
-    # Add lookup and additional pipeline stages
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies by valid year range
+    # 2. Joins with comments collection (like SQL JOIN)
+    # 3. Filters to only movies that have comments
+    # 4. Sorts comments by date and extracts most recent ones
+    # 5. Sorts movies by their most recent comment date
+    # 6. Shapes the final output with transformed comment structure
+    
+    pipeline = [
+        # STAGE 1: $match - Initial Filter
+        # Filter movies to only those with valid year data
+        # Tip: Use $match early to reduce the initial dataset for better performance
+        {
+            "$match": {
+                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+            }
+        }
+    ]
+    
+    # Add remaining pipeline stages
     pipeline.extend([
+        # STAGE 2: $lookup - Join with the 'comments' Collection
+        # This gives each movie document a 'comments' array containing all its comments
         {
             "$lookup": {
                 "from": "comments",
@@ -433,59 +454,74 @@ async def aggregate_movies_recent_commented(
                 "as": "comments"
             }
         },
+        # STAGE 3: $match - Filter Movies with at Least One Comment
+        # This helps reduces dataset to only movies with user engagement
         {
             "$match": {
                 "comments": {"$ne": []}
             }
         },
+        # STAGE 4: $addFields - Add New Computed Fields
         {
             "$addFields": {
+                # Add computed field 'recentComments' that extracts only the N most recent comments (up to 'limit')
                 "recentComments": {
                     "$slice": [
                         {
                             "$sortArray": {
                                 "input": "$comments",
-                                "sortBy": {"date": -1}
+                                "sortBy": {"date": -1}  # -1 = descending (newest first)
                             }
                         },
-                        limit
+                        limit  # Number of comments to keep
                     ]
                 },
+                # Add computed field 'mostRecentCommentDate' that gets the date of the most recent comment (to use in the next $sort stage)
                 "mostRecentCommentDate": {
                     "$max": "$comments.date"
                 }
             }
         },
+        # STAGE 5: $sort - Sort Movies by Most Recent Comment Date
         {
             "$sort": {"mostRecentCommentDate": -1}
         },
+        # STAGE 6: $limit - Restrict Result Set Size
+        # - If querying single movie: return up to 50 results
+        # - If querying all movies: return up to 20 results
+        # Tip: This prevents overwhelming the client with too much data
         {
-            "$limit": limit
+            "$limit": 50 if movie_id else 20
         },
+        # STAGE 7: $project - Shape Final Response Output
         {
             "$project": {
+                # Include basic movie fields
                 "title": 1,
                 "year": 1,
                 "genres": 1,
+                "_id": 1,
+                # Extract nested field: imdb.rating -> imdbRating
                 "imdbRating": "$imdb.rating",
+                # Use $map to reshape computed 'recentComments' field with cleaner field names
                 "recentComments": {
                     "$map": {
                         "input": "$recentComments",
                         "as": "comment",
                         "in": {
-                            "userName": "$$comment.name",
-                            "userEmail": "$$comment.email",
-                            "text": "$$comment.text",
-                            "date": "$$comment.date"
+                            "userName": "$$comment.name",      # Rename: name -> userName
+                            "userEmail": "$$comment.email",    # Rename: email -> userEmail
+                            "text": "$$comment.text",          # Keep: text
+                            "date": "$$comment.date"           # Keep: date
                         }
                     }
                 },
-                "totalComments": {"$size": "$comments"},
-                "_id": 1
+                # Calculate the total number of comments into 'totalComments' (not just 'recentComments')
+                # Used in display (e.g., "Showing 5 of 127 comments")
+                "totalComments": {"$size": "$comments"}
             }
         }
     ])
-
     # Execute the aggregation
     try:
         results = await execute_aggregation(pipeline)
@@ -520,32 +556,48 @@ async def aggregate_movies_recent_commented(
 
 @router.get("/api/movies/reportingByYear", response_model=SuccessResponse[List[dict]])
 async def aggregate_movies_by_year():
-    # Define aggregation pipeline to group movies by year
+    # Define aggregation pipeline to group movies by year with statistics
+    # This pipeline demonstrates grouping, statistical calculations, and data cleaning
+
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies by valid year range (data quality filter)
+    # 2. Groups movies by release year and calculates statistics per year
+    # 3. Shapes the final output with clean field names and rounded averages
+    # 4. Sorts results by year (newest first) for chronological presentation
+    
     pipeline = [
+        # STAGE 1: $match - Data Quality Filter
         # Clean data: ensure year is an integer and within reasonable range
+        # Tip: Filter early to reduce dataset size and improve performance
         {
             "$match": {
                 "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
             }
         },
-        # Group by year and calculate statistics
+        
+        # STAGE 2: $group - Aggregate Movies by Year
+        # Group all movies by their release year and calculate various statistics
         {
             "$group": {
-                "_id": "$year",
-                "movieCount": {"$sum": 1},
+                "_id": "$year",  # Group by year field
+                "movieCount": {"$sum": 1},  # Count total movies per year
+                
+                # Calculate average rating (only for valid numeric ratings)
                 "averageRating": {
                     "$avg": {
                         "$cond": [
                             {"$and": [
-                                {"$ne": ["$imdb.rating", None]},
-                                {"$ne": ["$imdb.rating", ""]},
-                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}
+                                {"$ne": ["$imdb.rating", None]},           # Not null
+                                {"$ne": ["$imdb.rating", ""]},             # Not empty string
+                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}  # Is numeric
                             ]},
-                            "$imdb.rating",
-                            "$$REMOVE"
+                            "$imdb.rating",  # Include valid IMDB ratings
+                            "$$REMOVE"       # Exclude invalid IMDB ratings
                         ]
                     }
                 },
+                
+                # Find highest rating for the year (same validation as average rating)
                 "highestRating": {
                     "$max": {
                         "$cond": [
@@ -559,6 +611,8 @@ async def aggregate_movies_by_year():
                         ]
                     }
                 },
+                
+                # Find lowest rating for the year (same validation as average and highest rating)
                 "lowestRating": {
                     "$min": {
                         "$cond": [
@@ -572,21 +626,29 @@ async def aggregate_movies_by_year():
                         ]
                     }
                 },
+                
+                # Sum total votes across all movies in the year
                 "totalVotes": {"$sum": "$imdb.votes"}
             }
         },
+        
+        # STAGE 3: $project - Shape Final Output
+        # Transform the grouped data into a clean, readable format
         {
             "$project": {
-                "year": "$_id",
+                "year": "$_id",  # Rename _id back to year because grouping was done by year but values were stored in _id
                 "movieCount": 1,
-                "averageRating": {"$round": ["$averageRating", 2]},
+                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
                 "highestRating": 1,
                 "lowestRating": 1,
                 "totalVotes": 1,
-                "_id": 0
+                "_id": 0  # Exclude the _id field from output
             }
         },
-        {"$sort": {"year": -1}}
+        
+        # STAGE 4: $sort - Sort by Year (Newest First)
+        # Sort results in descending order to show most recent years first
+        {"$sort": {"year": -1}}  # -1 = descending order
     ]
 
     # Execute the aggregation
@@ -619,37 +681,69 @@ async def aggregate_movies_by_year():
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
 ):
-    # Define aggregation pipeline to find directors with most movies
+    # Define aggregation pipeline to find directors with the most movies
+    # This pipeline demonstrates array unwinding, filtering, and ranking
+    
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies with valid directors and year data (data quality filter)
+    # 2. Unwinds directors array to create separate documents per director
+    # 3. Cleans director names by filtering out null/empty names
+    # 4. Groups movies by individual director and calculates statistics per director
+    # 5. Sorts directors based on movie count
+    # 6. Limits results to top N directors
+    # 7. Shapes the final output with clean field names and rounded averages
+
     pipeline = [
+        # STAGE 1: $match - Initial Data Quality Filter
+        # Filter movies that have director information and valid years
         {
             "$match": {
-                "directors": {"$exists": True, "$ne": None, "$ne": []},
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+                "directors": {"$exists": True, "$ne": None, "$ne": []},  # Has directors array
+                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}  # Valid year range
             }
         },
+        
+        # STAGE 2: $unwind - Flatten Directors Array
+        # Convert each movie's directors array into separate documents
+        # Example: Movie with ["Director A", "Director B"] becomes 2 documents
         {
             "$unwind": "$directors"
         },
+        
+        # STAGE 3: $match - Clean Director Names
+        # Filter out any null or empty director names after unwinding
         {
             "$match": {
                 "directors": {"$ne": None, "$ne": ""}
             }
         },
+        
+        # STAGE 4: $group - Aggregate by Director
+        # Group all movies by director name and calculate statistics
         {
             "$group": {
-                "_id": "$directors",
-                "movieCount": {"$sum": 1},
-                "averageRating": {"$avg": "$imdb.rating"}
+                "_id": "$directors",  # Group by individual director name
+                "movieCount": {"$sum": 1},  # Count movies per director
+                "averageRating": {"$avg": "$imdb.rating"}  # Average rating of director's movies
             }
         },
-        {"$sort": {"movieCount": -1}},
+        
+        # STAGE 5: $sort - Rank Directors by Movie Count
+        # Sort directors by number of movies (highest first)
+        {"$sort": {"movieCount": -1}},  # -1 = descending (most movies first)
+        
+        # STAGE 6: $limit - Restrict Results
+        # Limit to top N directors based on user input
         {"$limit": limit},
+        
+        # STAGE 7: $project - Shape Final Output
+        # Transform the grouped data into a clean, readable format
         {
             "$project": {
-                "director": "$_id",
+                "director": "$_id",  # Rename _id to director
                 "movieCount": 1,
-                "averageRating": {"$round": ["$averageRating", 2]},
-                "_id": 0
+                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
+                "_id": 0  # Exclude the _id field from output
             }
         }
     ]
