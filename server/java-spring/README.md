@@ -102,7 +102,7 @@ Once the application is running, you can access:
 
 ## API Endpoints
 
-### Movies
+### Movies (✅ Implemented)
 
 - `GET /api/movies` - Get all movies (with filtering, sorting, pagination)
 - `GET /api/movies/{id}` - Get a single movie by ID
@@ -114,7 +114,14 @@ Once the application is running, you can access:
 - `DELETE /api/movies` - Delete multiple movies
 - `DELETE /api/movies/{id}/find-and-delete` - Find and delete a movie
 
-> **Note**: Full endpoint implementation is planned for later phases. See the implementation plan for details.
+### Planned Endpoints
+
+See [TODO.md](TODO.md) for a complete list of planned features including:
+- Comments API
+- Users API
+- Sessions API (Authentication)
+- Theaters API (with geospatial queries)
+- Advanced movie features (aggregations, recommendations)
 
 ## Development
 
@@ -137,19 +144,28 @@ java -jar target/sample-mflix-spring-1.0.0.jar
 
 ## Implementation Status
 
-This project is being implemented in phases:
+### ✅ Completed Features
 
-- ✅ **Phase 1**: Project Setup and Configuration (CURRENT)
-- ⏳ **Phase 2**: Database Configuration and Connection
-- ⏳ **Phase 3**: Model Layer Implementation
-- ⏳ **Phase 4**: Repository Layer
-- ⏳ **Phase 5**: Service Layer
-- ⏳ **Phase 6**: Controller Layer
-- ⏳ **Phase 7**: Error Handling
-- ⏳ **Phase 8**: Testing
-- ⏳ **Phase 9**: Documentation and Polish
+- **Movies CRUD API** - Full create, read, update, delete operations
+- **Spring Data MongoDB** - Repository pattern with MongoTemplate for complex queries
+- **Text Search** - Full-text search on movie titles, plots, and genres
+- **Filtering & Pagination** - Query parameters for filtering, sorting, and pagination
+- **Custom Exception Handling** - Global exception handler with proper HTTP status codes
+- **Type-Safe DTOs** - Specific response types instead of generic Maps
+- **Unit Tests** - 35 tests covering service and controller layers
+- **OpenAPI Documentation** - Swagger UI available at `/swagger-ui.html`
+- **Database Verification** - Startup checks for database connectivity and indexes
 
-See `JAVA-SPRING-IMPLEMENTATION-PLAN.md` in the repository root for the complete implementation plan.
+### 🚧 In Progress / Planned
+
+See [TODO.md](TODO.md) for a comprehensive list of planned features and improvements, including:
+
+- Additional collections (Comments, Users, Sessions, Theaters)
+- Authentication & Authorization (Spring Security + JWT)
+- Integration tests with Testcontainers
+- Advanced queries (aggregations, geospatial, vector search)
+- Performance optimization and caching
+- Monitoring and observability
 
 ## Technology Stack
 

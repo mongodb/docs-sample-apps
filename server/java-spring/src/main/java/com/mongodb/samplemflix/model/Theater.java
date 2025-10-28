@@ -5,23 +5,37 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
  * Domain model representing a theater document from the MongoDB theaters collection.
  * <p>
  * This class maps to the theaters collection in the sample_mflix database.
  * It includes location information with address and geospatial coordinates.
+ *
+ * TODO: Implement Theater functionality:
+ * - Create TheaterRepository extending MongoRepository
+ * - Create TheaterService and TheaterServiceImpl
+ * - Create TheaterController with REST endpoints
+ * - Implement geospatial queries (findNear, findWithinRadius)
+ * - Add validation annotations
+ * - Add unit tests for Theater service and controller
+ * - Add integration tests with geospatial queries
+ * - Add GeoJSON support for location queries
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "theaters")
 public class Theater {
     
     /**
      * MongoDB document ID.
      * Maps to the _id field in MongoDB.
      */
+    @Id
     private ObjectId id;
     
     /**
@@ -100,6 +114,21 @@ public class Theater {
              * Note: GeoJSON uses longitude first, then latitude.
              */
             private double[] coordinates;
+        }
+    }
+
+    /**
+     * Field name constants for type-safe queries.
+     */
+    public static class Fields {
+        public static final String ID = "_id";
+        public static final String THEATER_ID = "theaterId";
+        public static final String LOCATION = "location";
+        public static final String LOCATION_GEO = "location.geo";
+        public static final String LOCATION_ADDRESS = "location.address";
+
+        private Fields() {
+            // Private constructor to prevent instantiation
         }
     }
 }

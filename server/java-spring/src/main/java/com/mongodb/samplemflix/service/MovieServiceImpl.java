@@ -330,4 +330,13 @@ public class MovieServiceImpl implements MovieService {
 
         return update;
     }
+
+    // TODO: Add advanced query methods
+    // - getMoviesByGenreStatistics() - Aggregation pipeline for genre statistics
+    // - getTopRatedMovies(int limit) - Movies sorted by rating
+    // - getMoviesByDecade(int decade) - Movies from a specific decade
+    // - getDirectorFilmography(String director) - All movies by a director
+    // - getActorFilmography(String actor) - All movies featuring an actor
+    // - searchSimilarMovies(String movieId) - Vector search on plot_embedding field
+    // - getMovieRecommendations(String userId) - Personalized recommendations
 }
