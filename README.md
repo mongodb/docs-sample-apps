@@ -7,6 +7,9 @@ having issues with the sample app, please refer to the `Issues` section below.
 ## Sample Apps
 
 This repository currently contains a single sample app using the `mflix` dataset.
+
+### MFlix Sample App
+
 The sample app provides a Next.js frontend in the `client` directory, with the
 choice of three backend stacks in the `server` directory:
 
@@ -89,12 +92,7 @@ To test and verify the PR, navigate to the target repository - see
   - [ ] Run the application and verify that it functions as expected.
 - [ ] Review the `deprecated_examples.json` file for any files that need to be
   deleted. If files are deleted:
-  - [ ] Review documentation references to ensure that any deleted files are not
-    referred to. If they are, update the documentation to refer to the correct
-    file.
   - [ ] Add a commit to the copier PR to delete the files from the target repository.
-- [ ] If the PR is for a new version of an existing sample app, update the
-  documentation to refer to the new version.
 - [ ] Merge the PR.
 
 ## Issues
