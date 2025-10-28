@@ -21,6 +21,29 @@
   text-align: center;
 }
 
+.batchDescription {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #495057;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.generalError {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .form {
   width: 100%;
 }

@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import pageStyles from "./page.module.css";
 import movieStyles from "./movies.module.css";
-import { MovieCard, Pagination, PageSizeSelector, AddMovieForm } from "../components";
+import { MovieCard, Pagination, PageSizeSelector, AddMovieForm, BatchEditMovieForm } from "../components";
 import { ErrorDisplay, LoadingSpinner } from "../components/ui";
-import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch } from "../lib/api";
+import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch } from "../lib/api";
 import { Movie } from "../types/movie";
 import { APP_CONFIG, ROUTES } from "../lib/constants";
 
@@ -20,7 +20,9 @@ export default function Movies() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showBatchEditForm, setShowBatchEditForm] = useState(false);
   const [selectedMovies, setSelectedMovies] = useState<Set<string>>(new Set());
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +132,44 @@ export default function Movies() {
     }
   };
 
+  const handleBatchUpdate = () => {
+    if (selectedMovies.size > 0) {
+      setShowBatchEditForm(true);
+      setError(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  const handleCancelBatchEdit = () => {
+    setShowBatchEditForm(false);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleSaveBatchEdit = async (updateData: Partial<Movie>) => {
+    setIsUpdating(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    const movieIds = Array.from(selectedMovies);
+    const result = await updateMoviesBatch(movieIds, updateData);
+
+    if (result.success) {
+      setSuccessMessage(`Successfully updated ${result.modifiedCount} out of ${result.matchedCount} movies!`);
+      setShowBatchEditForm(false);
+      setSelectedMovies(new Set()); // Clear selection
+      
+      // Refresh the movies list
+      setTimeout(() => {
+        loadMovies();
+      }, 1500);
+    } else {
+      setError(result.error || 'Failed to update movies');
+    }
+
+    setIsUpdating(false);
+  };
+
   const confirmBatchDelete = async () => {
     setIsDeleting(true);
     setError(null);
@@ -179,24 +219,35 @@ export default function Movies() {
           
           <div className={movieStyles.headerActions}>
             {/* Batch Selection Controls */}
-            {!showAddForm && movies.length > 0 && (
+            {!showAddForm && !showBatchEditForm && movies.length > 0 && (
               <div className={movieStyles.selectionControls}>
                 {selectedMovies.size > 0 && (
-                  <button
-                    onClick={handleBatchDelete}
-                    disabled={isDeleting}
-                    className={movieStyles.batchDeleteButton}
-                    type="button"
-                  >
-                    {isDeleting ? 'Deleting...' : `Delete ${selectedMovies.size} Selected`}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleBatchUpdate}
+                      disabled={isUpdating}
+                      className={movieStyles.batchUpdateButton}
+                      type="button"
+                    >
+                      {isUpdating ? 'Updating...' : `Update ${selectedMovies.size} Selected`}
+                    </button>
+                    
+                    <button
+                      onClick={handleBatchDelete}
+                      disabled={isDeleting}
+                      className={movieStyles.batchDeleteButton}
+                      type="button"
+                    >
+                      {isDeleting ? 'Deleting...' : `Delete ${selectedMovies.size} Selected`}
+                    </button>
+                  </>
                 )}
               </div>
             )}
 
             <button
               onClick={handleAddMovie}
-              disabled={showAddForm || isCreating}
+              disabled={showAddForm || showBatchEditForm || isCreating}
               className={movieStyles.addButton}
               type="button"
             >
@@ -227,11 +278,21 @@ export default function Movies() {
           />
         )}
 
+        {/* Batch Edit Movie Form */}
+        {showBatchEditForm && (
+          <BatchEditMovieForm
+            selectedCount={selectedMovies.size}
+            onSave={handleSaveBatchEdit}
+            onCancel={handleCancelBatchEdit}
+            isLoading={isUpdating}
+          />
+        )}
+
         {/* Page Size Selector */}
-        {!showAddForm && <PageSizeSelector currentLimit={limit} />}
+        {!showAddForm && !showBatchEditForm && <PageSizeSelector currentLimit={limit} />}
         
         {/* Movies Content */}
-        {!showAddForm && (
+        {!showAddForm && !showBatchEditForm && (
           <>
             {error && movies.length === 0 ? (
               <ErrorDisplay 
@@ -251,7 +312,7 @@ export default function Movies() {
                       movie={movie} 
                       isSelected={selectedMovies.has(movie._id)}
                       onSelectionChange={handleMovieSelection}
-                      showCheckbox={!showAddForm}
+                      showCheckbox={!showAddForm && !showBatchEditForm}
                     />
                   ))}
                 </div>

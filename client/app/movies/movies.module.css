@@ -69,6 +69,30 @@
   transform: none;
 }
 
+.batchUpdateButton {
+  padding: 0.5rem 1rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batchUpdateButton:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.batchUpdateButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .confirmationOverlay {
   position: fixed;
   top: 0;
@@ -285,7 +309,8 @@
   }
 
   .selectAllButton,
-  .batchDeleteButton {
+  .batchDeleteButton,
+  .batchUpdateButton {
     width: 100%;
     padding: 0.75rem 1rem;
   }

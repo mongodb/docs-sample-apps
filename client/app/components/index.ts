@@ -5,6 +5,7 @@ export { default as PageSizeSelector } from './PageSizeSelector';
 export { default as ActionButtons } from './ActionButtons';
 export { default as EditMovieForm } from './EditMovieForm';
 export { default as AddMovieForm } from './AddMovieForm';
+export { default as BatchEditMovieForm } from './BatchEditMovieForm';
 export { 
   Skeleton, 
   MovieCardSkeleton, 

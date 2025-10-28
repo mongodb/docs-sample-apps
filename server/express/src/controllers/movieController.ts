@@ -353,9 +353,23 @@ export async function updateMoviesBatch(
 
   const moviesCollection = getCollection("movies");
 
+  // Handle ObjectId conversion for _id fields in $in queries
+  let processedFilter = { ...filter };
+  if (filter._id && filter._id.$in && Array.isArray(filter._id.$in)) {
+    // Convert string IDs to ObjectId instances
+    processedFilter._id = {
+      $in: filter._id.$in.map((id: string) => {
+        if (ObjectId.isValid(id)) {
+          return new ObjectId(id);
+        }
+        throw new Error(`Invalid ObjectId: ${id}`);
+      })
+    };
+  }
+
   // Use updateMany() to update multiple documents
   // This is useful for bulk operations like updating all movies from a certain year
-  const result = await moviesCollection.updateMany(filter, { $set: update });
+  const result = await moviesCollection.updateMany(processedFilter, { $set: update });
 
   res.json(
     createSuccessResponse(

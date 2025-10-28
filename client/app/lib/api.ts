@@ -312,3 +312,53 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
     };
   }
 }
+
+/**
+ * Update multiple movies in a batch operation
+ */
+export async function updateMoviesBatch(movieIds: string[], updateData: Partial<Movie>): Promise<{ success: boolean; error?: string; matchedCount?: number; modifiedCount?: number }> {
+  try {
+    // Create filter to match the movie IDs
+    const filter = {
+      _id: {
+        $in: movieIds
+      }
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ filter, update: updateData }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to update movies: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { 
+      success: true, 
+      matchedCount: result.data.matchedCount,
+      modifiedCount: result.data.modifiedCount
+    };
+  } catch (error) {
+    console.error('Error updating movies batch:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while updating movies' 
+    };
+  }
+}
