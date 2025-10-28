@@ -19,7 +19,7 @@ jobs:
           
           # Fetch open alerts from GitHub API
           RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts?state=open")
+            "https://github.com/mongodb/docs-sample-apps/security/dependabot/alerts?state=open")
 
           ALERT_COUNT=$(echo "$RESPONSE" | jq length)
           echo "Found $ALERT_COUNT open alerts."
