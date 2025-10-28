@@ -402,26 +402,6 @@ async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
     movie_id: str = Query(default=None)
 ):
-    # Define aggregation pipeline to join movies with their most recent comments
-    pipeline = [
-        {
-            "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
-            }
-        }
-    ]
-    
-    # Add movie_id filter if provided
-    if movie_id:
-        try:
-            object_id = ObjectId(movie_id)
-            pipeline[0]["$match"]["_id"] = object_id
-        except Exception:
-            return create_error_response(
-                message="Invalid movie ID format",
-                code="INTERNAL_SERVER_ERROR",
-                details="The provided movie_id is not a valid ObjectId"
-            )
     
     # Add a multi-stage aggregation that:
     # 1. Filters movies by valid year range
@@ -441,6 +421,18 @@ async def aggregate_movies_recent_commented(
             }
         }
     ]
+
+    # Add movie_id filter if provided
+    if movie_id:
+        try:
+            object_id = ObjectId(movie_id)
+            pipeline[0]["$match"]["_id"] = object_id
+        except Exception:
+            return create_error_response(
+                message="Invalid movie ID format",
+                code="INTERNAL_SERVER_ERROR",
+                details="The provided movie_id is not a valid ObjectId"
+            )
     
     # Add remaining pipeline stages
     pipeline.extend([
