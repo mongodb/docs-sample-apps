@@ -1,7 +1,10 @@
 package com.mongodb.samplemflix.controller;
 
 import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
+import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.model.response.SuccessResponse;
@@ -125,17 +128,17 @@ public class MovieControllerImpl {
      * Creates multiple movie documents in a single operation.
      */
     @PostMapping("/batch")
-    public ResponseEntity<SuccessResponse<Map<String, Object>>> createMoviesBatch(
+    public ResponseEntity<SuccessResponse<BatchInsertResponse>> createMoviesBatch(
             @RequestBody List<CreateMovieRequest> requests) {
-        Map<String, Object> result = movieService.createMoviesBatch(requests);
-        
-        SuccessResponse<Map<String, Object>> response = SuccessResponse.<Map<String, Object>>builder()
+        BatchInsertResponse result = movieService.createMoviesBatch(requests);
+
+        SuccessResponse<BatchInsertResponse> response = SuccessResponse.<BatchInsertResponse>builder()
                 .success(true)
-                .message("Successfully created " + result.get("insertedCount") + " movies")
+                .message("Successfully created " + result.getInsertedCount() + " movies")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
-        
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
@@ -167,17 +170,17 @@ public class MovieControllerImpl {
      */
     @SuppressWarnings("unchecked")
     @PatchMapping
-    public ResponseEntity<SuccessResponse<Map<String, Object>>> updateMoviesBatch(
+    public ResponseEntity<SuccessResponse<BatchUpdateResponse>> updateMoviesBatch(
             @RequestBody Map<String, Object> body) {
         Document filter = new Document((Map<String, Object>) body.get("filter"));
         Document update = new Document((Map<String, Object>) body.get("update"));
 
-        Map<String, Object> result = movieService.updateMoviesBatch(filter, update);
+        BatchUpdateResponse result = movieService.updateMoviesBatch(filter, update);
 
-        SuccessResponse<Map<String, Object>> response = SuccessResponse.<Map<String, Object>>builder()
+        SuccessResponse<BatchUpdateResponse> response = SuccessResponse.<BatchUpdateResponse>builder()
                 .success(true)
-                .message("Update operation completed. Matched " + result.get("matchedCount") +
-                        " documents, modified " + result.get("modifiedCount") + " documents.")
+                .message("Update operation completed. Matched " + result.getMatchedCount() +
+                        " documents, modified " + result.getModifiedCount() + " documents.")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
@@ -210,16 +213,16 @@ public class MovieControllerImpl {
      * Deletes a single movie document.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<SuccessResponse<Map<String, Object>>> deleteMovie(@PathVariable String id) {
-        Map<String, Object> result = movieService.deleteMovie(id);
-        
-        SuccessResponse<Map<String, Object>> response = SuccessResponse.<Map<String, Object>>builder()
+    public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMovie(@PathVariable String id) {
+        DeleteResponse result = movieService.deleteMovie(id);
+
+        SuccessResponse<DeleteResponse> response = SuccessResponse.<DeleteResponse>builder()
                 .success(true)
                 .message("Movie deleted successfully")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
     
@@ -230,15 +233,15 @@ public class MovieControllerImpl {
      */
     @SuppressWarnings("unchecked")
     @DeleteMapping
-    public ResponseEntity<SuccessResponse<Map<String, Object>>> deleteMoviesBatch(
+    public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMoviesBatch(
             @RequestBody Map<String, Object> body) {
         Document filter = new Document((Map<String, Object>) body.get("filter"));
 
-        Map<String, Object> result = movieService.deleteMoviesBatch(filter);
+        DeleteResponse result = movieService.deleteMoviesBatch(filter);
 
-        SuccessResponse<Map<String, Object>> response = SuccessResponse.<Map<String, Object>>builder()
+        SuccessResponse<DeleteResponse> response = SuccessResponse.<DeleteResponse>builder()
                 .success(true)
-                .message("Delete operation completed. Removed " + result.get("deletedCount") + " documents.")
+                .message("Delete operation completed. Removed " + result.getDeletedCount() + " documents.")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();

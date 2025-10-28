@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.service.MovieService;
+import org.bson.BsonObjectId;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -202,9 +205,10 @@ class MovieControllerTest {
     void testCreateMoviesBatch_Success() throws Exception {
         // Arrange
         List<CreateMovieRequest> requests = Arrays.asList(createRequest, createRequest);
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("insertedCount", 2);
+        Map<Integer, org.bson.BsonValue> insertedIds = new HashMap<>();
+        insertedIds.put(0, new BsonObjectId(new ObjectId()));
+        insertedIds.put(1, new BsonObjectId(new ObjectId()));
+        BatchInsertResponse response = new BatchInsertResponse(2, insertedIds.values());
 
         when(movieService.createMoviesBatch(anyList())).thenReturn(response);
 
@@ -267,9 +271,7 @@ class MovieControllerTest {
     void testDeleteMovie_Success() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("deletedCount", 1L);
+        DeleteResponse response = new DeleteResponse(1L);
 
         when(movieService.deleteMovie(movieId)).thenReturn(response);
 

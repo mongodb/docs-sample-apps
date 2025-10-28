@@ -1,13 +1,15 @@
 package com.mongodb.samplemflix.service;
 
 import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
+import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import org.bson.Document;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Service interface for movie business logic.
@@ -20,15 +22,15 @@ public interface MovieService {
 
     Movie createMovie(CreateMovieRequest request);
 
-    Map<String, Object> createMoviesBatch(List<CreateMovieRequest> requests);
+    BatchInsertResponse createMoviesBatch(List<CreateMovieRequest> requests);
 
     Movie updateMovie(String id, UpdateMovieRequest request);
 
-    Map<String, Object> updateMoviesBatch(Document filter, Document update);
+    BatchUpdateResponse updateMoviesBatch(Document filter, Document update);
 
-    Map<String, Object> deleteMovie(String id);
+    DeleteResponse deleteMovie(String id);
 
-    Map<String, Object> deleteMoviesBatch(Document filter);
+    DeleteResponse deleteMoviesBatch(Document filter);
 
     Movie findAndDeleteMovie(String id);
 }

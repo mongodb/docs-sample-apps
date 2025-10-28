@@ -9,7 +9,9 @@ import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
@@ -295,12 +297,12 @@ class MovieServiceTest {
         when(movieRepository.insertMany(anyList())).thenReturn(insertResult);
 
         // Act
-        Map<String, Object> result = movieService.createMoviesBatch(requests);
+        BatchInsertResponse result = movieService.createMoviesBatch(requests);
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.get("insertedCount"));
-        assertNotNull(result.get("insertedIds"));
+        assertEquals(2, result.getInsertedCount());
+        assertNotNull(result.getInsertedIds());
         verify(movieRepository).insertMany(anyList());
     }
 
@@ -403,11 +405,11 @@ class MovieServiceTest {
         when(movieRepository.deleteOne(testId)).thenReturn(deleteResult);
 
         // Act
-        Map<String, Object> result = movieService.deleteMovie(validId);
+        DeleteResponse result = movieService.deleteMovie(validId);
 
         // Assert
         assertNotNull(result);
-        assertEquals(1L, result.get("deletedCount"));
+        assertEquals(1L, result.getDeletedCount());
         verify(movieRepository).deleteOne(testId);
     }
 

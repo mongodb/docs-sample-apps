@@ -9,7 +9,10 @@ import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
+import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
+import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
+import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
@@ -95,18 +98,18 @@ public class MovieServiceImpl implements MovieService {
     }
     
     @Override
-    public Map<String, Object> createMoviesBatch(List<CreateMovieRequest> requests) {
+    public BatchInsertResponse createMoviesBatch(List<CreateMovieRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             throw new ValidationException("Request body must be a non-empty array of movie objects");
         }
-        
+
         for (int i = 0; i < requests.size(); i++) {
             CreateMovieRequest request = requests.get(i);
             if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
                 throw new ValidationException("Movie at index " + i + ": Title is required");
             }
         }
-        
+
         List<Movie> movies = requests.stream()
                 .map(request -> Movie.builder()
                         .title(request.getTitle())
@@ -124,16 +127,16 @@ public class MovieServiceImpl implements MovieService {
                         .poster(request.getPoster())
                         .build())
                 .toList();
-        
+
         InsertManyResult result = movieRepository.insertMany(movies);
 
         if (!result.wasAcknowledged()) {
             throw new DatabaseOperationException("Batch movie insertion was not acknowledged by the database");
         }
-        
-        return Map.of(
-                "insertedCount", result.getInsertedIds().size(),
-                "insertedIds", result.getInsertedIds().values()
+
+        return new BatchInsertResponse(
+                result.getInsertedIds().size(),
+                result.getInsertedIds().values()
         );
     }
     
@@ -159,48 +162,48 @@ public class MovieServiceImpl implements MovieService {
     }
     
     @Override
-    public Map<String, Object> updateMoviesBatch(Document filter, Document update) {
+    public BatchUpdateResponse updateMoviesBatch(Document filter, Document update) {
         if (filter == null || update == null) {
             throw new ValidationException("Both filter and update objects are required");
         }
-        
+
         if (update.isEmpty()) {
             throw new ValidationException("Update object cannot be empty");
         }
-        
+
         Document setUpdate = new Document("$set", update);
         UpdateResult result = movieRepository.updateMany(filter, setUpdate);
-        
-        return Map.of(
-                "matchedCount", result.getMatchedCount(),
-                "modifiedCount", result.getModifiedCount()
+
+        return new BatchUpdateResponse(
+                result.getMatchedCount(),
+                result.getModifiedCount()
         );
     }
     
     @Override
-    public Map<String, Object> deleteMovie(String id) {
+    public DeleteResponse deleteMovie(String id) {
         if (!ObjectId.isValid(id)) {
             throw new ValidationException("Invalid movie ID format");
         }
-        
+
         DeleteResult result = movieRepository.deleteOne(new ObjectId(id));
-        
+
         if (result.getDeletedCount() == 0) {
             throw new ResourceNotFoundException("Movie not found");
         }
-        
-        return Map.of("deletedCount", result.getDeletedCount());
+
+        return new DeleteResponse(result.getDeletedCount());
     }
     
     @Override
-    public Map<String, Object> deleteMoviesBatch(Document filter) {
+    public DeleteResponse deleteMoviesBatch(Document filter) {
         if (filter == null || filter.isEmpty()) {
             throw new ValidationException("Filter object is required and cannot be empty. This prevents accidental deletion of all documents.");
         }
-        
+
         DeleteResult result = movieRepository.deleteMany(filter);
-        
-        return Map.of("deletedCount", result.getDeletedCount());
+
+        return new DeleteResponse(result.getDeletedCount());
     }
     
     @Override
