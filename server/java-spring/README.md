@@ -170,10 +170,10 @@ See [TODO.md](TODO.md) for a comprehensive list of planned features and improvem
 ## Technology Stack
 
 - **Framework**: Spring Boot 3.5.7
-- **Java Version**: 17
+- **Java Version**: 21
 - **MongoDB**: Spring Data MongoDB 4.5.5
 - **Build Tool**: Maven
-- **API Documentation**: SpringDoc OpenAPI 2.3.0
+- **API Documentation**: SpringDoc OpenAPI 2.8.13
 - **Testing**: JUnit 5, Mockito, Spring Boot Test
 
 ## Educational Purpose
