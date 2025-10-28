@@ -5,11 +5,16 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.codecs.pojo.PojoCodecProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.TimeUnit;
+
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
+import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
 /**
  * MongoDB configuration class for the Sample MFlix application.
@@ -64,12 +69,25 @@ public class MongoConfig {
             );
         }
 
+        // Create the POJO codec provider, enabling automatic POJO discovery
+        CodecRegistry pojoCodecRegistry = fromProviders(
+                PojoCodecProvider.builder().automatic(true).build()
+        );
+
+        // Combine the default registry with your new POJO registry
+        // IMPORTANT: The default registry must come FIRST.
+        CodecRegistry registry = fromRegistries(
+                MongoClientSettings.getDefaultCodecRegistry(),
+                pojoCodecRegistry
+        );
+
         // Parse and validate the connection string
         ConnectionString connectionString = new ConnectionString(mongoUri);
 
         // Build client settings with connection pooling and timeouts
         // These settings optimize for both performance and resource management
         MongoClientSettings settings = MongoClientSettings.builder()
+                .codecRegistry(registry)
                 .applyConnectionString(connectionString)
                 // Configure connection pool for optimal performance
                 .applyToConnectionPoolSettings(builder ->
