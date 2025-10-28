@@ -3,6 +3,7 @@ package com.mongodb.samplemflix.service;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
@@ -31,11 +32,13 @@ import java.util.regex.Pattern;
  */
 @Service
 public class MovieServiceImpl implements MovieService {
-    
+
     private final MovieRepository movieRepository;
-    
-    public MovieServiceImpl(MovieRepository movieRepository) {
+    private final ObjectMapper objectMapper;
+
+    public MovieServiceImpl(MovieRepository movieRepository, ObjectMapper objectMapper) {
         this.movieRepository = movieRepository;
+        this.objectMapper = objectMapper;
     }
     
     @Override
@@ -246,64 +249,15 @@ public class MovieServiceImpl implements MovieService {
     }
     
     private boolean isUpdateRequestEmpty(UpdateMovieRequest request) {
-        return request.getTitle() == null &&
-               request.getYear() == null &&
-               request.getPlot() == null &&
-               request.getFullplot() == null &&
-               request.getGenres() == null &&
-               request.getDirectors() == null &&
-               request.getWriters() == null &&
-               request.getCast() == null &&
-               request.getCountries() == null &&
-               request.getLanguages() == null &&
-               request.getRated() == null &&
-               request.getRuntime() == null &&
-               request.getPoster() == null;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestMap = objectMapper.convertValue(request, Map.class);
+        return requestMap.values().stream().allMatch(java.util.Objects::isNull);
     }
     
     private Document buildUpdateDocument(UpdateMovieRequest request) {
-        Document doc = new Document();
-        
-        if (request.getTitle() != null) {
-            doc.append("title", request.getTitle());
-        }
-        if (request.getYear() != null) {
-            doc.append("year", request.getYear());
-        }
-        if (request.getPlot() != null) {
-            doc.append("plot", request.getPlot());
-        }
-        if (request.getFullplot() != null) {
-            doc.append("fullplot", request.getFullplot());
-        }
-        if (request.getGenres() != null) {
-            doc.append("genres", request.getGenres());
-        }
-        if (request.getDirectors() != null) {
-            doc.append("directors", request.getDirectors());
-        }
-        if (request.getWriters() != null) {
-            doc.append("writers", request.getWriters());
-        }
-        if (request.getCast() != null) {
-            doc.append("cast", request.getCast());
-        }
-        if (request.getCountries() != null) {
-            doc.append("countries", request.getCountries());
-        }
-        if (request.getLanguages() != null) {
-            doc.append("languages", request.getLanguages());
-        }
-        if (request.getRated() != null) {
-            doc.append("rated", request.getRated());
-        }
-        if (request.getRuntime() != null) {
-            doc.append("runtime", request.getRuntime());
-        }
-        if (request.getPoster() != null) {
-            doc.append("poster", request.getPoster());
-        }
-        
-        return doc;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestMap = objectMapper.convertValue(request, Map.class);
+        requestMap.values().removeIf(java.util.Objects::isNull);
+        return new Document(requestMap);
     }
 }
