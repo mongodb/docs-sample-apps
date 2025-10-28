@@ -92,9 +92,18 @@ class CreateMovieRequest(BaseModel):
     rated: Optional[str]  = None
     runtime: Optional[int]  = None
     poster: Optional[str]  = None    
+    
+class Comment(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    name: str
+    email: str
+    movie_id: str
+    text: str
+    date: datetime
 
-
-
+    model_config = {
+        "populate_by_name": True
+    }
 class SuccessResponse(BaseModel, Generic[T]):
     success: bool = True
     message: Optional[str]
@@ -113,4 +122,3 @@ class ErrorResponse(BaseModel):
     message: str
     error: ErrorDetails
     timestamp: str
-    
