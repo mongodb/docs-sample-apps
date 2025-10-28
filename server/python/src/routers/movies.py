@@ -6,7 +6,6 @@ from datetime import datetime
 from src.utils.errorHandler import create_success_response, create_error_response
 from bson import ObjectId
 import re
-from bson import ObjectId
 from bson.errors import InvalidId
 
 '''
@@ -34,7 +33,11 @@ router = APIRouter()
         SuccessResponse[Movie]: A response object containing the movie data.
 """
 
-@router.get("/{id}", response_model=SuccessResponse[Movie])
+@router.get("/{id}",
+            response_model=SuccessResponse[Movie],
+            status_code=200,
+            tags=["movies"],
+            summary="Retrieve a single movie by its ID.")
 async def get_movie_by_id(id: str):
     # Validate ObjectId format
     try:
@@ -87,7 +90,11 @@ async def get_movie_by_id(id: str):
         SuccessResponse[List[Movie]]: A response object containing the list of movies and metadata.
 """
 
-@router.get("/", response_model=SuccessResponse[List[Movie]])
+@router.get("/",
+            response_model=SuccessResponse[List[Movie]],
+            status_code=200,
+            tags=["movies"],
+            summary="Retrieve a list of movies with optional filtering, sorting, and pagination.")
 # Validate the query parameters using FastAPI's Query functionality.
 async def get_all_movies(
     q:str = Query(default=None),
@@ -125,29 +132,29 @@ async def get_all_movies(
     sort = [(sort_by, sort_order)]
 
     # Query the database with the constructed filter, sort, skip, and limit.
-    try:
-        cursor = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)    
-        movies = []
-        async for movie in cursor:
-            if movie is None:
-                continue  # Skip null movies instead of raising exception
-            movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
 
-            # Ensure that the year field contains int value.
-            if "year" in movie and not isinstance(movie["year"], int):
-                cleaned_year = re.sub(r"\D", "", str(movie["year"]))
-                try:
-                    movie["year"] = int(cleaned_year) if cleaned_year else None
-                except ValueError:
-                    movie["year"] = None
-            movies.append(movie)
+    try:
+        result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)  
     except Exception as e:
         return create_error_response(
-            message="Database error occurred",
-            code="INTERNAL_SERVER_ERROR",
+            message="An error occurred while fetching movies.",
+            code="DATABASE_ERROR",
             details=str(e)
-        )
+        )   
 
+    movies = []
+
+    async for movie in result:
+        movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
+        # Ensure that the year field contains int value.
+        if "year" in movie and not isinstance(movie["year"], int):
+            cleaned_year = re.sub(r"\D", "", str(movie["year"]))
+            try:
+                movie["year"] = int(cleaned_year) if cleaned_year else None
+            except ValueError:
+                movie["year"] = None
+
+        movies.append(movie)            
     # Return the results wrapped in a SuccessResponse    
     return create_success_response(movies, f"Found {len(movies)} movies.")
 
@@ -239,8 +246,14 @@ Request Body:
 
 """
 
-@router.post("/batch")
-async def create_movies_batch(movies: List[CreateMovieRequest]):
+@router.post(
+        "/batch",
+        response_model=SuccessResponse[dict],
+        status_code = 201,
+        tags=["movies"],
+        summary = "Create multiple movies"
+        )
+async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
     #Verify that the movies list is not empty
@@ -255,6 +268,15 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
 
     for movie in movies:
         movies_dicts.append(movie.model_dump(exclude_unset=True, exclude_none=True))
+
+    try:
+        result = await movies_collection.insert_many(movies_dicts)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while inserting movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
     
     try:
         result = await movies_collection.insert_many(movies_dicts)
@@ -271,8 +293,6 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
         },
         f"Successfully created {len(result.inserted_ids)} movies."
     )
-
-
 
 #------------------------------------
 # Place update_movie endpoint here
@@ -292,19 +312,23 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
     Returns:
         SuccessResponse: The updated movie document, the number of fields modified and a success message.
 """
-@router.patch("/{movie_id}")
+@router.patch(
+        "/{movie_id}",
+        response_model=SuccessResponse[Movie],
+        status_code=200,
+        tags=["movies"],
+        summary="Update a single movie by its ID.")
 async def update_movie(
     movie_data: UpdateMovieRequest,
-    movie_id: str = Path(...),
-    
-):
+    movie_id: str = Path(...)
+) -> SuccessResponse[Movie]:
 
     movies_collection = get_collection("movies")
     
     # Validate the ObjectId
     try:
         movie_id = ObjectId(movie_id)
-    except:
+    except Exception :
         return create_error_response(
             message="Invalid movie_id format.",
             code="INVALID_OBJECT_ID",
@@ -321,30 +345,33 @@ async def update_movie(
             details=None
         )
 
-    result = await movies_collection.update_one(
-        {"_id": movie_id},
-        {"$set":update_dict}
-    )
+    try:
+        result = await movies_collection.update_one(
+            {"_id": movie_id},
+            {"$set":update_dict}
+        )
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while updating the movie.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
 
     if result.matched_count == 0:
         return create_error_response(
             message="No movie with that _id was found.",
             code="MOVIE_NOT_FOUND",
             details=str(movie_id)
-
         )
     
     updatedMovie = await movies_collection.find_one({"_id": str(movie_id)})
+    updatedMovie["_id"] = str(updatedMovie["_id"])
 
     return create_success_response(updatedMovie, f"Movie updated successfully. Modified {len(update_dict)} fields.")
-
-
-
 
 #------------------------------------
 # Place update_movies_by_batch endpoint here
 #------------------------------------
-
 
 """
     PATCH /api/movies
@@ -358,15 +385,19 @@ async def update_movie(
         SuccessResponse: A response object containing the number of matched and modified movies and a success message.
 """
 
-@router.patch("/")
+@router.patch("/",
+        response_model=SuccessResponse[dict],
+        status_code=200,
+        tags=["movies"],
+        summary="Batch update movies matching the given filter."
+        )
 async def update_movies_batch(
     filter: MovieFilter,
     update: UpdateMovieRequest   
-):
+) -> SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
     filter_dict = filter.model_dump(exclude_unset=True, exclude_none=True)
-    
     update_dict = update.model_dump(exclude_unset=True, exclude_none=True)
 
     #Verify the filter and the update dicts are not empty
@@ -377,7 +408,14 @@ async def update_movies_batch(
             details=None
         )
 
-    result = await movies_collection.update_many(filter_dict,{"$set": update_dict})
+    try:
+        result = await movies_collection.update_many(filter_dict,{"$set": update_dict})
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while updating movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )
     
     return create_success_response({
         "matchedCount": result.matched_count,
@@ -390,7 +428,6 @@ async def update_movies_batch(
 # Place delete_movie endpoint here
 #------------------------------------
 
-
 """
     DELETE /api/movies/{id}
     Delete a single movie by its ID.
@@ -400,7 +437,11 @@ async def update_movies_batch(
         SuccessResponse[dict]: A response object containing deletion details.
 """
 
-@router.delete("/{id}", response_model=SuccessResponse[dict])
+@router.delete("/{id}",
+                response_model=SuccessResponse[dict],
+                status_code=200,
+                tags=["movies"],
+                summary="Delete a single movie by its ID.")
 async def delete_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
@@ -449,13 +490,16 @@ async def delete_movie_by_id(id: str):
         SuccessResponse: An object containing the number of deleted movies and a success message.
 """
 
-
-
-@router.delete("/")
-async def delete_movies_batch(movie_filter:MovieFilter):
+@router.delete(
+        "/",
+        response_model=SuccessResponse[dict],
+        status_code=200,
+        tags=["movies"],
+        summary="Delete multiple movies matching the given filter."
+)
+async def delete_movies_batch(movie_filter:MovieFilter) -> SuccessResponse[dict]:
 
     movies_collection = get_collection("movies")
-    
     movie_filter_dict = movie_filter.model_dump(exclude_unset=True,exclude_none=True)
 
     if not movie_filter_dict:
@@ -465,7 +509,14 @@ async def delete_movies_batch(movie_filter:MovieFilter):
             details=None
         )
 
-    result = await movies_collection.delete_many(movie_filter_dict)
+    try:
+        result = await movies_collection.delete_many(movie_filter_dict)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while deleting movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )
 
     return create_success_response(
         {"deletedCount":result.deleted_count},
@@ -488,7 +539,11 @@ async def delete_movies_batch(movie_filter:MovieFilter):
         SuccessResponse[Movie]: A response object containing the deleted movie data.
 """
 
-@router.delete("/{id}/find-and-delete", response_model=SuccessResponse[Movie])
+@router.delete("/{id}/find-and-delete",
+                response_model=SuccessResponse[Movie],
+                status_code=200,
+                tags=["movies"],
+                summary="Find and delete a movie in a single operation.")
 async def find_and_delete_movie(id: str):
     try:
         object_id = ObjectId(id)
@@ -522,22 +577,6 @@ async def find_and_delete_movie(id: str):
     
     return create_success_response(deleted_movie, "Movie found and deleted successfully")
 
-async def execute_aggregation(pipeline: list) -> list:
-    """Helper function to execute aggregation pipeline and return results"""
-    print(f"Executing pipeline: {pipeline}")  # Debug logging
-    
-    movies_collection = get_collection("movies")
-    # For the async Pymongo driver, we need to await the aggregate call
-    cursor = await movies_collection.aggregate(pipeline)
-    results = await cursor.to_list(length=None)  # Convert cursor to list to collect all data at once rather than processing data per document
-    
-    print(f"Aggregation returned {len(results)} results")  # Debug logging
-    if len(results) <= 3:  # Log first few results for debugging
-        for i, doc in enumerate(results):
-            print(f"Result {i+1}: {doc}")
-    
-    return results
-
 """
     GET /api/movies/reportingByComments
     Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
@@ -549,7 +588,11 @@ async def execute_aggregation(pipeline: list) -> list:
         SuccessResponse[List[dict]]: A response object containing movies with their most recent comments.
 """
 
-@router.get("/api/movies/reportingByComments", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByComments",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            tags=["movies"],
+            summary="Aggregate movies with their most recent comments.")
 async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
     movie_id: str = Query(default=None)
@@ -698,7 +741,11 @@ async def aggregate_movies_recent_commented(
         SuccessResponse[List[dict]]: A response object containing yearly movie statistics.
 """
 
-@router.get("/api/movies/reportingByYear", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByYear",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            tags=["movies"],
+            summary="Aggregate movies by year with average rating and movie count.")
 async def aggregate_movies_by_year():
     # Define aggregation pipeline to group movies by year with statistics
     # This pipeline demonstrates grouping, statistical calculations, and data cleaning
@@ -821,7 +868,11 @@ async def aggregate_movies_by_year():
         SuccessResponse[List[dict]]: A response object containing director statistics.
 """
 
-@router.get("/api/movies/reportingByDirectors", response_model=SuccessResponse[List[dict]])
+@router.get("/api/movies/reportingByDirectors",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            tags=["movies"],
+            summary="Aggregate directors with the most movies and their statistics.")
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
 ):
@@ -907,20 +958,207 @@ async def aggregate_directors_most_movies(
         f"Found {len(results)} directors with most movies"
     )
 
-# ---- Old testing endpoint, will be removed later ----
-'''
-# Testing the ErrorReponse Model
-@router.get("/error")
-async def test_error():
-    try:
-        raise ValueError("This is a test error.")
-    except ValueError as e:
+#----------------------------------------------------------------------------------------------------------
+#  Atlas Search
+#
+# Atlas search based on searching the plot, fullplot, directors, writers, and cast fields.
+# This function was made with the assumption that the UI will have fields for plot,fullplot, 
+# directors, writers, and cast to search on. Or some sort of combined search field.
+# Also this fuzzy operator is being used to allow for some misspellings in the search terms
+# but that allows for very generous matching. This can be adjusted as needed.
+#----------------------------------------------------------------------------------------------------------
+"""
+
+    GET /api/movies/search/atlas
+
+    Search movies using MongoDB Atlas Search across the plot, fullplot, directors, writers, and cast fields.
+    You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
+
+    Query Parameters:
+        plot (str, optional): Text to search against the plot field.
+        fullplot (str, optional): Text to search against the fullplot field.
+        directors (str, optional): Text to search against the directors field.
+        writers (str, optional): Text to search against the writers field.
+        cast (str, optional): Text to search against the cast field.
+        limit (int, optional): Number of results to return (default: 20)
+        skip (int, optional): Number of results to skip for pagination (default: 0)
+        search_operator (str, optional): How to combine multiple search fields. 
+            Must be one of "must", "should", "mustNot", or "filter". Default is "must".
+
+    Returns:
+        SuccessResponse[List[Movie]]: A response object containing the list of matching movies.
+"""
+
+@router.get(
+    "/search/atlas",
+    response_model=SuccessResponse[List[Movie]],
+    status_code=200,
+    tags=["movies"],
+    summary="Search movies using Atlas Search."
+)
+
+async def search_movies_atlas(
+    plot: str = Query(default=None),
+    fullplot: str = Query(default=None),
+    directors: str = Query(default=None),
+    writers: str = Query(default=None),
+    cast: str = Query(default=None),
+    limit:int = Query(default=20, ge=1, le=100),
+    skip:int = Query(default=0, ge=0),
+    search_operator: str = Query(default="must")
+) -> SuccessResponse[List[Movie]]:
+    
+    search_phrases = []
+
+    # Validate the search_operator parameter to ensure it's a valid compound operator
+    valid_operators = {"must", "should", "mustNot", "filter"}
+    if search_operator not in valid_operators:
         return create_error_response(
-                message="A test error occurred.",
-                code="TEST_ERROR",
-                details=str(e)
-            )
-'''
+        message=f"Invalid search_operator '{search_operator}'. Must be one of {valid_operators}.",
+        code="INVALID_SEARCH_OPERATOR",
+        details=None
+    )
+
+    # Build the search_phrases list based on which fields were provided by the user.
+    # Each phrase becomes a separate clause in the Atlas Search compound query.
+    if plot:
+        search_phrases.append({
+            "text": {
+                "query": plot,
+                "path": "plot",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if fullplot:
+        search_phrases.append({
+            "text": {
+                "query": fullplot,
+                "path": "fullplot",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if directors:
+        search_phrases.append({
+            "text": {
+                "query": directors,
+                "path": "directors",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+
+            }
+        })
+    if writers:
+        search_phrases.append({
+            "text": {
+                "query": writers,
+                "path": "writers",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if cast:
+        search_phrases.append({
+            "text": {
+                "query": cast,
+                "path": "cast",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+
+    if not search_phrases:
+        return create_error_response(
+            message="At least one search parameter must be provided.",
+            code="NO_SEARCH_PARAMETERS",
+            details=None
+        )
+
+    # Build the aggregation pipeline for Atlas Search.
+    # The $search stage uses the specified compound operator (must, should, etc.)
+    aggregation_pipeline = [
+        {
+            "$search": {
+                "index": "movieSearchIndex",
+                "compound": {
+                    search_operator: search_phrases
+                }
+            }
+        },
+        {"$skip": skip},
+        {"$limit": limit},
+
+        # Project only the fields needed in the response
+        {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "year": 1,
+                "plot": 1,
+                "fullplot": 1,
+                "released":1,
+                "runtime": 1,
+                "poster": 1,
+                "genres": 1,
+                "directors": 1,
+                "writers": 1,
+                "cast": 1,
+                "countries": 1,
+                "languages": 1,
+                "rated": 1,
+                "awards": 1,
+                "imdb": 1,
+            }
+        }
+    ]
+
+    # Execute the aggregation pipeline using the helper function
+    try:
+        results = await execute_aggregation(aggregation_pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while performing the search.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
+
+    
+    # Convert ObjectId to string for each movie in the results
+    movies = []
+    for movie in results:
+        movie["_id"] = str(movie["_id"])
+        movies.append(movie)
+
+    return create_success_response(movies, f"Found {len(movies)} movies matching the search criteria.")
+    
+
+
+#------------------------------------
+#Helper Functions
+#------------------------------------
+
+"""  
+    Helper function to execute aggregation pipeline and return results.  
+
+    Args:  
+        pipeline: MongoDB aggregation pipeline stages  
+
+    Returns:  
+        List of documents from aggregation result  
+"""  
+
+async def execute_aggregation(pipeline: list) -> list:
+    """Helper function to execute aggregation pipeline and return results"""
+    print(f"Executing pipeline: {pipeline}")  # Debug logging
+    
+    movies_collection = get_collection("movies")
+    # For the async Pymongo driver, we need to await the aggregate call
+    cursor = await movies_collection.aggregate(pipeline)
+    results = await cursor.to_list(length=None)  # Convert cursor to list to collect all data at once rather than processing data per document
+    
+    print(f"Aggregation returned {len(results)} results")  # Debug logging
+    if len(results) <= 3:  # Log first few results for debugging
+        for i, doc in enumerate(results):
+            print(f"Result {i+1}: {doc}")
+    
+    return results
+
 
 # ---- Place Vector Search Here ----
 
