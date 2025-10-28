@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 /**
  * Service layer for movie business logic.
- * 
+ * <p>
  * This service handles:
  * - Business logic and validation
  * - Query construction (filters, sorts, pagination)
