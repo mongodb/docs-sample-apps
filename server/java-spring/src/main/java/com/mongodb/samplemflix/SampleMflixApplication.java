@@ -31,7 +31,7 @@ public class SampleMflixApplication {
     @GetMapping("/")
     public Map<String, Object> root() {
         return Map.of(
-                "name", "MongoDB Sample MFlix API",
+                "name", "sample-app-java-mflix",
                 "version", "1.0.0",
                 "description", "Java Spring Boot backend demonstrating MongoDB operations with the sample_mflix dataset",
                 "endpoints", Map.of("movies", "/api/movies")

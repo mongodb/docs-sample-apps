@@ -13,10 +13,10 @@
     </parent>
     
     <groupId>com.mongodb</groupId>
-    <artifactId>sample-mflix-spring</artifactId>
+    <artifactId>sample-app-java-mflix</artifactId>
     <version>1.0.0</version>
-    <name>MongoDB Sample MFlix Spring API</name>
-    <description>Spring Boot backend for MongoDB sample mflix application demonstrating CRUD operations using Spring Data MongoDB</description>
+    <name>sample-app-java-mflix</name>
+    <description>Java Spring Boot backend for MongoDB sample_mflix application demonstrating CRUD operations using Spring Data MongoDB</description>
     
     <properties>
         <java.version>17</java.version>

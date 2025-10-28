@@ -1,4 +1,4 @@
-# MongoDB Sample MFlix - Java Spring Boot Backend [DRAFT]
+# sample-app-java-mflix (INTERNAL)
 
 A Spring Boot REST API demonstrating MongoDB CRUD operations using Spring Data MongoDB with the sample_mflix database.
 
