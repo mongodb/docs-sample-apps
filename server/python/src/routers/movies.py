@@ -80,7 +80,15 @@ async def get_all_movies(
     sort = [(sort_by, sort_order)]
 
     # Query the database with the constructed filter, sort, skip, and limit.
-    result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)  
+
+    try:
+        result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)  
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while fetching movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )   
 
     movies = []
 
@@ -133,8 +141,14 @@ Request Body:
 
 """
 
-@router.post("/batch")
-async def create_movies_batch(movies: List[CreateMovieRequest]):
+@router.post(
+        "/batch",
+        response_model=SuccessResponse[dict],
+        status_code = 201,
+        tags=["movies"],
+        summary = "Create multiple movies"
+        )
+async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
     #Verify that the movies list is not empty
@@ -149,8 +163,15 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
 
     for movie in movies:
         movies_dicts.append(movie.model_dump(exclude_unset=True, exclude_none=True))
-    
-    result = await movies_collection.insert_many(movies_dicts)
+
+    try:
+        result = await movies_collection.insert_many(movies_dicts)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while inserting movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
     
     return create_success_response({
         "insertedCount": len(result.inserted_ids),
@@ -179,19 +200,23 @@ async def create_movies_batch(movies: List[CreateMovieRequest]):
     Returns:
         SuccessResponse: The updated movie document, the number of fields modified and a success message.
 """
-@router.patch("/{movie_id}")
+@router.patch(
+        "/{movie_id}",
+        response_model=SuccessResponse[Movie],
+        status_code=200,
+        tags=["movies"],
+        summary="Update a single movie by its ID.")
 async def update_movie(
     movie_data: UpdateMovieRequest,
-    movie_id: str = Path(...),
-    
-):
+    movie_id: str = Path(...)
+) -> SuccessResponse[Movie]:
 
     movies_collection = get_collection("movies")
     
     # Validate the ObjectId
     try:
         movie_id = ObjectId(movie_id)
-    except:
+    except Exception :
         return create_error_response(
             message="Invalid movie_id format.",
             code="INVALID_OBJECT_ID",
@@ -208,20 +233,27 @@ async def update_movie(
             details=None
         )
 
-    result = await movies_collection.update_one(
-        {"_id": movie_id},
-        {"$set":update_dict}
-    )
+    try:
+        result = await movies_collection.update_one(
+            {"_id": movie_id},
+            {"$set":update_dict}
+        )
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while updating the movie.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
 
     if result.matched_count == 0:
         return create_error_response(
             message="No movie with that _id was found.",
             code="MOVIE_NOT_FOUND",
             details=str(movie_id)
-
         )
     
     updatedMovie = await movies_collection.find_one({"_id": str(movie_id)})
+    updatedMovie["_id"] = str(updatedMovie["_id"])
 
     return create_success_response(updatedMovie, f"Movie updated successfully. Modified {len(update_dict)} fields.")
 
@@ -245,15 +277,19 @@ async def update_movie(
         SuccessResponse: A response object containing the number of matched and modified movies and a success message.
 """
 
-@router.patch("/")
+@router.patch("/",
+        response_model=SuccessResponse[dict],
+        status_code=200,
+        tags=["movies"],
+        summary="Batch update movies matching the given filter."
+        )
 async def update_movies_batch(
     filter: MovieFilter,
     update: UpdateMovieRequest   
-):
+) -> SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
     filter_dict = filter.model_dump(exclude_unset=True, exclude_none=True)
-    
     update_dict = update.model_dump(exclude_unset=True, exclude_none=True)
 
     #Verify the filter and the update dicts are not empty
@@ -264,7 +300,14 @@ async def update_movies_batch(
             details=None
         )
 
-    result = await movies_collection.update_many(filter_dict,{"$set": update_dict})
+    try:
+        result = await movies_collection.update_many(filter_dict,{"$set": update_dict})
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while updating movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )
     
     return create_success_response({
         "matchedCount": result.matched_count,
@@ -292,13 +335,16 @@ async def update_movies_batch(
         SuccessResponse: An object containing the number of deleted movies and a success message.
 """
 
-
-
-@router.delete("/")
-async def delete_movies_batch(movie_filter:MovieFilter):
+@router.delete(
+        "/",
+        response_model=SuccessResponse[dict],
+        status_code=200,
+        tags=["movies"],
+        summary="Delete multiple movies matching the given filter."
+)
+async def delete_movies_batch(movie_filter:MovieFilter) -> SuccessResponse[dict]:
 
     movies_collection = get_collection("movies")
-    
     movie_filter_dict = movie_filter.model_dump(exclude_unset=True,exclude_none=True)
 
     if not movie_filter_dict:
@@ -308,7 +354,14 @@ async def delete_movies_batch(movie_filter:MovieFilter):
             details=None
         )
 
-    result = await movies_collection.delete_many(movie_filter_dict)
+    try:
+        result = await movies_collection.delete_many(movie_filter_dict)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while deleting movies.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )
 
     return create_success_response(
         {"deletedCount":result.deleted_count},
@@ -322,17 +375,169 @@ async def delete_movies_batch(movie_filter:MovieFilter):
 #------------------------------------
 
 
-# ---- Old testing endpoint, will be removed later ----
-'''
-# Testing the ErrorReponse Model
-@router.get("/error")
-async def test_error():
-    try:
-        raise ValueError("This is a test error.")
-    except ValueError as e:
+
+
+
+#------------------------------------
+#  Atlas Search
+#------------------------------------
+"""
+Atlas search based on searching the plot, fullplot, directors, writers, and cast fields.
+This function was made with the assumption that the UI will have fields for plot,fullplot, 
+directors, writers, and cast to search on. Or some sort of combined search field.
+"""
+
+@router.get(
+    "/search/atlas",
+    response_model=SuccessResponse[List[Movie]],
+    tags=["movies"],
+    summary="Search movies using Atlas Search."
+)
+
+async def search_movies_atlas(
+    plot: str = Query(default=None),
+    fullplot: str = Query(default=None),
+    directors: str = Query(default=None),
+    writers: str = Query(default=None),
+    cast: str = Query(default=None),
+    limit:int = Query(default=20, ge=1, le=100),
+    skip:int = Query(default=0, ge=0),
+    search_operator: str = Query(default="must")
+) -> SuccessResponse[List[Movie]]:
+    
+    movies_collection = get_collection("movies")
+    search_phrases = []
+
+    # Build the search phrases based on provided parameters
+    if plot:
+        search_phrases.append({
+            "text": {
+                "query": plot,
+                "path": "plot",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if fullplot:
+        search_phrases.append({
+            "text": {
+                "query": fullplot,
+                "path": "fullplot",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if directors:
+        search_phrases.append({
+            "text": {
+                "query": directors,
+                "path": "directors",
+                "fuzzy":{"maxEdits":2, "prefixLength":2, "maxExpansions":50}
+
+            }
+        })
+    if writers:
+        search_phrases.append({
+            "text": {
+                "query": writers,
+                "path": "writers",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+    if cast:
+        search_phrases.append({
+            "text": {
+                "query": cast,
+                "path": "cast",
+                "fuzzy":{"maxEdits":1, "prefixLength":2}
+            }
+        })
+
+    if not search_phrases:
         return create_error_response(
-                message="A test error occurred.",
-                code="TEST_ERROR",
-                details=str(e)
-            )
-'''
+            message="At least one search parameter must be provided.",
+            code="NO_SEARCH_PARAMETERS",
+            details=None
+        )
+
+    aggregation_pipeline = [
+        {
+            "$search": {
+                "index": "movieSearchIndex",
+                "compound": {
+                    "must": search_phrases
+                }
+            }
+        },
+        {"$skip": skip},
+        {"$limit": limit},
+
+        {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "year": 1,
+                "plot": 1,
+                "fullplot": 1,
+                "released":1,
+                "runtime": 1,
+                "poster": 1,
+                "genres": 1,
+                "directors": 1,
+                "writers": 1,
+                "cast": 1,
+                "countries": 1,
+                "languages": 1,
+                "rated": 1,
+                "awards": 1,
+                "imdb": 1,
+            }
+        }
+    ]
+
+    try:
+        results = await execute_aggregation(aggregation_pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while performing the search.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
+
+    movies = []
+    for movie in results:
+        movie["_id"] = str(movie["_id"])
+        movies.append(movie)
+
+    return create_success_response(movies, f"Found {len(movies)} movies matching the search criteria.")
+    
+
+
+#------------------------------------
+#Helper Functions
+#------------------------------------
+
+"""  
+    Helper function to execute aggregation pipeline and return results.  
+
+    Args:  
+        pipeline: MongoDB aggregation pipeline stages  
+
+    Returns:  
+        List of documents from aggregation result  
+"""  
+
+async def execute_aggregation(pipeline: List[dict]) -> List[dict]:  
+
+    print(f"Executing pipeline: {pipeline}")  
+    
+    movies_collection = get_collection("movies")  
+    cursor = await movies_collection.aggregate(pipeline)  
+    results = await cursor.to_list(length=None)  
+    
+    print(f"Aggregation returned {len(results)} results")  
+    
+    # Debug logging for small result sets  
+    if len(results) <= 3:  
+        for i, doc in enumerate(results, 1):  
+            print(f"Result {i}: {doc}")  
+    
+    return results 
