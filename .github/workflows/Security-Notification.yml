@@ -1,33 +1,64 @@
 name: Security Vulnerability Slack Notification
 
-# This workflow runs whenever a Dependabot alert is created or reopened.
 on:
-  dependabot_alert:
-    types: [created, reopened]
+  schedule:
+    - cron: "0 */2 * * *"  # Every 2 hours
+  workflow_dispatch:        # Allow manual trigger from GitHub Actions tab
 
 jobs:
   notify_slack_on_alert:
     runs-on: ubuntu-latest
-    if: github.event_name == 'dependabot_alert'
-    steps:
-      - name: Send Slack Notification via Direct Curl Payload
-        run: |
-          MESSAGE_TEXT="*🚨 Dependabot Alert: ${{ github.event.action }} 🚨*\n\n*Vulnerability:* ${{ github.event.alert.security_vulnerability.package.ecosystem }} package *${{ github.event.alert.security_vulnerability.package.name }}*\n*Severity:* ${{ github.event.alert.security_vulnerability.severity }}\n*Repository:* ${{ github.repository }}\n\n*View Details:* ${{ github.event.alert.html_url }}"
-          
-          SLACK_PAYLOAD=$(jq -n \
-            --arg text "${MESSAGE_TEXT}" \
-            '{
-              "channel": "#docs-devdocs-notifications",
-              "username": "Dependabot Notifier",
-              "icon_emoji": ":lock:",
-              "text": $text
-            }')
 
-          # 3. Send the request directly to the webhook URL stored as a secret
-          curl -X POST \
-               -H 'Content-type: application/json' \
-               --data "$SLACK_PAYLOAD" \
-               ${{ secrets.SLACK_WEBHOOK }}
+    steps:
+      - name: Fetch Open Dependabot Alerts
         env:
-          # jq is pre-installed on GitHub runners and is used to safely build the JSON payload.
-          JQ_VERSION: 1.6
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          echo ":mag: Checking for open Dependabot vulnerability alerts..."
+          
+          # Fetch open alerts from GitHub API
+          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts?state=open")
+
+          ALERT_COUNT=$(echo "$RESPONSE" | jq length)
+          echo "Found $ALERT_COUNT open alerts."
+
+          # Only send Slack message if there are alerts
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo ":warning: Sending Slack notification..."
+
+            MESSAGE_TEXT="*:rotating_light: Dependabot found $ALERT_COUNT open security alert(s) in ${{ github.repository }}!* :rotating_light:\n\n"
+
+            # Loop through each alert to include details
+            for i in $(seq 0 $(($ALERT_COUNT - 1))); do
+              PACKAGE=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.package.name")
+              ECOSYSTEM=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.package.ecosystem")
+              SEVERITY=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.severity")
+              URL=$(echo "$RESPONSE" | jq -r ".[$i].html_url")
+
+              MESSAGE_TEXT+="*Package:* ${PACKAGE} (${ECOSYSTEM})\n"
+              MESSAGE_TEXT+="*Severity:* ${SEVERITY}\n"
+              MESSAGE_TEXT+="*Details:* ${URL}\n\n"
+            done
+
+            # Build Slack payload
+            SLACK_PAYLOAD=$(jq -n \
+              --arg text "$MESSAGE_TEXT" \
+              '{
+                "channel": "#docs-devdocs-notifications",
+                "username": "Dependabot Notifier",
+                "icon_emoji": ":lock:",
+                "text": $text
+              }')
+
+            # Send notification to Slack
+            curl -X POST \
+                 -H 'Content-type: application/json' \
+                 --data "$SLACK_PAYLOAD" \
+                 "$SLACK_WEBHOOK"
+
+            echo ":white_check_mark: Slack notification sent successfully!"
+          else
+            echo ":white_check_mark: No active alerts — no Slack message sent."
+          fi
