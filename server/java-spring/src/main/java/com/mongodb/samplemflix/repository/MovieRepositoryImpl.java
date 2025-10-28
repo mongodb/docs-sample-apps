@@ -46,7 +46,7 @@ public class MovieRepositoryImpl implements MovieRepository {
     
     @Override
     public Optional<Movie> findById(ObjectId id) {
-        Movie doc = moviesCollection.find(Filters.eq("_id", id)).first();
+        Movie doc = moviesCollection.find(Filters.eq(Movie.Fields.ID, id)).first();
         return Optional.ofNullable(doc);
     }
     
@@ -64,7 +64,7 @@ public class MovieRepositoryImpl implements MovieRepository {
     
     @Override
     public UpdateResult updateOne(ObjectId id, Document update) {
-        return moviesCollection.updateOne(Filters.eq("_id", id), update);
+        return moviesCollection.updateOne(Filters.eq(Movie.Fields.ID, id), update);
     }
     
     @Override
@@ -74,7 +74,7 @@ public class MovieRepositoryImpl implements MovieRepository {
     
     @Override
     public DeleteResult deleteOne(ObjectId id) {
-        return moviesCollection.deleteOne(Filters.eq("_id", id));
+        return moviesCollection.deleteOne(Filters.eq(Movie.Fields.ID, id));
     }
     
     @Override
@@ -84,7 +84,7 @@ public class MovieRepositoryImpl implements MovieRepository {
     
     @Override
     public Optional<Movie> findOneAndDelete(ObjectId id) {
-        Movie doc = moviesCollection.findOneAndDelete(Filters.eq("_id", id));
+        Movie doc = moviesCollection.findOneAndDelete(Filters.eq(Movie.Fields.ID, id));
         return Optional.ofNullable(doc);
     }
     

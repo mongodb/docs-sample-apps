@@ -215,19 +215,19 @@ public class MovieServiceImpl implements MovieService {
     
     private Document buildFilter(MovieSearchQuery query) {
         Document filter = new Document();
-        
+
         if (query.getQ() != null && !query.getQ().trim().isEmpty()) {
             filter.append("$text", new Document("$search", query.getQ()));
         }
-        
+
         if (query.getGenre() != null && !query.getGenre().trim().isEmpty()) {
-            filter.append("genres", new Document("$regex", Pattern.compile(query.getGenre(), Pattern.CASE_INSENSITIVE)));
+            filter.append(Movie.Fields.GENRES, new Document("$regex", Pattern.compile(query.getGenre(), Pattern.CASE_INSENSITIVE)));
         }
-        
+
         if (query.getYear() != null) {
-            filter.append("year", query.getYear());
+            filter.append(Movie.Fields.YEAR, query.getYear());
         }
-        
+
         if (query.getMinRating() != null || query.getMaxRating() != null) {
             Document ratingFilter = new Document();
             if (query.getMinRating() != null) {
@@ -236,14 +236,14 @@ public class MovieServiceImpl implements MovieService {
             if (query.getMaxRating() != null) {
                 ratingFilter.append("$lte", query.getMaxRating());
             }
-            filter.append("imdb.rating", ratingFilter);
+            filter.append(Movie.Fields.IMDB_RATING, ratingFilter);
         }
-        
+
         return filter;
     }
     
     private Document buildSort(String sortBy, String sortOrder) {
-        String field = sortBy != null && !sortBy.trim().isEmpty() ? sortBy : "title";
+        String field = sortBy != null && !sortBy.trim().isEmpty() ? sortBy : Movie.Fields.TITLE;
         int order = "desc".equalsIgnoreCase(sortOrder) ? -1 : 1;
         return new Document(field, order);
     }

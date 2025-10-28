@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.samplemflix.model.Movie;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,13 +123,15 @@ public class DatabaseVerification {
                     .name(TEXT_INDEX_NAME)
                     .background(true);
 
-            // Create the text index
+            // Create the text index using field name constants from Movie.Fields
+            // This makes the coupling between Movie class and index creation explicit
+            // and allows IDE "Find Usages" to track dependencies
             // MongoDB will automatically ignore this if the index already exists
             moviesCollection.createIndex(
                 Indexes.compoundIndex(
-                    Indexes.text("plot"),
-                    Indexes.text("title"),
-                    Indexes.text("fullplot")
+                    Indexes.text(Movie.Fields.PLOT),
+                    Indexes.text(Movie.Fields.TITLE),
+                    Indexes.text(Movie.Fields.FULLPLOT)
                 ),
                 indexOptions
             );

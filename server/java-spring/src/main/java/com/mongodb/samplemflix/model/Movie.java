@@ -29,6 +29,47 @@ import java.util.List;
 public class Movie {
 
     /**
+     * Field name constants for MongoDB operations.
+     * <p>
+     * These constants should be used when referencing field names in queries, filters,
+     * indexes, and other MongoDB operations to ensure type safety and enable IDE
+     * "Find Usages" functionality.
+     * <p>
+     * Example usage:
+     * <pre>
+     * filter.append(Movie.Fields.TITLE, "The Matrix");
+     * Indexes.text(Movie.Fields.PLOT);
+     * </pre>
+     */
+    public static class Fields {
+        public static final String ID = "_id";
+        public static final String TITLE = "title";
+        public static final String YEAR = "year";
+        public static final String PLOT = "plot";
+        public static final String FULLPLOT = "fullplot";
+        public static final String RELEASED = "released";
+        public static final String RUNTIME = "runtime";
+        public static final String POSTER = "poster";
+        public static final String GENRES = "genres";
+        public static final String DIRECTORS = "directors";
+        public static final String WRITERS = "writers";
+        public static final String CAST = "cast";
+        public static final String COUNTRIES = "countries";
+        public static final String LANGUAGES = "languages";
+        public static final String RATED = "rated";
+        public static final String AWARDS = "awards";
+        public static final String IMDB = "imdb";
+        public static final String IMDB_RATING = "imdb.rating";
+        public static final String TOMATOES = "tomatoes";
+        public static final String METACRITIC = "metacritic";
+        public static final String TYPE = "type";
+
+        private Fields() {
+            // Private constructor to prevent instantiation
+        }
+    }
+
+    /**
      * MongoDB document ID.
      * Maps to the _id field in MongoDB.
      * Can be null for new documents (MongoDB will generate it).
