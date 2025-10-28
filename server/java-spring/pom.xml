@@ -70,7 +70,7 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- Force version for Commons Lang -->
+        <!-- Force version for Commons Lang used by SpringDoc (CVE-2025-48924) -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>

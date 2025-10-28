@@ -4,6 +4,7 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
+import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
@@ -81,13 +82,13 @@ public class MovieServiceImpl implements MovieService {
                 .build();
         
         InsertOneResult result = movieRepository.insertOne(movie);
-        
+
         if (!result.wasAcknowledged()) {
-            throw new RuntimeException("Movie insertion was not acknowledged by the database");
+            throw new DatabaseOperationException("Movie insertion was not acknowledged by the database");
         }
-        
+
         return movieRepository.findById(result.getInsertedId().asObjectId().getValue())
-                .orElseThrow(() -> new RuntimeException("Failed to retrieve created movie"));
+                .orElseThrow(() -> new DatabaseOperationException("Failed to retrieve created movie"));
     }
     
     @Override
@@ -122,9 +123,9 @@ public class MovieServiceImpl implements MovieService {
                 .toList();
         
         InsertManyResult result = movieRepository.insertMany(movies);
-        
+
         if (!result.wasAcknowledged()) {
-            throw new RuntimeException("Batch movie insertion was not acknowledged by the database");
+            throw new DatabaseOperationException("Batch movie insertion was not acknowledged by the database");
         }
         
         return Map.of(
@@ -149,9 +150,9 @@ public class MovieServiceImpl implements MovieService {
         if (result.getMatchedCount() == 0) {
             throw new ResourceNotFoundException("Movie not found");
         }
-        
+
         return movieRepository.findById(new ObjectId(id))
-                .orElseThrow(() -> new RuntimeException("Failed to retrieve updated movie"));
+                .orElseThrow(() -> new DatabaseOperationException("Failed to retrieve updated movie"));
     }
     
     @Override
@@ -306,4 +307,3 @@ public class MovieServiceImpl implements MovieService {
         return doc;
     }
 }
-

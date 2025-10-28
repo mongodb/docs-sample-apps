@@ -59,6 +59,24 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(DatabaseOperationException.class)
+    public ResponseEntity<ErrorResponse> handleDatabaseOperationException(
+            DatabaseOperationException ex, WebRequest request) {
+        logger.error("Database operation error: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
+                .message("Database operation failed")
+                .error(ErrorResponse.ErrorDetails.builder()
+                        .message(ex.getMessage())
+                        .code("DATABASE_OPERATION_ERROR")
+                        .build())
+                .timestamp(Instant.now().toString())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(MongoWriteException.class)
     public ResponseEntity<ErrorResponse> handleMongoWriteException(
             MongoWriteException ex, WebRequest request) {
