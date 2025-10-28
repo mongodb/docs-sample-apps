@@ -1,17 +1,18 @@
 # MongoDB Sample MFlix - Java Spring Boot Backend [DRAFT]
 
-A Spring Boot REST API demonstrating MongoDB CRUD operations using the MongoDB Java Driver with the sample_mflix database.
+A Spring Boot REST API demonstrating MongoDB CRUD operations using Spring Data MongoDB with the sample_mflix database.
 
 ## Overview
 
 This application provides a REST API for managing movie data from MongoDB's sample_mflix database. It demonstrates:
 
-- Direct usage of the MongoDB Java Driver (not Spring Data MongoDB)
+- Spring Data MongoDB for simplified data access
 - CRUD operations (Create, Read, Update, Delete)
 - Text search functionality
 - Filtering, sorting, and pagination
 - Comprehensive error handling
 - API documentation with Swagger/OpenAPI
+- MongoTemplate for complex queries
 
 ## Prerequisites
 
@@ -152,9 +153,9 @@ See `JAVA-SPRING-IMPLEMENTATION-PLAN.md` in the repository root for the complete
 
 ## Technology Stack
 
-- **Framework**: Spring Boot 3.2.0
+- **Framework**: Spring Boot 3.5.7
 - **Java Version**: 17
-- **MongoDB Driver**: MongoDB Java Driver 5.1.4 (Sync)
+- **MongoDB**: Spring Data MongoDB 4.5.5
 - **Build Tool**: Maven
 - **API Documentation**: SpringDoc OpenAPI 2.3.0
 - **Testing**: JUnit 5, Mockito, Spring Boot Test
@@ -163,11 +164,12 @@ See `JAVA-SPRING-IMPLEMENTATION-PLAN.md` in the repository root for the complete
 
 This application is designed as an educational sample to demonstrate:
 
-1. How to use the MongoDB Java Driver directly (without Spring Data MongoDB)
+1. How to use Spring Data MongoDB for simplified data access
 2. Best practices for Spring Boot REST API development
 3. Proper separation of concerns (Controller → Service → Repository)
 4. MongoDB CRUD operations and query patterns
 5. Error handling and validation in Spring Boot
+6. Using MongoTemplate for complex queries alongside Spring Data repositories
 
 ## Troubleshooting
 

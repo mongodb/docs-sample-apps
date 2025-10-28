@@ -1,9 +1,7 @@
 package com.mongodb.samplemflix.service;
 
-import com.mongodb.client.result.DeleteResult;
-import com.mongodb.client.result.InsertManyResult;
-import com.mongodb.client.result.InsertOneResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
@@ -16,43 +14,63 @@ import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.TextCriteria;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
- * Service layer for movie business logic.
+ * Service layer for movie business logic using Spring Data MongoDB.
  * <p>
  * This service handles:
  * - Business logic and validation
- * - Query construction (filters, sorts, pagination)
+ * - Query construction using Spring Data MongoDB Query API
  * - Data transformation between DTOs and entities
  * - Error handling and exception throwing
+ * <p>
+ * Uses both:
+ * - MovieRepository (Spring Data) for simple CRUD operations
+ * - MongoTemplate for complex queries and batch operations
  */
 @Service
 public class MovieServiceImpl implements MovieService {
 
     private final MovieRepository movieRepository;
+    private final MongoTemplate mongoTemplate;
     private final ObjectMapper objectMapper;
 
-    public MovieServiceImpl(MovieRepository movieRepository, ObjectMapper objectMapper) {
+    public MovieServiceImpl(MovieRepository movieRepository, MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
         this.movieRepository = movieRepository;
+        this.mongoTemplate = mongoTemplate;
         this.objectMapper = objectMapper;
     }
     
     @Override
     public List<Movie> getAllMovies(MovieSearchQuery query) {
-        Document filter = buildFilter(query);
-        Document sort = buildSort(query.getSortBy(), query.getSortOrder());
-        
+        Query mongoQuery = buildQuery(query);
+
         int limit = Math.min(Math.max(query.getLimit() != null ? query.getLimit() : 20, 1), 100);
         int skip = Math.max(query.getSkip() != null ? query.getSkip() : 0, 0);
-        
-        return movieRepository.find(filter, sort, skip, limit);
+
+        mongoQuery.skip(skip).limit(limit);
+        mongoQuery.with(buildSort(query.getSortBy(), query.getSortOrder()));
+
+        return mongoTemplate.find(mongoQuery, Movie.class);
     }
     
     @Override
@@ -70,7 +88,7 @@ public class MovieServiceImpl implements MovieService {
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             throw new ValidationException("Title is required");
         }
-        
+
         Movie movie = Movie.builder()
                 .title(request.getTitle())
                 .year(request.getYear())
@@ -86,15 +104,9 @@ public class MovieServiceImpl implements MovieService {
                 .runtime(request.getRuntime())
                 .poster(request.getPoster())
                 .build();
-        
-        InsertOneResult result = movieRepository.insertOne(movie);
 
-        if (!result.wasAcknowledged()) {
-            throw new DatabaseOperationException("Movie insertion was not acknowledged by the database");
-        }
-
-        return movieRepository.findById(result.getInsertedId().asObjectId().getValue())
-                .orElseThrow(() -> new DatabaseOperationException("Failed to retrieve created movie"));
+        // Spring Data MongoDB's save() method inserts or updates
+        return movieRepository.save(movie);
     }
     
     @Override
@@ -128,15 +140,17 @@ public class MovieServiceImpl implements MovieService {
                         .build())
                 .toList();
 
-        InsertManyResult result = movieRepository.insertMany(movies);
+        // Spring Data MongoDB's saveAll() method for batch insert
+        List<Movie> savedMovies = movieRepository.saveAll(movies);
 
-        if (!result.wasAcknowledged()) {
-            throw new DatabaseOperationException("Batch movie insertion was not acknowledged by the database");
-        }
+        // Extract IDs from saved movies
+        Collection<BsonValue> insertedIds = savedMovies.stream()
+                .map(movie -> new org.bson.BsonObjectId(movie.getId()))
+                .collect(Collectors.toList());
 
         return new BatchInsertResponse(
-                result.getInsertedIds().size(),
-                result.getInsertedIds().values()
+                savedMovies.size(),
+                insertedIds
         );
     }
     
@@ -145,19 +159,25 @@ public class MovieServiceImpl implements MovieService {
         if (!ObjectId.isValid(id)) {
             throw new ValidationException("Invalid movie ID format");
         }
-        
+
         if (request == null || isUpdateRequestEmpty(request)) {
             throw new ValidationException("No update data provided");
         }
-        
-        Document update = new Document("$set", buildUpdateDocument(request));
-        UpdateResult result = movieRepository.updateOne(new ObjectId(id), update);
-        
+
+        ObjectId objectId = new ObjectId(id);
+
+        // Build Spring Data MongoDB Update object
+        Update update = buildUpdate(request);
+
+        // Use MongoTemplate for update operation
+        Query query = new Query(Criteria.where("_id").is(objectId));
+        UpdateResult result = mongoTemplate.updateFirst(query, update, Movie.class);
+
         if (result.getMatchedCount() == 0) {
             throw new ResourceNotFoundException("Movie not found");
         }
 
-        return movieRepository.findById(new ObjectId(id))
+        return movieRepository.findById(objectId)
                 .orElseThrow(() -> new DatabaseOperationException("Failed to retrieve updated movie"));
     }
     
@@ -171,8 +191,15 @@ public class MovieServiceImpl implements MovieService {
             throw new ValidationException("Update object cannot be empty");
         }
 
-        Document setUpdate = new Document("$set", update);
-        UpdateResult result = movieRepository.updateMany(filter, setUpdate);
+        // Convert Document filter to Spring Data Query
+        Query query = new Query();
+        filter.forEach((key, value) -> query.addCriteria(Criteria.where(key).is(value)));
+
+        // Convert Document update to Spring Data Update
+        Update mongoUpdate = new Update();
+        update.forEach(mongoUpdate::set);
+
+        UpdateResult result = mongoTemplate.updateMulti(query, mongoUpdate, Movie.class);
 
         return new BatchUpdateResponse(
                 result.getMatchedCount(),
@@ -186,13 +213,16 @@ public class MovieServiceImpl implements MovieService {
             throw new ValidationException("Invalid movie ID format");
         }
 
-        DeleteResult result = movieRepository.deleteOne(new ObjectId(id));
+        ObjectId objectId = new ObjectId(id);
 
-        if (result.getDeletedCount() == 0) {
+        // Check if movie exists before deleting
+        if (!movieRepository.existsById(objectId)) {
             throw new ResourceNotFoundException("Movie not found");
         }
 
-        return new DeleteResponse(result.getDeletedCount());
+        movieRepository.deleteById(objectId);
+
+        return new DeleteResponse(1L);
     }
     
     @Override
@@ -201,7 +231,11 @@ public class MovieServiceImpl implements MovieService {
             throw new ValidationException("Filter object is required and cannot be empty. This prevents accidental deletion of all documents.");
         }
 
-        DeleteResult result = movieRepository.deleteMany(filter);
+        // Convert Document filter to Spring Data Query
+        Query query = new Query();
+        filter.forEach((key, value) -> query.addCriteria(Criteria.where(key).is(value)));
+
+        DeleteResult result = mongoTemplate.remove(query, Movie.class);
 
         return new DeleteResponse(result.getDeletedCount());
     }
@@ -211,56 +245,89 @@ public class MovieServiceImpl implements MovieService {
         if (!ObjectId.isValid(id)) {
             throw new ValidationException("Invalid movie ID format");
         }
-        
-        return movieRepository.findOneAndDelete(new ObjectId(id))
-                .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
+
+        ObjectId objectId = new ObjectId(id);
+        Query query = new Query(Criteria.where("_id").is(objectId));
+
+        Movie movie = mongoTemplate.findAndRemove(query, Movie.class);
+
+        if (movie == null) {
+            throw new ResourceNotFoundException("Movie not found");
+        }
+
+        return movie;
     }
     
-    private Document buildFilter(MovieSearchQuery query) {
-        Document filter = new Document();
+    /**
+     * Builds a Spring Data MongoDB Query from the search parameters.
+     */
+    private Query buildQuery(MovieSearchQuery query) {
+        Query mongoQuery = new Query();
 
+        // Text search
         if (query.getQ() != null && !query.getQ().trim().isEmpty()) {
-            filter.append("$text", new Document("$search", query.getQ()));
+            TextCriteria textCriteria = TextCriteria.forDefaultLanguage().matching(query.getQ());
+            mongoQuery.addCriteria(textCriteria);
         }
 
+        // Genre filter (case-insensitive regex)
         if (query.getGenre() != null && !query.getGenre().trim().isEmpty()) {
-            filter.append(Movie.Fields.GENRES, new Document("$regex", Pattern.compile(query.getGenre(), Pattern.CASE_INSENSITIVE)));
+            mongoQuery.addCriteria(Criteria.where(Movie.Fields.GENRES)
+                    .regex(Pattern.compile(query.getGenre(), Pattern.CASE_INSENSITIVE)));
         }
 
+        // Year filter
         if (query.getYear() != null) {
-            filter.append(Movie.Fields.YEAR, query.getYear());
+            mongoQuery.addCriteria(Criteria.where(Movie.Fields.YEAR).is(query.getYear()));
         }
 
+        // Rating range filter
         if (query.getMinRating() != null || query.getMaxRating() != null) {
-            Document ratingFilter = new Document();
+            Criteria ratingCriteria = Criteria.where(Movie.Fields.IMDB_RATING);
             if (query.getMinRating() != null) {
-                ratingFilter.append("$gte", query.getMinRating());
+                ratingCriteria = ratingCriteria.gte(query.getMinRating());
             }
             if (query.getMaxRating() != null) {
-                ratingFilter.append("$lte", query.getMaxRating());
+                ratingCriteria = ratingCriteria.lte(query.getMaxRating());
             }
-            filter.append(Movie.Fields.IMDB_RATING, ratingFilter);
+            mongoQuery.addCriteria(ratingCriteria);
         }
 
-        return filter;
+        return mongoQuery;
     }
-    
-    private Document buildSort(String sortBy, String sortOrder) {
+
+    /**
+     * Builds a Spring Data Sort object from sort parameters.
+     */
+    private Sort buildSort(String sortBy, String sortOrder) {
         String field = sortBy != null && !sortBy.trim().isEmpty() ? sortBy : Movie.Fields.TITLE;
-        int order = "desc".equalsIgnoreCase(sortOrder) ? -1 : 1;
-        return new Document(field, order);
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortOrder) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(direction, field);
     }
     
+    /**
+     * Checks if the update request has any non-null fields.
+     */
     private boolean isUpdateRequestEmpty(UpdateMovieRequest request) {
         @SuppressWarnings("unchecked")
         Map<String, Object> requestMap = objectMapper.convertValue(request, Map.class);
         return requestMap.values().stream().allMatch(java.util.Objects::isNull);
     }
-    
-    private Document buildUpdateDocument(UpdateMovieRequest request) {
+
+    /**
+     * Builds a Spring Data MongoDB Update object from the update request.
+     */
+    private Update buildUpdate(UpdateMovieRequest request) {
         @SuppressWarnings("unchecked")
         Map<String, Object> requestMap = objectMapper.convertValue(request, Map.class);
-        requestMap.values().removeIf(java.util.Objects::isNull);
-        return new Document(requestMap);
+
+        Update update = new Update();
+        requestMap.forEach((key, value) -> {
+            if (value != null) {
+                update.set(key, value);
+            }
+        });
+
+        return update;
     }
 }

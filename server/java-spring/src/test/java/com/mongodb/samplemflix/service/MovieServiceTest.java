@@ -2,8 +2,6 @@ package com.mongodb.samplemflix.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.result.DeleteResult;
-import com.mongodb.client.result.InsertManyResult;
-import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
@@ -25,6 +23,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.util.*;
 
@@ -33,10 +33,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for MovieServiceImpl.
+ * Unit tests for MovieServiceImpl using Spring Data MongoDB.
  *
  * These tests verify the business logic of the service layer
- * by mocking the repository layer dependencies.
+ * by mocking the repository and MongoTemplate dependencies.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MovieService Unit Tests")
@@ -44,6 +44,9 @@ class MovieServiceTest {
 
     @Mock
     private MovieRepository movieRepository;
+
+    @Mock
+    private MongoTemplate mongoTemplate;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -89,7 +92,7 @@ class MovieServiceTest {
         MovieSearchQuery query = MovieSearchQuery.builder().build();
         List<Movie> expectedMovies = Arrays.asList(testMovie);
 
-        when(movieRepository.find(any(Document.class), any(Document.class), eq(0), eq(20)))
+        when(mongoTemplate.find(any(Query.class), eq(Movie.class)))
                 .thenReturn(expectedMovies);
 
         // Act
@@ -99,7 +102,7 @@ class MovieServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals(testMovie.getTitle(), result.get(0).getTitle());
-        verify(movieRepository).find(any(Document.class), any(Document.class), eq(0), eq(20));
+        verify(mongoTemplate).find(any(Query.class), eq(Movie.class));
     }
 
     @Test
@@ -112,7 +115,7 @@ class MovieServiceTest {
                 .build();
         List<Movie> expectedMovies = Arrays.asList(testMovie);
 
-        when(movieRepository.find(any(Document.class), any(Document.class), eq(10), eq(50)))
+        when(mongoTemplate.find(any(Query.class), eq(Movie.class)))
                 .thenReturn(expectedMovies);
 
         // Act
@@ -121,7 +124,7 @@ class MovieServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(movieRepository).find(any(Document.class), any(Document.class), eq(10), eq(50));
+        verify(mongoTemplate).find(any(Query.class), eq(Movie.class));
     }
 
     @Test
@@ -132,14 +135,14 @@ class MovieServiceTest {
                 .limit(200)
                 .build();
 
-        when(movieRepository.find(any(Document.class), any(Document.class), eq(0), eq(100)))
+        when(mongoTemplate.find(any(Query.class), eq(Movie.class)))
                 .thenReturn(Collections.emptyList());
 
         // Act
         movieService.getAllMovies(query);
 
         // Assert
-        verify(movieRepository).find(any(Document.class), any(Document.class), eq(0), eq(100));
+        verify(mongoTemplate).find(any(Query.class), eq(Movie.class));
     }
 
     @Test
@@ -150,14 +153,14 @@ class MovieServiceTest {
                 .limit(0)
                 .build();
 
-        when(movieRepository.find(any(Document.class), any(Document.class), eq(0), eq(1)))
+        when(mongoTemplate.find(any(Query.class), eq(Movie.class)))
                 .thenReturn(Collections.emptyList());
 
         // Act
         movieService.getAllMovies(query);
 
         // Assert
-        verify(movieRepository).find(any(Document.class), any(Document.class), eq(0), eq(1));
+        verify(mongoTemplate).find(any(Query.class), eq(Movie.class));
     }
 
     // ==================== GET MOVIE BY ID TESTS ====================
@@ -207,19 +210,14 @@ class MovieServiceTest {
     @DisplayName("Should create movie successfully")
     void testCreateMovie_Success() {
         // Arrange
-        InsertOneResult insertResult = mock(InsertOneResult.class);
-        when(insertResult.wasAcknowledged()).thenReturn(true);
-        when(insertResult.getInsertedId()).thenReturn(new BsonObjectId(testId));
-        when(movieRepository.insertOne(any(Movie.class))).thenReturn(insertResult);
-        when(movieRepository.findById(testId)).thenReturn(Optional.of(testMovie));
+        when(movieRepository.save(any(Movie.class))).thenReturn(testMovie);
 
         // Act
         Movie result = movieService.createMovie(createRequest);
 
         // Assert
         assertNotNull(result);
-        verify(movieRepository).insertOne(any(Movie.class));
-        verify(movieRepository).findById(testId);
+        verify(movieRepository).save(any(Movie.class));
     }
 
     @Test
@@ -233,7 +231,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.createMovie(invalidRequest));
-        verify(movieRepository, never()).insertOne(any());
+        verify(movieRepository, never()).save(any());
     }
 
     @Test
@@ -247,37 +245,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.createMovie(invalidRequest));
-        verify(movieRepository, never()).insertOne(any());
-    }
-
-    @Test
-    @DisplayName("Should throw DatabaseOperationException when insert not acknowledged")
-    void testCreateMovie_NotAcknowledged() {
-        // Arrange
-        InsertOneResult insertResult = mock(InsertOneResult.class);
-        when(insertResult.wasAcknowledged()).thenReturn(false);
-        when(movieRepository.insertOne(any(Movie.class))).thenReturn(insertResult);
-
-        // Act & Assert
-        assertThrows(DatabaseOperationException.class, () -> movieService.createMovie(createRequest));
-        verify(movieRepository).insertOne(any(Movie.class));
-        verify(movieRepository, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("Should throw DatabaseOperationException when created movie not found")
-    void testCreateMovie_CreatedMovieNotFound() {
-        // Arrange
-        InsertOneResult insertResult = mock(InsertOneResult.class);
-        when(insertResult.wasAcknowledged()).thenReturn(true);
-        when(insertResult.getInsertedId()).thenReturn(new BsonObjectId(testId));
-        when(movieRepository.insertOne(any(Movie.class))).thenReturn(insertResult);
-        when(movieRepository.findById(testId)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(DatabaseOperationException.class, () -> movieService.createMovie(createRequest));
-        verify(movieRepository).insertOne(any(Movie.class));
-        verify(movieRepository).findById(testId);
+        verify(movieRepository, never()).save(any());
     }
 
     // ==================== CREATE MOVIES BATCH TESTS ====================
@@ -287,14 +255,9 @@ class MovieServiceTest {
     void testCreateMoviesBatch_Success() {
         // Arrange
         List<CreateMovieRequest> requests = Arrays.asList(createRequest, createRequest);
-        InsertManyResult insertResult = mock(InsertManyResult.class);
-        Map<Integer, org.bson.BsonValue> insertedIds = new HashMap<>();
-        insertedIds.put(0, new BsonObjectId(new ObjectId()));
-        insertedIds.put(1, new BsonObjectId(new ObjectId()));
+        List<Movie> savedMovies = Arrays.asList(testMovie, testMovie);
 
-        when(insertResult.wasAcknowledged()).thenReturn(true);
-        when(insertResult.getInsertedIds()).thenReturn(insertedIds);
-        when(movieRepository.insertMany(anyList())).thenReturn(insertResult);
+        when(movieRepository.saveAll(anyList())).thenReturn(savedMovies);
 
         // Act
         BatchInsertResponse result = movieService.createMoviesBatch(requests);
@@ -303,21 +266,7 @@ class MovieServiceTest {
         assertNotNull(result);
         assertEquals(2, result.getInsertedCount());
         assertNotNull(result.getInsertedIds());
-        verify(movieRepository).insertMany(anyList());
-    }
-
-    @Test
-    @DisplayName("Should throw DatabaseOperationException when batch insert not acknowledged")
-    void testCreateMoviesBatch_NotAcknowledged() {
-        // Arrange
-        List<CreateMovieRequest> requests = Arrays.asList(createRequest);
-        InsertManyResult insertResult = mock(InsertManyResult.class);
-        when(insertResult.wasAcknowledged()).thenReturn(false);
-        when(movieRepository.insertMany(anyList())).thenReturn(insertResult);
-
-        // Act & Assert
-        assertThrows(DatabaseOperationException.class, () -> movieService.createMoviesBatch(requests));
-        verify(movieRepository).insertMany(anyList());
+        verify(movieRepository).saveAll(anyList());
     }
 
     // ==================== UPDATE MOVIE TESTS ====================
@@ -335,7 +284,8 @@ class MovieServiceTest {
 
         UpdateResult updateResult = mock(UpdateResult.class);
         when(updateResult.getMatchedCount()).thenReturn(1L);
-        when(movieRepository.updateOne(eq(testId), any(Document.class))).thenReturn(updateResult);
+        when(mongoTemplate.updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class)))
+                .thenReturn(updateResult);
         when(movieRepository.findById(testId)).thenReturn(Optional.of(testMovie));
 
         // Act
@@ -343,7 +293,7 @@ class MovieServiceTest {
 
         // Assert
         assertNotNull(result);
-        verify(movieRepository).updateOne(eq(testId), any(Document.class));
+        verify(mongoTemplate).updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class));
         verify(movieRepository).findById(testId);
     }
 
@@ -355,7 +305,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.updateMovie(invalidId, updateRequest));
-        verify(movieRepository, never()).updateOne(any(), any());
+        verify(mongoTemplate, never()).updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class));
     }
 
     @Test
@@ -370,7 +320,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.updateMovie(validId, emptyRequest));
-        verify(movieRepository, never()).updateOne(any(), any());
+        verify(mongoTemplate, never()).updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class));
     }
 
     @Test
@@ -385,11 +335,12 @@ class MovieServiceTest {
 
         UpdateResult updateResult = mock(UpdateResult.class);
         when(updateResult.getMatchedCount()).thenReturn(0L);
-        when(movieRepository.updateOne(eq(testId), any(Document.class))).thenReturn(updateResult);
+        when(mongoTemplate.updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class)))
+                .thenReturn(updateResult);
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> movieService.updateMovie(validId, updateRequest));
-        verify(movieRepository).updateOne(eq(testId), any(Document.class));
+        verify(mongoTemplate).updateFirst(any(Query.class), any(org.springframework.data.mongodb.core.query.Update.class), any(Class.class));
         verify(movieRepository, never()).findById(any());
     }
 
@@ -400,9 +351,7 @@ class MovieServiceTest {
     void testDeleteMovie_Success() {
         // Arrange
         String validId = testId.toHexString();
-        DeleteResult deleteResult = mock(DeleteResult.class);
-        when(deleteResult.getDeletedCount()).thenReturn(1L);
-        when(movieRepository.deleteOne(testId)).thenReturn(deleteResult);
+        when(movieRepository.existsById(testId)).thenReturn(true);
 
         // Act
         DeleteResponse result = movieService.deleteMovie(validId);
@@ -410,7 +359,8 @@ class MovieServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(1L, result.getDeletedCount());
-        verify(movieRepository).deleteOne(testId);
+        verify(movieRepository).existsById(testId);
+        verify(movieRepository).deleteById(testId);
     }
 
     @Test
@@ -421,7 +371,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.deleteMovie(invalidId));
-        verify(movieRepository, never()).deleteOne(any());
+        verify(movieRepository, never()).deleteById(any());
     }
 
     @Test
@@ -429,13 +379,12 @@ class MovieServiceTest {
     void testDeleteMovie_NotFound() {
         // Arrange
         String validId = testId.toHexString();
-        DeleteResult deleteResult = mock(DeleteResult.class);
-        when(deleteResult.getDeletedCount()).thenReturn(0L);
-        when(movieRepository.deleteOne(testId)).thenReturn(deleteResult);
+        when(movieRepository.existsById(testId)).thenReturn(false);
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> movieService.deleteMovie(validId));
-        verify(movieRepository).deleteOne(testId);
+        verify(movieRepository).existsById(testId);
+        verify(movieRepository, never()).deleteById(any());
     }
 
     // ==================== FIND AND DELETE MOVIE TESTS ====================
@@ -445,7 +394,7 @@ class MovieServiceTest {
     void testFindAndDeleteMovie_Success() {
         // Arrange
         String validId = testId.toHexString();
-        when(movieRepository.findOneAndDelete(testId)).thenReturn(Optional.of(testMovie));
+        when(mongoTemplate.findAndRemove(any(Query.class), eq(Movie.class))).thenReturn(testMovie);
 
         // Act
         Movie result = movieService.findAndDeleteMovie(validId);
@@ -453,7 +402,7 @@ class MovieServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(testMovie.getTitle(), result.getTitle());
-        verify(movieRepository).findOneAndDelete(testId);
+        verify(mongoTemplate).findAndRemove(any(Query.class), eq(Movie.class));
     }
 
     @Test
@@ -464,7 +413,7 @@ class MovieServiceTest {
 
         // Act & Assert
         assertThrows(ValidationException.class, () -> movieService.findAndDeleteMovie(invalidId));
-        verify(movieRepository, never()).findOneAndDelete(any());
+        verify(mongoTemplate, never()).findAndRemove(any(), any());
     }
 
     @Test
@@ -472,10 +421,10 @@ class MovieServiceTest {
     void testFindAndDeleteMovie_NotFound() {
         // Arrange
         String validId = testId.toHexString();
-        when(movieRepository.findOneAndDelete(testId)).thenReturn(Optional.empty());
+        when(mongoTemplate.findAndRemove(any(Query.class), eq(Movie.class))).thenReturn(null);
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> movieService.findAndDeleteMovie(validId));
-        verify(movieRepository).findOneAndDelete(testId);
+        verify(mongoTemplate).findAndRemove(any(Query.class), eq(Movie.class));
     }
 }
