@@ -16,7 +16,7 @@ This application provides a REST API for managing movie data from MongoDB's samp
 
 ## Prerequisites
 
-- Java 17 or later
+- Java 21 or later
 - Maven 3.6 or later
 - MongoDB Atlas account or local MongoDB instance with sample_mflix database
 
