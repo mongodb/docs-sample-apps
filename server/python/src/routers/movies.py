@@ -13,13 +13,53 @@ This file contains all the business logic for movie operations.
 Each method demonstrates different MongoDB operations using the PyMongo driver.
 
 Implemented Endpoints:
-- GET /api/movies/ : Retrieve a list of movies with optional filter, sorting,
-    and pagination.
-- POST /api/movies/batch : Create multiple movies in a single request.
+- GET /api/movies/ :
+    Retrieve a list of movies with optional filtering, sorting, and pagination.
+    Supports text search, genre, year, rating filters, and customizable sorting.
 
+- GET /api/movies/{id} :
+    Retrieve a single movie by its ID.
 
+- POST /api/movies/ :
+    Create a new movie.
+
+- POST /api/movies/batch :
+    Create multiple movies in a single request.
+
+- PATCH /api/movies/{movie_id} :
+    Update a single movie by its ID.
+
+- PATCH /api/movies/ :
+    Batch update movies matching the given filter.
+
+- DELETE /api/movies/{id} :
+    Delete a single movie by its ID.
+
+- DELETE /api/movies/ :
+    Delete multiple movies matching the given filter.
+
+- DELETE /api/movies/{id}/find-and-delete :
+    Find and delete a movie in a single atomic operation.
+
+- GET /api/movies/reportingByComments :
+    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
+
+- GET /api/movies/reportingByYear :
+    Aggregate movies by year with average rating and movie count.
+
+- GET /api/movies/reportingByDirectors :
+    Aggregate directors with the most movies and their statistics.
+
+- GET /api/movies/search/atlas :
+    Search movies using MongoDB Atlas Search across the plot, fullplot, directors, writers, and cast fields.
+    Supports compound search operators and fuzzy matching.
+
+Helper Functions:
+- execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the results.
 '''
+
 router = APIRouter()
+
 #------------------------------------
 # Place get_movie_by_id endpoint here
 #------------------------------------

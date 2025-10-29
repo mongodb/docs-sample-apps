@@ -130,19 +130,3 @@ class ErrorResponse(BaseModel):
     error: ErrorDetails
     timestamp: str
     
-
-
-"""
-I don't think we need this any more but we will see.
-
-class MovieFilter(BaseModel):
-    text: Optional[TextFilter] = Field(None, alias="$text")    
-    genres: Optional[RegexFilter] = None
-    year: Optional[int] = None
-    imdb_rating: Optional[RatingFilter] = Field(None, alias="imdb.rating")
-
-    model_config = {
-        "populate_by_name" : True
-    }
-
-"""
