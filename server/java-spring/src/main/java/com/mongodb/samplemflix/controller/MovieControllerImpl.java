@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
  * REST controller for movie-related endpoints.
  * <p>
  * This controller handles all HTTP requests for movie operations including:
+ * <pre>
  * - GET /api/movies - Get all movies with filtering, sorting, and pagination
  * - GET /api/movies/{id} - Get a single movie by ID
  * - POST /api/movies - Create a new movie
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
  * - DELETE /api/movies/{id}/find-and-delete - Find and delete a movie
+ * </pre>
  */
 @RestController
 @RequestMapping("/api/movies")
@@ -44,8 +46,8 @@ public class MovieControllerImpl {
     
     /**
      * GET /api/movies
-     * <p>
-     * Retrieves multiple movies with optional filtering, sorting, and pagination.
+     *
+     * <p>Retrieves multiple movies with optional filtering, sorting, and pagination.
      */
     @GetMapping
     public ResponseEntity<SuccessResponse<List<Movie>>> getAllMovies(
@@ -85,8 +87,8 @@ public class MovieControllerImpl {
     
     /**
      * GET /api/movies/{id}
-     * <p>
-     * Retrieves a single movie by its ObjectId.
+     *
+     * <p>Retrieves a single movie by its ObjectId.
      */
     @GetMapping("/{id}")
     public ResponseEntity<SuccessResponse<Movie>> getMovieById(@PathVariable String id) {
@@ -104,8 +106,8 @@ public class MovieControllerImpl {
     
     /**
      * POST /api/movies
-     * <p>
-     * Creates a single new movie document.
+     *
+     * <p>Creates a single new movie document.
      */
     @PostMapping
     public ResponseEntity<SuccessResponse<Movie>> createMovie(@Valid @RequestBody CreateMovieRequest request) {
@@ -123,8 +125,8 @@ public class MovieControllerImpl {
     
     /**
      * POST /api/movies/batch
-     * <p>
-     * Creates multiple movie documents in a single operation.
+     *
+     * <p>Creates multiple movie documents in a single operation.
      */
     @PostMapping("/batch")
     public ResponseEntity<SuccessResponse<BatchInsertResponse>> createMoviesBatch(
@@ -143,8 +145,8 @@ public class MovieControllerImpl {
     
     /**
      * PUT /api/movies/{id}
-     * <p>
-     * Updates a single movie document.
+     *
+     * <p>Updates a single movie document.
      */
     @PutMapping("/{id}")
     public ResponseEntity<SuccessResponse<Movie>> updateMovie(
@@ -164,8 +166,8 @@ public class MovieControllerImpl {
     
     /**
      * PATCH /api/movies
-     * <p>
-     * Updates multiple movies based on a filter.
+     *
+     * <p>Updates multiple movies based on a filter.
      */
     @SuppressWarnings("unchecked")
     @PatchMapping
@@ -189,8 +191,8 @@ public class MovieControllerImpl {
     
     /**
      * DELETE /api/movies/{id}/find-and-delete
-     * <p>
-     * Finds and deletes a movie in a single atomic operation.
+     *
+     * <p>Finds and deletes a movie in a single atomic operation.
      */
     @DeleteMapping("/{id}/find-and-delete")
     public ResponseEntity<SuccessResponse<Movie>> findAndDeleteMovie(@PathVariable String id) {
@@ -208,8 +210,8 @@ public class MovieControllerImpl {
     
     /**
      * DELETE /api/movies/{id}
-     * <p>
-     * Deletes a single movie document.
+     *
+     * <p>Deletes a single movie document.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMovie(@PathVariable String id) {
@@ -227,8 +229,8 @@ public class MovieControllerImpl {
     
     /**
      * DELETE /api/movies
-     * <p>
-     * Deletes multiple movies based on a filter.
+     *
+     * <p>Deletes multiple movies based on a filter.
      */
     @SuppressWarnings("unchecked")
     @DeleteMapping

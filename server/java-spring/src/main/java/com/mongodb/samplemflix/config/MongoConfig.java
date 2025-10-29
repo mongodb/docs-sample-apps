@@ -2,30 +2,36 @@ package com.mongodb.samplemflix.config;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoDatabase;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 /**
  * MongoDB configuration class for the Sample MFlix application using Spring Data MongoDB.
- * <p>
- * This class extends AbstractMongoClientConfiguration to customize MongoDB client settings
+ *
+ * <p>This class extends AbstractMongoClientConfiguration to customize MongoDB client settings
  * while leveraging Spring Data MongoDB's auto-configuration for repositories and templates.
- * <p>
- * Key features:
+ *
+ * <p>Key features:
+ * <pre>
  * - Connection pooling with configurable settings (max 100 connections, min 10)
  * - Connection timeout configuration (10 seconds for connect and read)
  * - Automatic POJO mapping (no manual codec configuration needed)
  * - Repository scanning and auto-configuration
  * - MongoTemplate bean creation for complex queries
- * <p>
- * Spring Data MongoDB automatically:
+ * </pre>
+ * <p>Spring Data MongoDB automatically:
+ * <pre>
  * - Creates MongoClient and MongoTemplate beans
  * - Handles POJO to BSON conversion
  * - Manages connection lifecycle
  * - Provides repository implementations
+ * </pre>
  */
 @Configuration
 @EnableMongoRepositories(basePackages = "com.mongodb.samplemflix.repository")
@@ -72,5 +78,19 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
                 .applyToClusterSettings(clusterBuilder ->
                     clusterBuilder.serverSelectionTimeout(10000, TimeUnit.MILLISECONDS)  // 10s to select server
                 );
+    }
+
+    /**
+     * Provides a MongoDatabase bean for direct MongoDB driver access.
+     *
+     * <p>This bean is needed for components that require direct access to the MongoDB
+     * driver API (like DatabaseVerification), while still using Spring Data MongoDB
+     * for repository operations.
+     *
+     * @return the configured MongoDatabase instance
+     */
+    @Bean
+    public MongoDatabase mongoDatabase() {
+        return mongoClient().getDatabase(databaseName);
     }
 }

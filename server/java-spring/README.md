@@ -144,7 +144,7 @@ java -jar target/sample-mflix-spring-1.0.0.jar
 
 ## Implementation Status
 
-### ✅ Completed Features
+### Completed Features
 
 - **Movies CRUD API** - Full create, read, update, delete operations
 - **Spring Data MongoDB** - Repository pattern with MongoTemplate for complex queries
@@ -161,11 +161,8 @@ java -jar target/sample-mflix-spring-1.0.0.jar
 See [TODO.md](TODO.md) for a comprehensive list of planned features and improvements, including:
 
 - Additional collections (Comments, Users, Sessions, Theaters)
-- Authentication & Authorization (Spring Security + JWT)
 - Integration tests with Testcontainers
 - Advanced queries (aggregations, geospatial, vector search)
-- Performance optimization and caching
-- Monitoring and observability
 
 ## Technology Stack
 
@@ -202,7 +199,7 @@ If you encounter connection issues:
 
 If Maven build fails:
 
-1. Ensure you have Java 17 or later installed: `java -version`
+1. Ensure you have Java 21 or later installed: `java -version`
 2. Ensure Maven is installed: `mvn -version`
 3. Clear Maven cache: `mvn clean`
 4. Try rebuilding: `mvn clean install`

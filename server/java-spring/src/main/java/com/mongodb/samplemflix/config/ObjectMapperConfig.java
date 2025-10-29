@@ -11,6 +11,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 
+/**
+ * Configuration for customizing the ObjectMapper used for JSON serialization and deserialization.
+ *
+ * <p>This configuration disables the default timestamp serialization for dates and registers a
+ * custom serializer for MongoDB's ObjectId to convert it to a string representation.
+ *
+ * <p>It also registers a JavaTimeModule to handle Java 8 date and time types.
+ */
+
 @Configuration
 public class ObjectMapperConfig {
 
@@ -36,4 +45,3 @@ public class ObjectMapperConfig {
         return new DefaultDataBufferFactory();
     }
 }
-

@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for creating a new movie.
- * <p>
- * This DTO is used for POST /api/movies requests.
+ *
+ * <p>This DTO is used for POST /api/movies requests.
  * It includes validation annotations to ensure required fields are present.
  * Only the title field is required; all other fields are optional.
  */

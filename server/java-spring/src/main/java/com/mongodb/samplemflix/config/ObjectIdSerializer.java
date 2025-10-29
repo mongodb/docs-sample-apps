@@ -6,9 +6,15 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
 import org.bson.types.ObjectId;
 
-// ObjectId is a MognoDB GUID Class, an efficient 12 byte UUID starting with a
-// timestamp for efficnent indexing - we need to teach Jackson how to convert it
-// to JSON nicely
+/**
+ * Custom serializer for MongoDB's ObjectId to convert it to a string representation.
+ *
+ * <p>MongoDB's ObjectId is a 12-byte unique identifier. By default, Jackson will serialize it
+ * as a base64 string, but we want to use the more human-readable hex string representation.
+ *
+ * <p>This custom serializer teaches Jackson to convert ObjectId to a hex string when
+ * writing JSON.
+ */
 
 public class ObjectIdSerializer extends StdSerializer<ObjectId> {
 
@@ -22,4 +28,3 @@ public class ObjectIdSerializer extends StdSerializer<ObjectId> {
         gen.writeString(value.toHexString());
     }
 }
-

@@ -10,11 +10,11 @@ import org.springframework.web.filter.CorsFilter;
 
 /**
  * CORS (Cross-Origin Resource Sharing) configuration for the Sample MFlix API.
- * <p>
- * This configuration allows the frontend application (typically running on a different port
+ *
+ * <p>This configuration allows the frontend application (typically running on a different port
  * during development) to make requests to this backend API.
- * <p>
- * The allowed origins are configured via the CORS_ORIGIN environment variable.
+ *
+ * <p>The allowed origins are configured via the CORS_ORIGIN environment variable.
  */
 @Configuration
 public class CorsConfig {

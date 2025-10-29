@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * Error response wrapper for API error responses.
- * <p>
- * This class wraps error responses with error codes, messages, and metadata.
- * <p>
- * {
+ *
+ * <p>This class wraps error responses with error codes, messages, and metadata.
+ *
+ * <pre> {
  *   success: false,
  *   message: string,
  *   error: {
@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
  *     details?: any
  *   },
  *   timestamp: string
- * }
+ * }</pre>
  */
 @Data
 @Builder

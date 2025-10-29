@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for movie search query parameters.
- * <p>
- * This DTO is used to parse and validate query parameters for GET /api/movies requests.
+ *
+ * <p>This DTO is used to parse and validate query parameters for GET /api/movies requests.
  * It supports full-text search, filtering by genre/year/rating, sorting, and pagination.
  */
 @Data

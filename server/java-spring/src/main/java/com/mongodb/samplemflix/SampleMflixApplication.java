@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Main Spring Boot application class for the MongoDB Sample MFlix API.
  *
- * This application demonstrates MongoDB CRUD operations using the MongoDB Java Driver
+ * <p>This application demonstrates MongoDB CRUD operations using the MongoDB Java Driver
  * in a Spring Boot environment. It provides a REST API for managing movie data from
  * the sample_mflix database.
  *

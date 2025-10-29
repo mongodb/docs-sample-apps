@@ -9,17 +9,17 @@ import lombok.NoArgsConstructor;
 
 /**
  * Success response wrapper for API responses.
- * <p>
- * This class wraps successful API responses with metadata like timestamp and pagination.
+ *
+ * <p>This class wraps successful API responses with metadata like timestamp and pagination.
  * It uses a generic type parameter T to hold the response data.
- * <p>
- * {
+ *
+ * <pre>  {
  *   success: true,
  *   message?: string,
  *   data: T,
  *   timestamp: string,
  *   pagination?: { page, limit, total, pages }
- * }
+ * }</pre>
  */
 @Data
 @Builder

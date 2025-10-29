@@ -10,12 +10,12 @@ import org.bson.types.ObjectId;
 
 /**
  * Domain model representing a movie document from the MongoDB movies collection.
- * <p>
- * This class maps to the movies collection in the sample_mflix database.
+ *
+ * <p>This class maps to the movies collection in the sample_mflix database.
  * It includes all fields from the movie documents including nested objects
  * for awards, IMDB ratings, and Tomatoes ratings.
- * <p>
- * Note: We use Lombok annotations to reduce boilerplate code:
+ *
+ * <p>Note: We use Lombok annotations to reduce boilerplate code:
  * - @Data: Generates getters, setters, toString, equals, and hashCode
  * - @Builder: Provides a fluent builder pattern for object construction
  * - @NoArgsConstructor: Generates a no-argument constructor (required by MongoDB driver)
@@ -29,12 +29,12 @@ public class Movie {
 
     /**
      * Field name constants for MongoDB operations.
-     * <p>
-     * These constants should be used when referencing field names in queries, filters,
+     *
+     * <p>These constants should be used when referencing field names in queries, filters,
      * indexes, and other MongoDB operations to ensure type safety and enable IDE
      * "Find Usages" functionality.
-     * <p>
-     * Example usage:
+     *
+     * <p>Example usage:
      * <pre>
      * filter.append(Movie.Fields.TITLE, "The Matrix");
      * Indexes.text(Movie.Fields.PLOT);

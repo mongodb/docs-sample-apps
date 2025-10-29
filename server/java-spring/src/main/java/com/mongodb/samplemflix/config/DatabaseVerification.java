@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * Database verification component that runs on application startup.
- * <p>
- * This component performs pre-flight checks to ensure the MongoDB database
+ *
+ * <p>This component performs pre-flight checks to ensure the MongoDB database
  * is properly configured and contains the expected data and indexes.
- * <p>
- * Verification steps:
+ *
+ * <p>Verification steps:
  * 1. Check if the movies collection exists
  * 2. Verify the collection contains documents
  * 3. Check for text search indexes on plot, title, and fullplot fields
@@ -43,11 +43,11 @@ public class DatabaseVerification {
 
     /**
      * Runs database verification checks after the bean is constructed.
-     * <p>
-     * This method is called automatically by Spring after dependency injection
+     *
+     * <p>This method is called automatically by Spring after dependency injection
      * is complete. It performs all verification steps and logs the results.
-     * <p>
-     * The method catches all exceptions to prevent application startup failure,
+     *
+     * <p>The method catches all exceptions to prevent application startup failure,
      * but logs errors to help developers identify issues.
      */
     @PostConstruct
@@ -70,12 +70,13 @@ public class DatabaseVerification {
     /**
      * Verifies the movies collection exists, contains data, and has required indexes.
      *
-     * This method:
+     * <p>This method:
+     * <pre>
      * 1. Checks if the movies collection exists (implicitly by accessing it)
      * 2. Counts documents to verify sample data is loaded
      * 3. Creates a text search index on plot, title, and fullplot fields
-     *
-     * The text search index enables full-text search functionality across movie
+     *</pre>
+     * <p>The text search index enables full-text search functionality across movie
      * descriptions and titles, which is used by the search endpoint.
      */
     private void verifyMoviesCollection() {
@@ -101,15 +102,16 @@ public class DatabaseVerification {
     /**
      * Creates a text search index on the movies collection if it doesn't already exist.
      *
-     * The index is created on three fields:
+     * <p>The index is created on three fields:
+     * <pre>
      * - plot: Short movie description
      * - title: Movie title
      * - fullplot: Full movie description
-     *
-     * This enables the $text search operator to perform full-text search across
+     * </pre>
+     * <p>This enables the $text search operator to perform full-text search across
      * these fields, which is used by the search endpoint in the API.
      *
-     * The index is created in the background to avoid blocking other operations.
+     * <p>The index is created in the background to avoid blocking other operations.
      * If the index already exists, MongoDB will ignore the duplicate creation request.
      *
      * @param moviesCollection the movies collection to create the index on

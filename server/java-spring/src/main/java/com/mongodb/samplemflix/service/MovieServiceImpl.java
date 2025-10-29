@@ -32,16 +32,19 @@ import org.springframework.stereotype.Service;
 
 /**
  * Service layer for movie business logic using Spring Data MongoDB.
- * <p>
- * This service handles:
+ *
+ * <p>This service handles:
+ * <pre>
  * - Business logic and validation
  * - Query construction using Spring Data MongoDB Query API
  * - Data transformation between DTOs and entities
  * - Error handling and exception throwing
- * <p>
+ * </pre>
  * Uses both:
+ * <pre>
  * - MovieRepository (Spring Data) for simple CRUD operations
  * - MongoTemplate for complex queries and batch operations
+ * </pre>
  */
 @Service
 public class MovieServiceImpl implements MovieService {

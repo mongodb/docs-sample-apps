@@ -12,11 +12,11 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 /**
  * Domain model representing a comment document from the MongoDB comments collection.
- * <p>
- * This class maps to the comments collection in the sample_mflix database.
+ *
+ * <p>This class maps to the comments collection in the sample_mflix database.
  * Comments are user reviews/comments associated with movies.
  *
- * TODO: Implement Comment functionality:
+ * <p>TODO: Implement Comment functionality:
  * - Create CommentRepository extending MongoRepository
  * - Create CommentService and CommentServiceImpl
  * - Create CommentController with REST endpoints
