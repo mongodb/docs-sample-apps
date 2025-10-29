@@ -1,13 +1,12 @@
 package com.mongodb.samplemflix.model;
 
+import java.util.Date;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
-
-import java.util.Date;
-import java.util.List;
 
 /**
  * Domain model representing a movie document from the MongoDB movies collection.

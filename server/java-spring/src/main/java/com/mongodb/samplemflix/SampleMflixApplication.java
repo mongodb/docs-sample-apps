@@ -1,11 +1,10 @@
 package com.mongodb.samplemflix;
 
+import java.util.Map;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * Main Spring Boot application class for the MongoDB Sample MFlix API.

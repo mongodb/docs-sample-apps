@@ -7,9 +7,8 @@ import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
-import org.bson.Document;
-
 import java.util.List;
+import org.bson.Document;
 
 /**
  * Service interface for movie business logic.

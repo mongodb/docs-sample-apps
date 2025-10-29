@@ -14,25 +14,21 @@ import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.TextCriteria;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Service layer for movie business logic using Spring Data MongoDB.
@@ -64,7 +60,7 @@ public class MovieServiceImpl implements MovieService {
     public List<Movie> getAllMovies(MovieSearchQuery query) {
         Query mongoQuery = buildQuery(query);
 
-        int limit = Math.min(Math.max(query.getLimit() != null ? query.getLimit() : 20, 1), 100);
+        int limit = Math.clamp(query.getLimit() != null ? query.getLimit() : 20, 1, 100);
         int skip = Math.max(query.getSkip() != null ? query.getSkip() : 0, 0);
 
         mongoQuery.skip(skip).limit(limit);

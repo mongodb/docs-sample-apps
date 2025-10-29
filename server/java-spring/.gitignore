@@ -1,5 +1,10 @@
 # Java/Spring Boot - Specific Ignores
-# Common patterns (.env, .DS_Store, .idea/, .vscode/, logs) in root .gitignore
+# Common patterns
+.env
+.DS_Store
+
+#Cache
+.cache/
 
 # Compiled Files
 *.class
@@ -27,13 +32,6 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
-
-# Gradle
-.gradle/
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 # IntelliJ IDEA
 *.iws

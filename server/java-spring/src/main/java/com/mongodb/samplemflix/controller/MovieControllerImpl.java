@@ -10,14 +10,13 @@ import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.model.response.SuccessResponse;
 import com.mongodb.samplemflix.service.MovieService;
 import jakarta.validation.Valid;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.bson.Document;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 /**
  * REST controller for movie-related endpoints.

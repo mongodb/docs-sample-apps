@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.model;
 
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,8 +9,6 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-
-import java.util.Date;
 
 /**
  * Domain model representing a comment document from the MongoDB comments collection.
@@ -67,19 +66,4 @@ public class Comment {
      */
     private Date date;
 
-    /**
-     * Field name constants for type-safe queries.
-     */
-    public static class Fields {
-        public static final String ID = "_id";
-        public static final String NAME = "name";
-        public static final String EMAIL = "email";
-        public static final String MOVIE_ID = "movie_id";
-        public static final String TEXT = "text";
-        public static final String DATE = "date";
-
-        private Fields() {
-            // Private constructor to prevent instantiation
-        }
-    }
 }
