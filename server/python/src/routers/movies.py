@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Path
-from src.database.mongo_client import db, get_collection
+from src.database.mongo_client import db, get_collection, voyage_ai_available
 from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, VectorSearchResult
 from typing import List
 from datetime import datetime
@@ -271,7 +271,6 @@ async def search_movies(
 # Specify your Voyage API key and embedding model
 model = "voyage-3-large"
 outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
-vo = voyageai.Client()
 
 # Vector Search Endpoint
 @router.get("/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
@@ -289,10 +288,20 @@ async def vector_search_movies(
     Returns:
         SuccessResponse containing a list of movies with similarity scores
     """
+    if not voyage_ai_available():
+        return create_error_response(
+            message="Vector search unavailable",
+            code="SERVICE_UNAVAILABLE",
+            details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
+        )
+    
     try:
+        # Initialize the client here to avoid import-time errors
+        vo = voyageai.Client()
+        
         # The vector search index was already created at startup time
         # Generate embedding for the search query
-        query_embedding = get_embedding(q, input_type="query")
+        query_embedding = get_embedding(q, input_type="query", client=vo)
         
         # Get the embedded movies collection
         embedded_movies_collection = get_collection("embedded_movies")
@@ -1340,13 +1349,28 @@ async def execute_aggregation_on_collection(collection, pipeline: list) -> list:
     Args:  
         data: Input data to generate embeddings for
         input_type: Type of input data
+        client: Voyage AI client instance
 
     Returns:  
         Vector embeddings for the given input
 """
 
-def get_embedding(data, input_type = "document"):
-  embeddings = vo.embed(
-      data, model = model, output_dimension = outputDimension, input_type = input_type
-  ).embeddings
-  return embeddings[0]
+def get_embedding(data, input_type = "document", client=None):
+    """
+    Helper function to generate vector embeddings from an input.
+
+    Args:  
+        data: Input data to generate embeddings for
+        input_type: Type of input data
+        client: Voyage AI client instance
+
+    Returns:  
+        Vector embeddings for the given input
+    """
+    if client is None:
+        client = voyageai.Client()
+    
+    embeddings = client.embed(
+        data, model = model, output_dimension = outputDimension, input_type = input_type
+    ).embeddings
+    return embeddings[0]
