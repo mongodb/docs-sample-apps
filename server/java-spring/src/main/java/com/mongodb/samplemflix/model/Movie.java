@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
  * Domain model representing a movie document from the MongoDB movies collection.
@@ -25,6 +26,7 @@ import org.bson.types.ObjectId;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "movies")
 public class Movie {
 
     /**
