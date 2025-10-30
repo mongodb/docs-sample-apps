@@ -14,10 +14,14 @@ import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
+import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
+import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.service.MovieService;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -323,5 +327,179 @@ class MovieControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    // ==================== AGGREGATION ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/comments - Should return movies with most comments")
+    void testGetMoviesWithMostComments_Success() throws Exception {
+        // Arrange
+        MovieWithCommentsResult.CommentInfo comment = MovieWithCommentsResult.CommentInfo.builder()
+                .id(new ObjectId().toHexString())
+                .name("John Doe")
+                .email("john@example.com")
+                .text("Great movie!")
+                .date(new Date())
+                .build();
+
+        MovieWithCommentsResult.ImdbInfo imdb = MovieWithCommentsResult.ImdbInfo.builder()
+                .rating(8.5)
+                .votes(1000)
+                .build();
+
+        MovieWithCommentsResult result = MovieWithCommentsResult.builder()
+                .id(testId.toHexString())
+                .title("Test Movie")
+                .year(2024)
+                .plot("Test plot")
+                .poster("http://example.com/poster.jpg")
+                .genres(Arrays.asList("Action", "Drama"))
+                .imdb(imdb)
+                .recentComments(Arrays.asList(comment))
+                .totalComments(5)
+                .mostRecentCommentDate(new Date())
+                .build();
+
+        when(movieService.getMoviesWithMostComments(anyInt(), isNull())).thenReturn(Arrays.asList(result));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].title").value("Test Movie"))
+                .andExpect(jsonPath("$.data[0].year").value(2024))
+                .andExpect(jsonPath("$.data[0].totalComments").value(5))
+                .andExpect(jsonPath("$.data[0].recentComments", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].recentComments[0].name").value("John Doe"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/comments - Should accept limit parameter")
+    void testGetMoviesWithMostComments_WithLimit() throws Exception {
+        // Arrange
+        when(movieService.getMoviesWithMostComments(eq(5), isNull())).thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/comments")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/comments - Should accept movieId parameter")
+    void testGetMoviesWithMostComments_WithMovieId() throws Exception {
+        // Arrange
+        String movieId = testId.toHexString();
+        when(movieService.getMoviesWithMostComments(anyInt(), eq(movieId))).thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/comments")
+                        .param("movieId", movieId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/comments - Should return 400 for invalid movieId")
+    void testGetMoviesWithMostComments_InvalidMovieId() throws Exception {
+        // Arrange
+        String invalidMovieId = "invalid-id";
+        when(movieService.getMoviesWithMostComments(anyInt(), eq(invalidMovieId)))
+                .thenThrow(new ValidationException("Invalid movie ID format"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/comments")
+                        .param("movieId", invalidMovieId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/years - Should return movies by year with statistics")
+    void testGetMoviesByYearWithStats_Success() throws Exception {
+        // Arrange
+        MoviesByYearResult result1 = MoviesByYearResult.builder()
+                .year(2024)
+                .movieCount(10)
+                .averageRating(7.5)
+                .highestRating(9.0)
+                .lowestRating(6.0)
+                .totalVotes(5000L)
+                .build();
+
+        MoviesByYearResult result2 = MoviesByYearResult.builder()
+                .year(2023)
+                .movieCount(15)
+                .averageRating(7.8)
+                .highestRating(9.5)
+                .lowestRating(6.5)
+                .totalVotes(7500L)
+                .build();
+
+        when(movieService.getMoviesByYearWithStats()).thenReturn(Arrays.asList(result1, result2));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/years"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].year").value(2024))
+                .andExpect(jsonPath("$.data[0].movieCount").value(10))
+                .andExpect(jsonPath("$.data[0].averageRating").value(7.5))
+                .andExpect(jsonPath("$.data[1].year").value(2023))
+                .andExpect(jsonPath("$.data[1].movieCount").value(15));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/directors - Should return directors with most movies")
+    void testGetDirectorsWithMostMovies_Success() throws Exception {
+        // Arrange
+        DirectorStatisticsResult result1 = DirectorStatisticsResult.builder()
+                .director("Christopher Nolan")
+                .movieCount(10)
+                .averageRating(8.5)
+                .build();
+
+        DirectorStatisticsResult result2 = DirectorStatisticsResult.builder()
+                .director("Steven Spielberg")
+                .movieCount(25)
+                .averageRating(8.2)
+                .build();
+
+        when(movieService.getDirectorsWithMostMovies(anyInt())).thenReturn(Arrays.asList(result1, result2));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/directors"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].director").value("Christopher Nolan"))
+                .andExpect(jsonPath("$.data[0].movieCount").value(10))
+                .andExpect(jsonPath("$.data[0].averageRating").value(8.5))
+                .andExpect(jsonPath("$.data[1].director").value("Steven Spielberg"))
+                .andExpect(jsonPath("$.data[1].movieCount").value(25));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/aggregations/directors - Should accept limit parameter")
+    void testGetDirectorsWithMostMovies_WithLimit() throws Exception {
+        // Arrange
+        when(movieService.getDirectorsWithMostMovies(eq(10))).thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/aggregations/directors")
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
     }
 }

@@ -5,7 +5,10 @@ import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
+import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
+import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.model.response.SuccessResponse;
 import com.mongodb.samplemflix.service.MovieService;
@@ -20,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller for movie-related endpoints.
- * <p>
- * This controller handles all HTTP requests for movie operations including:
+ * 
+ * <p>This controller handles all HTTP requests for movie operations including:
  * <pre>
  * - GET /api/movies - Get all movies with filtering, sorting, and pagination
  * - GET /api/movies/{id} - Get a single movie by ID
@@ -32,6 +35,9 @@ import org.springframework.web.bind.annotation.*;
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
  * - DELETE /api/movies/{id}/find-and-delete - Find and delete a movie
+ * - GET /api/movies/reportingByComments - Aggregate movies with most comments
+ * - GET /api/movies/reportingByYear - Aggregate movies by year with statistics
+ * - GET /api/movies/reportingByDirectors - Aggregate directors with most movies
  * </pre>
  */
 @RestController
@@ -246,6 +252,96 @@ public class MovieControllerImpl {
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Aggregation endpoints for reporting
+
+    /**
+     * GET /api/movies/aggregations/comments
+     *
+     * <p>Aggregates movies with their most recent comments.
+     * Demonstrates MongoDB $lookup (join) operation to combine movies with comments.
+     *
+     * @param limit Maximum number of movies to return (default: 10, max: 50)
+     * @param movieId Optional movie ID to filter by specific movie
+     * @return List of movies with their recent comments
+     */
+    @GetMapping("/aggregations/comments")
+    public ResponseEntity<SuccessResponse<List<MovieWithCommentsResult>>> getMoviesWithMostComments(
+            @RequestParam(defaultValue = "10") Integer limit,
+            @RequestParam(required = false) String movieId) {
+
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostComments(limit, movieId);
+
+        // Calculate total comments across all movies
+        int totalComments = results.stream()
+                .mapToInt(result -> result.getTotalComments() != null ? result.getTotalComments() : 0)
+                .sum();
+
+        String message = movieId != null
+                ? String.format("Found %d comments from movie", totalComments)
+                : String.format("Found %d comments from %d movie%s",
+                        totalComments, results.size(), results.size() != 1 ? "s" : "");
+
+        SuccessResponse<List<MovieWithCommentsResult>> response =
+                SuccessResponse.<List<MovieWithCommentsResult>>builder()
+                        .success(true)
+                        .message(message)
+                        .data(results)
+                        .timestamp(Instant.now().toString())
+                        .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/movies/aggregations/years
+     *
+     * <p>Aggregates movies by year with statistics.
+     * Demonstrates MongoDB $group operation for statistical aggregation.
+     *
+     * @return List of yearly statistics including movie count and average rating
+     */
+    @GetMapping("/aggregations/years")
+    public ResponseEntity<SuccessResponse<List<MoviesByYearResult>>> getMoviesByYearWithStats() {
+
+        List<MoviesByYearResult> results = movieService.getMoviesByYearWithStats();
+
+        SuccessResponse<List<MoviesByYearResult>> response =
+                SuccessResponse.<List<MoviesByYearResult>>builder()
+                        .success(true)
+                        .message(String.format("Aggregated statistics for %d years", results.size()))
+                        .data(results)
+                        .timestamp(Instant.now().toString())
+                        .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/movies/aggregations/directors
+     *
+     * <p>Aggregates directors with the most movies.
+     * Demonstrates MongoDB $unwind operation for array flattening and aggregation.
+     *
+     * @param limit Maximum number of directors to return (default: 20, max: 100)
+     * @return List of directors with their movie count and average rating
+     */
+    @GetMapping("/aggregations/directors")
+    public ResponseEntity<SuccessResponse<List<DirectorStatisticsResult>>> getDirectorsWithMostMovies(
+            @RequestParam(defaultValue = "20") Integer limit) {
+
+        List<DirectorStatisticsResult> results = movieService.getDirectorsWithMostMovies(limit);
+
+        SuccessResponse<List<DirectorStatisticsResult>> response =
+                SuccessResponse.<List<DirectorStatisticsResult>>builder()
+                        .success(true)
+                        .message(String.format("Found %d directors with most movies", results.size()))
+                        .data(results)
+                        .timestamp(Instant.now().toString())
+                        .build();
 
         return ResponseEntity.ok(response);
     }

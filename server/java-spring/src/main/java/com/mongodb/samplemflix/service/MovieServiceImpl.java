@@ -11,7 +11,10 @@ import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
+import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
+import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
 import java.util.Collection;
@@ -24,6 +27,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
+import org.springframework.data.mongodb.core.aggregation.ConditionalOperators;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.TextCriteria;
@@ -328,6 +335,226 @@ public class MovieServiceImpl implements MovieService {
         });
 
         return update;
+    }
+
+    // Aggregation methods for reporting
+
+    @Override
+    public List<MovieWithCommentsResult> getMoviesWithMostComments(Integer limit, String movieId) {
+        // Validate and set default limit
+        int resultLimit = Math.clamp(limit != null ? limit : 10, 1, 50);
+
+        // Build match criteria
+        Criteria matchCriteria = Criteria.where(Movie.Fields.YEAR).type(16).gte(1800).lte(2030);
+
+        // Add movie ID filter if provided
+        if (movieId != null && !movieId.trim().isEmpty()) {
+            if (!ObjectId.isValid(movieId)) {
+                throw new ValidationException("Invalid movie ID format");
+            }
+            matchCriteria = matchCriteria.and(Movie.Fields.ID).is(new ObjectId(movieId));
+        }
+
+        // Build aggregation pipeline
+        // This demonstrates $lookup (join), $unwind, $sort, $group, and $project operations
+        Aggregation aggregation = Aggregation.newAggregation(
+                // STAGE 1: Match movies with valid year data
+                Aggregation.match(matchCriteria),
+
+                // STAGE 2: Lookup (join) with comments collection
+                Aggregation.lookup("comments", "_id", "movie_id", "comments"),
+
+                // STAGE 3: Filter to only movies with comments
+                Aggregation.match(Criteria.where("comments").ne(List.of())),
+
+                // STAGE 4: Add computed fields
+                Aggregation.project()
+                        .and(Movie.Fields.ID).as("_id")
+                        .and(Movie.Fields.TITLE).as("title")
+                        .and(Movie.Fields.YEAR).as("year")
+                        .and(Movie.Fields.PLOT).as("plot")
+                        .and(Movie.Fields.POSTER).as("poster")
+                        .and(Movie.Fields.GENRES).as("genres")
+                        .and(Movie.Fields.IMDB).as("imdb")
+                        .and("comments").as("comments")
+                        .and(ArrayOperators.Size.lengthOfArray("comments")).as("totalComments")
+                        .and(ArrayOperators.ArrayElemAt.arrayOf("comments.date").elementAt(0)).as("mostRecentCommentDate"),
+
+                // STAGE 5: Sort by most recent comment date (descending)
+                Aggregation.sort(Sort.Direction.DESC, "mostRecentCommentDate"),
+
+                // STAGE 6: Limit results
+                Aggregation.limit(resultLimit),
+
+                // STAGE 7: Project final output with recent comments slice
+                Aggregation.project()
+                        .and(ConditionalOperators.ifNull("_id").then("")).as("id")
+                        .and("title").as("title")
+                        .and("year").as("year")
+                        .and("plot").as("plot")
+                        .and("poster").as("poster")
+                        .and("genres").as("genres")
+                        .and("imdb").as("imdb")
+                        .and(ArrayOperators.Slice.sliceArrayOf("comments").itemCount(5)).as("recentComments")
+                        .and("totalComments").as("totalComments")
+                        .and("mostRecentCommentDate").as("mostRecentCommentDate")
+        );
+
+        AggregationResults<Document> results = mongoTemplate.aggregate(
+                aggregation, "movies", Document.class);
+
+        // Convert Document results to DTOs
+        return results.getMappedResults().stream()
+                .map(this::mapToMovieWithCommentsResult)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MoviesByYearResult> getMoviesByYearWithStats() {
+        // Build aggregation pipeline
+        // This demonstrates $group with statistical operators and $project for data shaping
+        Aggregation aggregation = Aggregation.newAggregation(
+                // STAGE 1: Match movies with valid year data
+                Aggregation.match(
+                        Criteria.where(Movie.Fields.YEAR).type(16).gte(1800).lte(2030)
+                ),
+
+                // STAGE 2: Group by year and calculate statistics
+                Aggregation.group(Movie.Fields.YEAR)
+                        .count().as("movieCount")
+                        .avg(Movie.Fields.IMDB_RATING).as("averageRating")
+                        .max(Movie.Fields.IMDB_RATING).as("highestRating")
+                        .min(Movie.Fields.IMDB_RATING).as("lowestRating")
+                        .sum("imdb.votes").as("totalVotes"),
+
+                // STAGE 3: Project final output with renamed fields
+                Aggregation.project()
+                        .and("_id").as("year")
+                        .and("movieCount").as("movieCount")
+                        .and("averageRating").as("averageRating")
+                        .and("highestRating").as("highestRating")
+                        .and("lowestRating").as("lowestRating")
+                        .and("totalVotes").as("totalVotes")
+                        .andExclude("_id"),
+
+                // STAGE 4: Sort by year (descending)
+                Aggregation.sort(Sort.Direction.DESC, "year")
+        );
+
+        AggregationResults<MoviesByYearResult> results = mongoTemplate.aggregate(
+                aggregation, "movies", MoviesByYearResult.class);
+
+        // Round average rating to 2 decimal places
+        return results.getMappedResults().stream()
+                .peek(result -> {
+                    if (result.getAverageRating() != null) {
+                        result.setAverageRating(
+                                Math.round(result.getAverageRating() * 100.0) / 100.0
+                        );
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DirectorStatisticsResult> getDirectorsWithMostMovies(Integer limit) {
+        // Validate and set default limit
+        int resultLimit = Math.clamp(limit != null ? limit : 20, 1, 100);
+
+        // Build aggregation pipeline
+        // This demonstrates $unwind for array flattening and $group for aggregation
+        Aggregation aggregation = Aggregation.newAggregation(
+                // STAGE 1: Match movies with directors and valid year
+                Aggregation.match(
+                        Criteria.where(Movie.Fields.DIRECTORS).exists(true).ne(null).ne(List.of())
+                                .and(Movie.Fields.YEAR).type(16).gte(1800).lte(2030)
+                ),
+
+                // STAGE 2: Unwind directors array
+                Aggregation.unwind(Movie.Fields.DIRECTORS),
+
+                // STAGE 3: Filter out null/empty director names
+                Aggregation.match(
+                        Criteria.where(Movie.Fields.DIRECTORS).ne(null).ne("")
+                ),
+
+                // STAGE 4: Group by director and calculate statistics
+                Aggregation.group(Movie.Fields.DIRECTORS)
+                        .count().as("movieCount")
+                        .avg(Movie.Fields.IMDB_RATING).as("averageRating"),
+
+                // STAGE 5: Sort by movie count (descending)
+                Aggregation.sort(Sort.Direction.DESC, "movieCount"),
+
+                // STAGE 6: Limit results
+                Aggregation.limit(resultLimit),
+
+                // STAGE 7: Project final output
+                Aggregation.project()
+                        .and("_id").as("director")
+                        .and("movieCount").as("movieCount")
+                        .and("averageRating").as("averageRating")
+                        .andExclude("_id")
+        );
+
+        AggregationResults<DirectorStatisticsResult> results = mongoTemplate.aggregate(
+                aggregation, "movies", DirectorStatisticsResult.class);
+
+        // Round average rating to 2 decimal places
+        return results.getMappedResults().stream()
+                .peek(result -> {
+                    if (result.getAverageRating() != null) {
+                        result.setAverageRating(
+                                Math.round(result.getAverageRating() * 100.0) / 100.0
+                        );
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to map Document to MovieWithCommentsResult.
+     */
+    private MovieWithCommentsResult mapToMovieWithCommentsResult(Document doc) {
+        // Extract IMDB info
+        MovieWithCommentsResult.ImdbInfo imdbInfo = null;
+        Document imdbDoc = doc.get("imdb", Document.class);
+        if (imdbDoc != null) {
+            imdbInfo = MovieWithCommentsResult.ImdbInfo.builder()
+                    .rating(imdbDoc.getDouble("rating"))
+                    .votes(imdbDoc.getInteger("votes"))
+                    .build();
+        }
+
+        // Extract recent comments
+        List<MovieWithCommentsResult.CommentInfo> recentComments = null;
+        @SuppressWarnings("unchecked")
+        List<Document> commentsDoc = (List<Document>) doc.get("recentComments");
+        if (commentsDoc != null) {
+            recentComments = commentsDoc.stream()
+                    .map(commentDoc -> MovieWithCommentsResult.CommentInfo.builder()
+                            .id(commentDoc.getObjectId("_id") != null ?
+                                    commentDoc.getObjectId("_id").toHexString() : null)
+                            .name(commentDoc.getString("name"))
+                            .email(commentDoc.getString("email"))
+                            .text(commentDoc.getString("text"))
+                            .date(commentDoc.getDate("date"))
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        return MovieWithCommentsResult.builder()
+                .id(doc.getString("id"))
+                .title(doc.getString("title"))
+                .year(doc.getInteger("year"))
+                .plot(doc.getString("plot"))
+                .poster(doc.getString("poster"))
+                .genres((List<String>) doc.get("genres"))
+                .imdb(imdbInfo)
+                .recentComments(recentComments)
+                .totalComments(doc.getInteger("totalComments"))
+                .mostRecentCommentDate(doc.getDate("mostRecentCommentDate"))
+                .build();
     }
 
     // TODO: Add advanced query methods
