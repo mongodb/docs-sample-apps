@@ -114,15 +114,6 @@ Once the application is running, you can access:
 - `DELETE /api/movies` - Delete multiple movies
 - `DELETE /api/movies/{id}/find-and-delete` - Find and delete a movie
 
-### Planned Endpoints
-
-See [TODO.md](TODO.md) for a complete list of planned features including:
-- Comments API
-- Users API
-- Sessions API (Authentication)
-- Theaters API (with geospatial queries)
-- Advanced movie features (aggregations, recommendations)
-
 ## Development
 
 ### Running Tests
@@ -156,13 +147,6 @@ java -jar target/sample-mflix-spring-1.0.0.jar
 - **OpenAPI Documentation** - Swagger UI available at `/swagger-ui.html`
 - **Database Verification** - Startup checks for database connectivity and indexes
 
-### 🚧 In Progress / Planned
-
-See [TODO.md](TODO.md) for a comprehensive list of planned features and improvements, including:
-
-- Additional collections (Comments, Users, Sessions, Theaters)
-- Integration tests with Testcontainers
-- Advanced queries (aggregations, geospatial, vector search)
 
 ## Technology Stack
 
