@@ -2,8 +2,8 @@
 # 1. CORE WEB FRAMEWORK & ASGI SERVER
 # FastAPI and its main components.
 # ------------------------------------------------------------------------------
-fastapi~=0.120.0        # The main web framework
-starlette~=0.48.0       # FastAPI's underlying ASGI toolkit
+fastapi~=0.120.1        # The main web framework
+starlette~=0.49.1       # FastAPI's underlying ASGI toolkit
 uvicorn~=0.38.0         # Production-ready ASGI server
 uvloop~=0.22.0          # Optional: High-performance event loop for uvicorn
 websockets~=15.0.0      # For WebSocket support

@@ -1,34 +1,50 @@
 from fastapi import FastAPI
 from src.routers import movies
 from src.utils.errorHandler import register_error_handlers
+from src.database.mongo_client import db
+import traceback
 
 app = FastAPI()
 register_error_handlers(app)
 app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
 
 
+@app.on_event("startup")
+async def ensure_search_index():
+    try:
+        movies_collection = db.get_collection("movies")
+        result = await movies_collection.list_search_indexes()
+        indexes = [idx async for idx in result]
+        index_names = [index["name"] for index in indexes]
+        if "movieSearchIndex" in index_names:
+            print("MongoDB Search index already exists.")
+            return
+
+        # Create a mapping if the movieSearchIndex does not exist
+        index_definition = {
+            "mappings": {
+                "dynamic": False,
+                "fields": {
+                    "plot": {"type": "string", "analyzer": "lucene.standard"},
+                    "fullplot": {"type": "string", "analyzer": "lucene.standard"},
+                    "directors": {"type": "string", "analyzer": "lucene.standard"},
+                    "writers": {"type": "string", "analyzer": "lucene.standard"},
+                    "cast": {"type": "string", "analyzer": "lucene.standard"}
+                }
+            }
+        }
+        # Creates movieSearchIndex on the movies collection
+        await db.command({
+            "createSearchIndexes": "movies",
+            "indexes": [{
+                "name": "movieSearchIndex",
+                "definition": index_definition
+            }]
+        })
+        print("MongoDB Search index created.")
+    except Exception as e:
+        print(f"Error creating the search index: {e}")
 
 
 
 
-
-
-#------------------------------------
-# Testing error endpoints. Will be removed later
-#------------------------------------
-
-'''
-@app.get("/")
-async def root():
-    return {"message": "Backend is running!"}
-
-@app.get("/test-duplicate")
-async def test_duplicate():
-    from pymongo.errors import DuplicateKeyError
-    raise DuplicateKeyError("This is a test duplicate key error.")
-
-@app.get("/test-generic")
-async def test_generic():
-    from pymongo.errors import PyMongoError
-    raise PyMongoError("This is a test generic pymongo error.")
-'''
