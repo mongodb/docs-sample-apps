@@ -111,6 +111,16 @@ class MovieFilter(BaseModel):
     runtime: Optional[int]  = None
     poster: Optional[str]  = None   
 
+class VectorSearchResult(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    title: str
+    plot: Optional[str] = None
+    score: float
+
+    model_config = {
+        "populate_by_name": True
+    }
+
 class SuccessResponse(BaseModel, Generic[T]):
     success: bool = True
     message: Optional[str]

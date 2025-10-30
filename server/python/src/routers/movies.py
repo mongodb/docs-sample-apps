@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Path
 from src.database.mongo_client import db, get_collection
-from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest
+from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, VectorSearchResult
 from typing import List
 from datetime import datetime
 from src.utils.errorHandler import create_success_response, create_error_response
