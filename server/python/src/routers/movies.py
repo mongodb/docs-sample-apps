@@ -55,8 +55,15 @@ Implemented Endpoints:
     Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
     Supports compound search operators and fuzzy matching.
 
+- GET /api/movies/vector-search :
+    Search movies using MongoDB Vector Search to enable semantic search capabilities over
+    the plot field.
+
 Helper Functions:
-- execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the results.
+- execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the
+results.
+- execute_aggregation_on_collection(collection, pipeline): Executes a MongoDB aggregation pipeline on a specific collection and returns the results.
+- get_embedding(data, input_type): Creates the vector embedding for a given input using the specified input type.
 '''
 
 router = APIRouter()
