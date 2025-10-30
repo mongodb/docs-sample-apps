@@ -51,7 +51,7 @@ Implemented Endpoints:
     Aggregate directors with the most movies and their statistics.
 
 - GET /api/movies/search/atlas :
-    Search movies using MongoDB Atlas Search across the plot, fullplot, directors, writers, and cast fields.
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
     Supports compound search operators and fuzzy matching.
 
 Helper Functions:
@@ -76,7 +76,6 @@ router = APIRouter()
 @router.get("/{id}",
             response_model=SuccessResponse[Movie],
             status_code=200,
-            tags=["movies"],
             summary="Retrieve a single movie by its ID.")
 async def get_movie_by_id(id: str):
     # Validate ObjectId format
@@ -133,7 +132,6 @@ async def get_movie_by_id(id: str):
 @router.get("/",
             response_model=SuccessResponse[List[Movie]],
             status_code=200,
-            tags=["movies"],
             summary="Retrieve a list of movies with optional filtering, sorting, and pagination.")
 # Validate the query parameters using FastAPI's Query functionality.
 async def get_all_movies(
@@ -290,7 +288,6 @@ Request Body:
         "/batch",
         response_model=SuccessResponse[dict],
         status_code = 201,
-        tags=["movies"],
         summary = "Create multiple movies"
         )
 async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessResponse[dict]:
@@ -313,7 +310,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
         result = await movies_collection.insert_many(movies_dicts)
     except Exception as e:
         return create_error_response(
-            message="An error occurred while inserting movies.",
+            message="An error occurred while creating movies.",
             code="DATABASE_ERROR",
             details=str(e)
         )    
@@ -356,7 +353,6 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
         "/{movie_id}",
         response_model=SuccessResponse[Movie],
         status_code=200,
-        tags=["movies"],
         summary="Update a single movie by its ID.")
 async def update_movie(
     movie_data: UpdateMovieRequest,
@@ -428,7 +424,6 @@ async def update_movie(
 @router.patch("/",
         response_model=SuccessResponse[dict],
         status_code=200,
-        tags=["movies"],
         summary="Batch update movies matching the given filter."
         )
 async def update_movies_batch(
@@ -480,7 +475,6 @@ async def update_movies_batch(
 @router.delete("/{id}",
                 response_model=SuccessResponse[dict],
                 status_code=200,
-                tags=["movies"],
                 summary="Delete a single movie by its ID.")
 async def delete_movie_by_id(id: str):
     try:
@@ -534,7 +528,6 @@ async def delete_movie_by_id(id: str):
         "/",
         response_model=SuccessResponse[dict],
         status_code=200,
-        tags=["movies"],
         summary="Delete multiple movies matching the given filter."
 )
 async def delete_movies_batch(movie_filter:MovieFilter) -> SuccessResponse[dict]:
@@ -582,7 +575,6 @@ async def delete_movies_batch(movie_filter:MovieFilter) -> SuccessResponse[dict]
 @router.delete("/{id}/find-and-delete",
                 response_model=SuccessResponse[Movie],
                 status_code=200,
-                tags=["movies"],
                 summary="Find and delete a movie in a single operation.")
 async def find_and_delete_movie(id: str):
     try:
@@ -631,7 +623,6 @@ async def find_and_delete_movie(id: str):
 @router.get("/api/movies/reportingByComments",
             response_model=SuccessResponse[List[dict]],
             status_code=200,
-            tags=["movies"],
             summary="Aggregate movies with their most recent comments.")
 async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
@@ -784,7 +775,6 @@ async def aggregate_movies_recent_commented(
 @router.get("/api/movies/reportingByYear",
             response_model=SuccessResponse[List[dict]],
             status_code=200,
-            tags=["movies"],
             summary="Aggregate movies by year with average rating and movie count.")
 async def aggregate_movies_by_year():
     # Define aggregation pipeline to group movies by year with statistics
@@ -911,7 +901,6 @@ async def aggregate_movies_by_year():
 @router.get("/api/movies/reportingByDirectors",
             response_model=SuccessResponse[List[dict]],
             status_code=200,
-            tags=["movies"],
             summary="Aggregate directors with the most movies and their statistics.")
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
@@ -999,9 +988,9 @@ async def aggregate_directors_most_movies(
     )
 
 #----------------------------------------------------------------------------------------------------------
-#  Atlas Search
+# MongoDB Search
 #
-# Atlas search based on searching the plot, fullplot, directors, writers, and cast fields.
+# MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
 # This function was made with the assumption that the UI will have fields for plot,fullplot, 
 # directors, writers, and cast to search on. Or some sort of combined search field.
 # Also this fuzzy operator is being used to allow for some misspellings in the search terms
@@ -1011,7 +1000,7 @@ async def aggregate_directors_most_movies(
 
     GET /api/movies/search/atlas
 
-    Search movies using MongoDB Atlas Search across the plot, fullplot, directors, writers, and cast fields.
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
     You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
 
     Query Parameters:
@@ -1033,8 +1022,7 @@ async def aggregate_directors_most_movies(
     "/search/atlas",
     response_model=SuccessResponse[List[Movie]],
     status_code=200,
-    tags=["movies"],
-    summary="Search movies using Atlas Search."
+    summary="Search movies using MongoDB Search."
 )
 
 async def search_movies_atlas(
@@ -1054,52 +1042,62 @@ async def search_movies_atlas(
     valid_operators = {"must", "should", "mustNot", "filter"}
     if search_operator not in valid_operators:
         return create_error_response(
-        message=f"Invalid search_operator '{search_operator}'. Must be one of {valid_operators}.",
+        message=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}.",
         code="INVALID_SEARCH_OPERATOR",
         details=None
     )
 
     # Build the search_phrases list based on which fields were provided by the user.
-    # Each phrase becomes a separate clause in the Atlas Search compound query.
+    # Each phrase becomes a separate clause in the MongoDB Search compound query.
+
     if plot:
         search_phrases.append({
-            "text": {
+            # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
+            # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
+            "phrase": {
                 "query": plot,
                 "path": "plot",
-                "fuzzy":{"maxEdits":1, "prefixLength":2}
             }
         })
     if fullplot:
         search_phrases.append({
-            "text": {
+            "phrase": {
                 "query": fullplot,
                 "path": "fullplot",
-                "fuzzy":{"maxEdits":1, "prefixLength":2}
             }
         })
     if directors:
+        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
+        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
+        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
+        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
+        #             (Higher values make the search stricter and faster.)
+        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
+
         search_phrases.append({
             "text": {
                 "query": directors,
                 "path": "directors",
-                "fuzzy":{"maxEdits":1, "prefixLength":2}
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
 
             }
         })
     if writers:
+        # See comments above regarding fuzzy search options.
         search_phrases.append({
             "text": {
                 "query": writers,
                 "path": "writers",
-                "fuzzy":{"maxEdits":1, "prefixLength":2}
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
             }
         })
     if cast:
+        # See comments above regarding fuzzy search options.
         search_phrases.append({
             "text": {
                 "query": cast,
                 "path": "cast",
-                "fuzzy":{"maxEdits":1, "prefixLength":2}
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
             }
         })
 
@@ -1110,7 +1108,7 @@ async def search_movies_atlas(
             details=None
         )
 
-    # Build the aggregation pipeline for Atlas Search.
+    # Build the aggregation pipeline for MongoDB Search.
     # The $search stage uses the specified compound operator (must, should, etc.)
     aggregation_pipeline = [
         {

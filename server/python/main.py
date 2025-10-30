@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from src.routers import movies
 from src.utils.errorHandler import register_error_handlers
 from src.database.mongo_client import db
+import traceback
 
 app = FastAPI()
 register_error_handlers(app)
@@ -11,6 +12,15 @@ app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
 @app.on_event("startup")
 async def ensure_search_index():
     try:
+        movies_collection = db.get_collection("movies")
+        result = await movies_collection.list_search_indexes()
+        indexes = [idx async for idx in result]
+        index_names = [index["name"] for index in indexes]
+        if "movieSearchIndex" in index_names:
+            print("MongoDB Search index already exists.")
+            return
+
+        # Create a mapping if the movieSearchIndex does not exist
         index_definition = {
             "mappings": {
                 "dynamic": False,
@@ -23,7 +33,7 @@ async def ensure_search_index():
                 }
             }
         }
-        # This will create or update the Atlas Search index
+        # Creates movieSearchIndex on the movies collection
         await db.command({
             "createSearchIndexes": "movies",
             "indexes": [{
@@ -31,9 +41,10 @@ async def ensure_search_index():
                 "definition": index_definition
             }]
         })
-        print("Atlas Search index ensured.")
+        print("MongoDB Search index created.")
     except Exception as e:
         print(f"Error creating the search index: {e}")
+
 
 
 
