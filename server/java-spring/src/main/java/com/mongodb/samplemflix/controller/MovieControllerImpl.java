@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/movies/aggregations/years - Aggregate movies by year with statistics
  * - GET /api/movies/aggregations/directors - Aggregate directors with most movies
  * - GET /api/movies/search - Text search using Atlas Search Index across multiple fields (plot, fullplot, directors, writers, cast)
- * - GET /api/movies/findSimilarMovies - Vector search to find similar movies based on plot embeddings
+ * - GET /api/movies/find-similar-movies - Vector search to find similar movies based on plot embeddings
  * </pre>
  */
 @RestController
@@ -414,7 +414,7 @@ public class MovieControllerImpl {
     }
 
     /**
-     * GET /api/movies/findSimilarMovies
+     * GET /api/movies/find-similar-movies
      *
      * <p>Finds similar movies using vector search on plot embeddings.
      * Demonstrates MongoDB Atlas Vector Search to find movies with similar plots.
@@ -423,7 +423,7 @@ public class MovieControllerImpl {
      * @param limit Maximum number of similar movies to return (default: 10, max: 50)
      * @return List of similar movies based on plot embeddings
      */
-    @GetMapping("/findSimilarMovies")
+    @GetMapping("/find-similar-movies")
     public ResponseEntity<SuccessResponse<List<Movie>>> findSimilarMovies(
             @RequestParam String movieId,
             @RequestParam(defaultValue = "10") Integer limit) {

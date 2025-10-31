@@ -155,7 +155,7 @@ Once the application is running, you can access:
   - `filter` - Criteria must match but don't affect scoring
 
 #### Vector Search
-- `GET /api/movies/findSimilarMovies` - Find similar movies using vector search on plot embeddings
+- `GET /api/movies/find-similar-movies` - Find similar movies using vector search on plot embeddings
 
 ## Development
 

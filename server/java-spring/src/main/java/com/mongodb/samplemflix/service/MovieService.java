@@ -83,19 +83,6 @@ public interface MovieService {
     List<Movie> searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest);
 
     /**
-     * Searches movies by plot using MongoDB Atlas Search.
-     * Demonstrates text search using Atlas Search Index.
-     *
-     * @deprecated Use {@link #searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest)} instead
-     * @param plotQuery Text to search in the plot field
-     * @param limit Maximum number of movies to return (default: 20, max: 100)
-     * @param skip Number of results to skip for pagination (default: 0)
-     * @return List of movies matching the search criteria
-     */
-    @Deprecated
-    List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip);
-
-    /**
      * Finds similar movies using vector search on plot embeddings.
      * Demonstrates MongoDB Atlas Vector Search.
      *

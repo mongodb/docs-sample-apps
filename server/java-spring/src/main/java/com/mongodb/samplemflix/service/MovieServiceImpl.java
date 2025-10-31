@@ -7,15 +7,7 @@ import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
-import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
-import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
-import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
-import com.mongodb.samplemflix.model.dto.DeleteResponse;
-import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
-import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
-import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
-import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
-import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
+import com.mongodb.samplemflix.model.dto.*;
 import com.mongodb.samplemflix.repository.MovieRepository;
 import java.util.Collection;
 import java.util.List;
@@ -549,7 +541,7 @@ public class MovieServiceImpl implements MovieService {
                 .year(doc.getInteger("year"))
                 .plot(doc.getString("plot"))
                 .poster(doc.getString("poster"))
-                .genres((List<String>) doc.get("genres"))
+                .genres(doc.getList("genres", String.class))
                 .imdb(imdbInfo)
                 .recentComments(recentComments)
                 .totalComments(doc.getInteger("totalComments"))
@@ -560,7 +552,7 @@ public class MovieServiceImpl implements MovieService {
     // Atlas Search methods
 
     @Override
-    public List<Movie> searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest) {
+    public List<Movie> searchMovies(MovieSearchRequest searchRequest) {
         // Validate that at least one search field is provided
         if (!searchRequest.hasSearchFields()) {
             throw new ValidationException("At least one search parameter must be provided");
@@ -686,21 +678,8 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
-    @Override
-    @Deprecated
-    public List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip) {
-        // Delegate to the new searchMovies method
-        com.mongodb.samplemflix.model.dto.MovieSearchRequest request =
-            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
-                .plot(plotQuery)
-                .limit(limit)
-                .skip(skip)
-                .searchOperator("must")
-                .build();
 
-        return searchMovies(request);
-    }
-
+    // TODO: Implement vector search
     @Override
     public List<Movie> findSimilarMovies(String movieId, Integer limit) {
         // Validate movie ID
@@ -787,12 +766,4 @@ public class MovieServiceImpl implements MovieService {
             throw new DatabaseOperationException("Error performing vector search: " + e.getMessage());
         }
     }
-
-    // TODO: Add advanced query methods
-    // - getMoviesByGenreStatistics() - Aggregation pipeline for genre statistics
-    // - getTopRatedMovies(int limit) - Movies sorted by rating
-    // - getMoviesByDecade(int decade) - Movies from a specific decade
-    // - getDirectorFilmography(String director) - All movies by a director
-    // - getActorFilmography(String actor) - All movies featuring an actor
-    // - getMovieRecommendations(String userId) - Personalized recommendations
 }

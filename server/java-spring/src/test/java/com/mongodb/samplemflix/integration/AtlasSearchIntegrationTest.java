@@ -78,7 +78,7 @@ class AtlasSearchIntegrationTest {
         // Atlas Search indexes documents asynchronously
         System.out.println("Waiting for test documents to be indexed...");
         try {
-            Thread.sleep(5000); // Wait 5 seconds for indexing
+            Thread.sleep(10000); // Wait 10 seconds for indexing
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -115,7 +115,14 @@ class AtlasSearchIntegrationTest {
         }
 
         // Act
-        List<Movie> results = movieService.searchMoviesByPlot("space adventure", 10, 0);
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot("space adventure")
+                .limit(10)
+                .skip(0)
+                .searchOperator("must")
+                .build();
+        List<Movie> results = movieService.searchMovies(searchRequest);
 
         // Assert
         assertNotNull(results, "Search results should not be null");
@@ -137,7 +144,14 @@ class AtlasSearchIntegrationTest {
         }
 
         // Act - search for something that definitely doesn't exist
-        List<Movie> results = movieService.searchMoviesByPlot("xyzabc123nonexistent", 10, 0);
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot("xyzabc123nonexistent")
+                .limit(10)
+                .skip(0)
+                .searchOperator("must")
+                .build();
+        List<Movie> results = movieService.searchMovies(searchRequest);
 
         // Assert
         assertNotNull(results, "Search results should not be null");
@@ -153,7 +167,14 @@ class AtlasSearchIntegrationTest {
         }
 
         // Act
-        List<Movie> results = movieService.searchMoviesByPlot("adventure", 2, 0);
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot("adventure")
+                .limit(2)
+                .skip(0)
+                .searchOperator("must")
+                .build();
+        List<Movie> results = movieService.searchMovies(searchRequest);
 
         // Assert
         assertNotNull(results, "Search results should not be null");
@@ -169,10 +190,24 @@ class AtlasSearchIntegrationTest {
         }
 
         // Act - Get first page
-        List<Movie> firstPage = movieService.searchMoviesByPlot("adventure", 2, 0);
-        
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest firstPageRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot("adventure")
+                .limit(2)
+                .skip(0)
+                .searchOperator("must")
+                .build();
+        List<Movie> firstPage = movieService.searchMovies(firstPageRequest);
+
         // Act - Get second page
-        List<Movie> secondPage = movieService.searchMoviesByPlot("adventure", 2, 2);
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest secondPageRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot("adventure")
+                .limit(2)
+                .skip(2)
+                .searchOperator("must")
+                .build();
+        List<Movie> secondPage = movieService.searchMovies(secondPageRequest);
 
         // Assert
         assertNotNull(firstPage, "First page should not be null");
