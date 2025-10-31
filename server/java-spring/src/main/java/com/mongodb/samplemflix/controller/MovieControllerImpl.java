@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller for movie-related endpoints.
- * 
+ *
  * <p>This controller handles all HTTP requests for movie operations including:
  * <pre>
  * - GET /api/movies - Get all movies with filtering, sorting, and pagination
@@ -35,9 +35,11 @@ import org.springframework.web.bind.annotation.*;
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
  * - DELETE /api/movies/{id}/find-and-delete - Find and delete a movie
- * - GET /api/movies/reportingByComments - Aggregate movies with most comments
- * - GET /api/movies/reportingByYear - Aggregate movies by year with statistics
- * - GET /api/movies/reportingByDirectors - Aggregate directors with most movies
+ * - GET /api/movies/aggregations/comments - Aggregate movies with most comments
+ * - GET /api/movies/aggregations/years - Aggregate movies by year with statistics
+ * - GET /api/movies/aggregations/directors - Aggregate directors with most movies
+ * - GET /api/movies/searchByPlot - Text search using Atlas Search Index based on plot
+ * - GET /api/movies/findSimilarMovies - Vector search to find similar movies based on plot embeddings
  * </pre>
  */
 @RestController
@@ -342,6 +344,64 @@ public class MovieControllerImpl {
                         .data(results)
                         .timestamp(Instant.now().toString())
                         .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Atlas Search endpoints
+
+    /**
+     * GET /api/movies/searchByPlot
+     *
+     * <p>Searches movies by plot using MongoDB Atlas Search.
+     * Demonstrates text search using Atlas Search Index based on plot field.
+     *
+     * @param plot Text to search in the plot field (required)
+     * @param limit Maximum number of movies to return (default: 20, max: 100)
+     * @param skip Number of results to skip for pagination (default: 0)
+     * @return List of movies matching the search criteria
+     */
+    @GetMapping("/searchByPlot")
+    public ResponseEntity<SuccessResponse<List<Movie>>> searchMoviesByPlot(
+            @RequestParam String plot,
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "0") Integer skip) {
+
+        List<Movie> movies = movieService.searchMoviesByPlot(plot, limit, skip);
+
+        SuccessResponse<List<Movie>> response = SuccessResponse.<List<Movie>>builder()
+                .success(true)
+                .message(String.format("Found %d movies matching the search criteria", movies.size()))
+                .data(movies)
+                .timestamp(Instant.now().toString())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/movies/findSimilarMovies
+     *
+     * <p>Finds similar movies using vector search on plot embeddings.
+     * Demonstrates MongoDB Atlas Vector Search to find movies with similar plots.
+     *
+     * @param movieId ID of the movie to find similar movies for (required)
+     * @param limit Maximum number of similar movies to return (default: 10, max: 50)
+     * @return List of similar movies based on plot embeddings
+     */
+    @GetMapping("/findSimilarMovies")
+    public ResponseEntity<SuccessResponse<List<Movie>>> findSimilarMovies(
+            @RequestParam String movieId,
+            @RequestParam(defaultValue = "10") Integer limit) {
+
+        List<Movie> movies = movieService.findSimilarMovies(movieId, limit);
+
+        SuccessResponse<List<Movie>> response = SuccessResponse.<List<Movie>>builder()
+                .success(true)
+                .message(String.format("Found %d similar movies", movies.size()))
+                .data(movies)
+                .timestamp(Instant.now().toString())
+                .build();
 
         return ResponseEntity.ok(response);
     }

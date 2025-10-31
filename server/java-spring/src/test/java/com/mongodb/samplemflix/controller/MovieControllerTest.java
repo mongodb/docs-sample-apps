@@ -502,4 +502,97 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray());
     }
+
+    // ==================== ATLAS SEARCH ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/movies/searchByPlot - Should search movies by plot successfully")
+    void testSearchMoviesByPlot_Success() throws Exception {
+        // Arrange
+        Movie movie1 = Movie.builder()
+                .id(new ObjectId())
+                .title("Space Adventure")
+                .year(2024)
+                .plot("An epic space adventure across the galaxy")
+                .genres(Arrays.asList("Sci-Fi", "Adventure"))
+                .build();
+
+        Movie movie2 = Movie.builder()
+                .id(new ObjectId())
+                .title("Space Quest")
+                .year(2023)
+                .plot("A thrilling space adventure to save humanity")
+                .genres(Arrays.asList("Sci-Fi", "Action"))
+                .build();
+
+        when(movieService.searchMoviesByPlot(eq("space adventure"), eq(20), eq(0)))
+                .thenReturn(Arrays.asList(movie1, movie2));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/searchByPlot")
+                        .param("plot", "space adventure"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("Space Adventure"))
+                .andExpect(jsonPath("$.data[0].plot").value(containsString("space adventure")))
+                .andExpect(jsonPath("$.data[1].title").value("Space Quest"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/searchByPlot - Should accept limit and skip parameters")
+    void testSearchMoviesByPlot_WithPagination() throws Exception {
+        // Arrange
+        when(movieService.searchMoviesByPlot(eq("adventure"), eq(10), eq(5)))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/searchByPlot")
+                        .param("plot", "adventure")
+                        .param("limit", "10")
+                        .param("skip", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/searchByPlot - Should return 400 when plot parameter is missing")
+    void testSearchMoviesByPlot_MissingPlotParameter() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/searchByPlot"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/searchByPlot - Should return 400 for validation error")
+    void testSearchMoviesByPlot_ValidationError() throws Exception {
+        // Arrange
+        when(movieService.searchMoviesByPlot(anyString(), anyInt(), anyInt()))
+                .thenThrow(new ValidationException("Plot query cannot be empty"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/searchByPlot")
+                        .param("plot", ""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/searchByPlot - Should return empty list when no matches found")
+    void testSearchMoviesByPlot_NoResults() throws Exception {
+        // Arrange
+        when(movieService.searchMoviesByPlot(eq("nonexistent"), eq(20), eq(0)))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/searchByPlot")
+                        .param("plot", "nonexistent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
 }

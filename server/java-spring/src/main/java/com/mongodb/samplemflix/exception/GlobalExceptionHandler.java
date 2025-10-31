@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
@@ -50,6 +51,26 @@ public class GlobalExceptionHandler {
                 .message("Validation failed")
                 .error(ErrorResponse.ErrorDetails.builder()
                         .message(ex.getMessage())
+                        .code("VALIDATION_ERROR")
+                        .build())
+                .timestamp(Instant.now().toString())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException ex, WebRequest request) {
+        logger.error("Missing request parameter: {}", ex.getMessage());
+
+        String message = String.format("Required parameter '%s' is missing", ex.getParameterName());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
+                .message(message)
+                .error(ErrorResponse.ErrorDetails.builder()
+                        .message(message)
                         .code("VALIDATION_ERROR")
                         .build())
                 .timestamp(Instant.now().toString())

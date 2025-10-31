@@ -557,12 +557,160 @@ public class MovieServiceImpl implements MovieService {
                 .build();
     }
 
+    // Atlas Search methods
+
+    @Override
+    public List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip) {
+        // Validate input
+        if (plotQuery == null || plotQuery.trim().isEmpty()) {
+            throw new ValidationException("Plot search query is required");
+        }
+
+        // Validate and set defaults for pagination
+        int resultLimit = Math.clamp(limit != null ? limit : 20, 1, 100);
+        int resultSkip = Math.max(skip != null ? skip : 0, 0);
+
+        // Build the $search aggregation stage using Document
+        // Spring Data MongoDB doesn't have native support for $search, so we use Document
+        Document searchStage = new Document("$search", new Document()
+                .append("index", "movieSearchIndex")
+                .append("phrase", new Document()
+                        .append("query", plotQuery.trim())
+                        .append("path", Movie.Fields.PLOT)
+                )
+        );
+
+        Document skipStage = new Document("$skip", resultSkip);
+        Document limitStage = new Document("$limit", resultLimit);
+
+        // Project only the fields needed in the response
+        Document projectStage = new Document("$project", new Document()
+                .append(Movie.Fields.ID, 1)
+                .append(Movie.Fields.TITLE, 1)
+                .append(Movie.Fields.YEAR, 1)
+                .append(Movie.Fields.PLOT, 1)
+                .append(Movie.Fields.FULLPLOT, 1)
+                .append(Movie.Fields.RELEASED, 1)
+                .append(Movie.Fields.RUNTIME, 1)
+                .append(Movie.Fields.POSTER, 1)
+                .append(Movie.Fields.GENRES, 1)
+                .append(Movie.Fields.DIRECTORS, 1)
+                .append(Movie.Fields.WRITERS, 1)
+                .append(Movie.Fields.CAST, 1)
+                .append(Movie.Fields.COUNTRIES, 1)
+                .append(Movie.Fields.LANGUAGES, 1)
+                .append(Movie.Fields.RATED, 1)
+                .append(Movie.Fields.AWARDS, 1)
+                .append(Movie.Fields.IMDB, 1)
+        );
+
+        // Execute the aggregation pipeline
+        // Use MongoTemplate's getCollection to run raw aggregation
+        // Spring Data MongoDB doesn't have native support for $search, so we use the MongoDB driver directly
+        try {
+            List<Document> aggregationPipeline = List.of(searchStage, skipStage, limitStage, projectStage);
+
+            return mongoTemplate.getCollection("movies")
+                    .aggregate(aggregationPipeline)
+                    .map(doc -> mongoTemplate.getConverter().read(Movie.class, doc))
+                    .into(new java.util.ArrayList<>());
+        } catch (Exception e) {
+            throw new DatabaseOperationException("Error performing Atlas Search: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<Movie> findSimilarMovies(String movieId, Integer limit) {
+        // Validate movie ID
+        if (movieId == null || movieId.trim().isEmpty()) {
+            throw new ValidationException("Movie ID is required");
+        }
+
+        if (!ObjectId.isValid(movieId)) {
+            throw new ValidationException("Invalid movie ID format");
+        }
+
+        // Validate and set default limit
+        int resultLimit = Math.clamp(limit != null ? limit : 10, 1, 50);
+
+        // First, get the movie to retrieve its plot_embedding
+        ObjectId objectId = new ObjectId(movieId);
+        Document movie = mongoTemplate.getCollection("movies")
+                .find(new Document(Movie.Fields.ID, objectId))
+                .first();
+
+        if (movie == null) {
+            throw new ResourceNotFoundException("Movie not found");
+        }
+
+        // Check if plot_embedding exists
+        if (!movie.containsKey("plot_embedding")) {
+            throw new ValidationException("Movie does not have plot embeddings for vector search");
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Double> plotEmbedding = (List<Double>) movie.get("plot_embedding");
+
+        // Build the $vectorSearch aggregation stage
+        // Note: This requires MongoDB Atlas with a vector search index configured
+        Document vectorSearchStage = new Document("$vectorSearch", new Document()
+                .append("index", "plotEmbeddingIndex")
+                .append("path", "plot_embedding")
+                .append("queryVector", plotEmbedding)
+                .append("numCandidates", resultLimit * 10)
+                .append("limit", resultLimit + 1) // +1 to exclude the source movie
+        );
+
+        // Filter out the source movie
+        Document matchStage = new Document("$match",
+                new Document(Movie.Fields.ID, new Document("$ne", objectId))
+        );
+
+        // Limit to final result count
+        Document limitStage = new Document("$limit", resultLimit);
+
+        // Project only the fields needed in the response
+        Document projectStage = new Document("$project", new Document()
+                .append(Movie.Fields.ID, 1)
+                .append(Movie.Fields.TITLE, 1)
+                .append(Movie.Fields.YEAR, 1)
+                .append(Movie.Fields.PLOT, 1)
+                .append(Movie.Fields.FULLPLOT, 1)
+                .append(Movie.Fields.RELEASED, 1)
+                .append(Movie.Fields.RUNTIME, 1)
+                .append(Movie.Fields.POSTER, 1)
+                .append(Movie.Fields.GENRES, 1)
+                .append(Movie.Fields.DIRECTORS, 1)
+                .append(Movie.Fields.WRITERS, 1)
+                .append(Movie.Fields.CAST, 1)
+                .append(Movie.Fields.COUNTRIES, 1)
+                .append(Movie.Fields.LANGUAGES, 1)
+                .append(Movie.Fields.RATED, 1)
+                .append(Movie.Fields.AWARDS, 1)
+                .append(Movie.Fields.IMDB, 1)
+                .append("score", new Document("$meta", "vectorSearchScore"))
+        );
+
+        // Execute the aggregation pipeline
+        try {
+            List<Document> aggregationPipeline = List.of(
+                    vectorSearchStage, matchStage, limitStage, projectStage
+            );
+
+            return mongoTemplate.getCollection("movies")
+                    .aggregate(aggregationPipeline)
+                    .map(doc -> mongoTemplate.getConverter().read(Movie.class, doc))
+                    .into(new java.util.ArrayList<>());
+        } catch (Exception e) {
+            throw new DatabaseOperationException("Error performing vector search: " + e.getMessage());
+        }
+    }
+
     // TODO: Add advanced query methods
     // - getMoviesByGenreStatistics() - Aggregation pipeline for genre statistics
     // - getTopRatedMovies(int limit) - Movies sorted by rating
     // - getMoviesByDecade(int decade) - Movies from a specific decade
     // - getDirectorFilmography(String director) - All movies by a director
     // - getActorFilmography(String actor) - All movies featuring an actor
-    // - searchSimilarMovies(String movieId) - Vector search on plot_embedding field
     // - getMovieRecommendations(String userId) - Personalized recommendations
 }

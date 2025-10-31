@@ -61,4 +61,27 @@ public interface MovieService {
      * @return List of directors with their movie count and average rating
      */
     List<DirectorStatisticsResult> getDirectorsWithMostMovies(Integer limit);
+
+    // Atlas Search endpoints
+
+    /**
+     * Searches movies by plot using MongoDB Atlas Search.
+     * Demonstrates text search using Atlas Search Index.
+     *
+     * @param plotQuery Text to search in the plot field
+     * @param limit Maximum number of movies to return (default: 20, max: 100)
+     * @param skip Number of results to skip for pagination (default: 0)
+     * @return List of movies matching the search criteria
+     */
+    List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip);
+
+    /**
+     * Finds similar movies using vector search on plot embeddings.
+     * Demonstrates MongoDB Atlas Vector Search.
+     *
+     * @param movieId ID of the movie to find similar movies for
+     * @param limit Maximum number of similar movies to return (default: 10, max: 50)
+     * @return List of similar movies based on plot embeddings
+     */
+    List<Movie> findSimilarMovies(String movieId, Integer limit);
 }
