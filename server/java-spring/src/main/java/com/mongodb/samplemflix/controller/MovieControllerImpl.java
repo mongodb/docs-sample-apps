@@ -12,6 +12,9 @@ import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.model.response.SuccessResponse;
 import com.mongodb.samplemflix.service.MovieService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -44,6 +47,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/movies")
+@Tag(name = "Movies", description = "Movie management endpoints for CRUD operations, search, and aggregations")
 public class MovieControllerImpl {
     
     private final MovieService movieService;
@@ -52,21 +56,31 @@ public class MovieControllerImpl {
         this.movieService = movieService;
     }
     
-    /**
-     * GET /api/movies
-     *
-     * <p>Retrieves multiple movies with optional filtering, sorting, and pagination.
-     */
+    @Operation(
+        summary = "Get all movies with optional filtering, sorting, and pagination",
+        description = "Retrieve a list of movies with optional filtering by text search, genre, year, and rating. " +
+                     "Supports sorting and pagination. Text search (q parameter) uses MongoDB text index to search " +
+                     "across plot, title, and fullplot fields."
+    )
     @GetMapping
     public ResponseEntity<SuccessResponse<List<Movie>>> getAllMovies(
+            @Parameter(description = "Text search query (searches plot, title, fullplot)")
             @RequestParam(required = false) String q,
+            @Parameter(description = "Filter by genre (case-insensitive partial match)")
             @RequestParam(required = false) String genre,
+            @Parameter(description = "Filter by exact year")
             @RequestParam(required = false) Integer year,
+            @Parameter(description = "Minimum IMDB rating (inclusive)")
             @RequestParam(required = false) Double minRating,
+            @Parameter(description = "Maximum IMDB rating (inclusive)")
             @RequestParam(required = false) Double maxRating,
+            @Parameter(description = "Number of results to return (default: 20)")
             @RequestParam(defaultValue = "20") Integer limit,
+            @Parameter(description = "Number of results to skip for pagination (default: 0)")
             @RequestParam(defaultValue = "0") Integer skip,
+            @Parameter(description = "Field to sort by (default: title)")
             @RequestParam(defaultValue = "title") String sortBy,
+            @Parameter(description = "Sort order: 'asc' or 'desc' (default: asc)")
             @RequestParam(defaultValue = "asc") String sortOrder) {
         
         MovieSearchQuery query = MovieSearchQuery.builder()
@@ -93,13 +107,14 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * GET /api/movies/{id}
-     *
-     * <p>Retrieves a single movie by its ObjectId.
-     */
+    @Operation(
+        summary = "Get a single movie by ID",
+        description = "Retrieve a single movie by its MongoDB ObjectId."
+    )
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse<Movie>> getMovieById(@PathVariable String id) {
+    public ResponseEntity<SuccessResponse<Movie>> getMovieById(
+            @Parameter(description = "Movie ObjectId (24-character hex string)", required = true)
+            @PathVariable String id) {
         Movie movie = movieService.getMovieById(id);
         
         SuccessResponse<Movie> response = SuccessResponse.<Movie>builder()
@@ -112,13 +127,14 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * POST /api/movies
-     *
-     * <p>Creates a single new movie document.
-     */
+    @Operation(
+        summary = "Create a new movie",
+        description = "Create a single new movie document. Only the title field is required; all other fields are optional."
+    )
     @PostMapping
-    public ResponseEntity<SuccessResponse<Movie>> createMovie(@Valid @RequestBody CreateMovieRequest request) {
+    public ResponseEntity<SuccessResponse<Movie>> createMovie(
+            @Parameter(description = "Movie data to create", required = true)
+            @Valid @RequestBody CreateMovieRequest request) {
         Movie movie = movieService.createMovie(request);
         
         SuccessResponse<Movie> response = SuccessResponse.<Movie>builder()
@@ -131,13 +147,13 @@ public class MovieControllerImpl {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
-    /**
-     * POST /api/movies/batch
-     *
-     * <p>Creates multiple movie documents in a single operation.
-     */
+    @Operation(
+        summary = "Create multiple movies in batch",
+        description = "Create multiple movie documents in a single operation using insertMany."
+    )
     @PostMapping("/batch")
     public ResponseEntity<SuccessResponse<BatchInsertResponse>> createMoviesBatch(
+            @Parameter(description = "List of movies to create", required = true)
             @RequestBody List<CreateMovieRequest> requests) {
         BatchInsertResponse result = movieService.createMoviesBatch(requests);
 
@@ -150,16 +166,16 @@ public class MovieControllerImpl {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
-    /**
-     * PATCH /api/movies/{id}
-     *
-     * <p>Updates a single movie document with partial updates.
-     * Only the fields provided in the request will be updated.
-     */
+
+    @Operation(
+        summary = "Update a movie by ID",
+        description = "Update a single movie document by its ObjectId using updateOne with $set operator."
+    )
     @PatchMapping("/{id}")
     public ResponseEntity<SuccessResponse<Movie>> updateMovie(
+            @Parameter(description = "Movie ObjectId to update", required = true)
             @PathVariable String id,
+            @Parameter(description = "Updated movie data (only provided fields will be updated)", required = true)
             @RequestBody UpdateMovieRequest request) {
         Movie movie = movieService.updateMovie(id, request);
 
@@ -173,14 +189,15 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * PATCH /api/movies
-     *
-     * <p>Updates multiple movies based on a filter.
-     */
+    @Operation(
+        summary = "Update multiple movies in batch",
+        description = "Update multiple movies matching the given filter using updateMany. " +
+                     "Request body should contain 'filter' and 'update' objects."
+    )
     @SuppressWarnings("unchecked")
     @PatchMapping
     public ResponseEntity<SuccessResponse<BatchUpdateResponse>> updateMoviesBatch(
+            @Parameter(description = "Request body with 'filter' and 'update' objects", required = true)
             @RequestBody Map<String, Object> body) {
         Document filter = new Document((Map<String, Object>) body.get("filter"));
         Document update = new Document((Map<String, Object>) body.get("update"));
@@ -198,13 +215,15 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * DELETE /api/movies/{id}/find-and-delete
-     *
-     * <p>Finds and deletes a movie in a single atomic operation.
-     */
+    @Operation(
+        summary = "Find and delete a movie atomically",
+        description = "Find and delete a movie in a single atomic operation using findOneAndDelete. " +
+                     "Returns the deleted movie document."
+    )
     @DeleteMapping("/{id}/find-and-delete")
-    public ResponseEntity<SuccessResponse<Movie>> findAndDeleteMovie(@PathVariable String id) {
+    public ResponseEntity<SuccessResponse<Movie>> findAndDeleteMovie(
+            @Parameter(description = "Movie ObjectId to find and delete", required = true)
+            @PathVariable String id) {
         Movie movie = movieService.findAndDeleteMovie(id);
         
         SuccessResponse<Movie> response = SuccessResponse.<Movie>builder()
@@ -217,13 +236,14 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * DELETE /api/movies/{id}
-     *
-     * <p>Deletes a single movie document.
-     */
+    @Operation(
+        summary = "Delete a movie by ID",
+        description = "Delete a single movie document by its ObjectId using deleteOne."
+    )
     @DeleteMapping("/{id}")
-    public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMovie(@PathVariable String id) {
+    public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMovie(
+            @Parameter(description = "Movie ObjectId to delete", required = true)
+            @PathVariable String id) {
         DeleteResponse result = movieService.deleteMovie(id);
 
         SuccessResponse<DeleteResponse> response = SuccessResponse.<DeleteResponse>builder()
@@ -236,14 +256,15 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * DELETE /api/movies
-     *
-     * <p>Deletes multiple movies based on a filter.
-     */
+    @Operation(
+        summary = "Delete multiple movies in batch",
+        description = "Delete multiple movies matching the given filter using deleteMany. " +
+                     "Request body should contain a 'filter' object."
+    )
     @SuppressWarnings("unchecked")
     @DeleteMapping
     public ResponseEntity<SuccessResponse<DeleteResponse>> deleteMoviesBatch(
+            @Parameter(description = "Request body with 'filter' object", required = true)
             @RequestBody Map<String, Object> body) {
         Document filter = new Document((Map<String, Object>) body.get("filter"));
 
@@ -261,19 +282,16 @@ public class MovieControllerImpl {
 
     // Aggregation endpoints for reporting
 
-    /**
-     * GET /api/movies/aggregations/comments
-     *
-     * <p>Aggregates movies with their most recent comments.
-     * Demonstrates MongoDB $lookup (join) operation to combine movies with comments.
-     *
-     * @param limit Maximum number of movies to return (default: 10, max: 50)
-     * @param movieId Optional movie ID to filter by specific movie
-     * @return List of movies with their recent comments
-     */
+    @Operation(
+        summary = "Aggregate movies with their most recent comments",
+        description = "Aggregates movies with their most recent comments using MongoDB $lookup (join) operation. " +
+                     "Demonstrates how to combine data from the movies and comments collections."
+    )
     @GetMapping("/aggregations/comments")
     public ResponseEntity<SuccessResponse<List<MovieWithCommentsResult>>> getMoviesWithMostComments(
+            @Parameter(description = "Maximum number of movies to return (default: 10, max: 50)")
             @RequestParam(defaultValue = "10") Integer limit,
+            @Parameter(description = "Optional movie ID to filter by specific movie")
             @RequestParam(required = false) String movieId) {
 
         List<MovieWithCommentsResult> results = movieService.getMoviesWithMostComments(limit, movieId);
@@ -299,14 +317,11 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * GET /api/movies/aggregations/years
-     *
-     * <p>Aggregates movies by year with statistics.
-     * Demonstrates MongoDB $group operation for statistical aggregation.
-     *
-     * @return List of yearly statistics including movie count and average rating
-     */
+    @Operation(
+        summary = "Aggregate movies by year with statistics",
+        description = "Aggregates movies by year with statistics including movie count and average rating. " +
+                     "Demonstrates MongoDB $group operation for statistical aggregation."
+    )
     @GetMapping("/aggregations/years")
     public ResponseEntity<SuccessResponse<List<MoviesByYearResult>>> getMoviesByYearWithStats() {
 
@@ -323,17 +338,14 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * GET /api/movies/aggregations/directors
-     *
-     * <p>Aggregates directors with the most movies.
-     * Demonstrates MongoDB $unwind operation for array flattening and aggregation.
-     *
-     * @param limit Maximum number of directors to return (default: 20, max: 100)
-     * @return List of directors with their movie count and average rating
-     */
+    @Operation(
+        summary = "Aggregate directors with the most movies",
+        description = "Aggregates directors with the most movies and their statistics. " +
+                     "Demonstrates MongoDB $unwind operation for array flattening and aggregation."
+    )
     @GetMapping("/aggregations/directors")
     public ResponseEntity<SuccessResponse<List<DirectorStatisticsResult>>> getDirectorsWithMostMovies(
+            @Parameter(description = "Maximum number of directors to return (default: 20, max: 100)")
             @RequestParam(defaultValue = "20") Integer limit) {
 
         List<DirectorStatisticsResult> results = movieService.getDirectorsWithMostMovies(limit);
@@ -351,42 +363,30 @@ public class MovieControllerImpl {
 
     // Atlas Search endpoints
 
-    /**
-     * GET /api/movies/search
-     *
-     * <p>Searches movies using MongoDB Atlas Search across multiple fields.
-     * Demonstrates text search using Atlas Search Index with compound operators.
-     *
-     * <p>Supports searching across:
-     * <ul>
-     * <li>plot - using phrase operator for exact phrase matching</li>
-     * <li>fullplot - using phrase operator for exact phrase matching</li>
-     * <li>directors - using text operator with fuzzy matching</li>
-     * <li>writers - using text operator with fuzzy matching</li>
-     * <li>cast - using text operator with fuzzy matching</li>
-     * </ul>
-     *
-     * <p>At least one search field must be provided.
-     *
-     * @param plot Text to search in the plot field (optional)
-     * @param fullplot Text to search in the fullplot field (optional)
-     * @param directors Text to search in the directors field (optional)
-     * @param writers Text to search in the writers field (optional)
-     * @param cast Text to search in the cast field (optional)
-     * @param limit Maximum number of movies to return (default: 20, max: 100)
-     * @param skip Number of results to skip for pagination (default: 0)
-     * @param searchOperator Compound operator: must, should, mustNot, filter (default: must)
-     * @return List of movies matching the search criteria
-     */
+    @Operation(
+        summary = "Search movies using MongoDB Atlas Search",
+        description = "Search movies using MongoDB Atlas Search across multiple fields (plot, fullplot, directors, writers, cast). " +
+                     "You can combine multiple fields in a single query and control how they are combined using the searchOperator parameter. " +
+                     "At least one search field must be provided. " +
+                     "Plot and fullplot use phrase operator for exact matching, while directors, writers, and cast use text operator with fuzzy matching."
+    )
     @GetMapping("/search")
     public ResponseEntity<SuccessResponse<List<Movie>>> searchMovies(
+            @Parameter(description = "Text to search in the plot field (phrase matching)")
             @RequestParam(required = false) String plot,
+            @Parameter(description = "Text to search in the fullplot field (phrase matching)")
             @RequestParam(required = false) String fullplot,
+            @Parameter(description = "Text to search in the directors field (fuzzy matching)")
             @RequestParam(required = false) String directors,
+            @Parameter(description = "Text to search in the writers field (fuzzy matching)")
             @RequestParam(required = false) String writers,
+            @Parameter(description = "Text to search in the cast field (fuzzy matching)")
             @RequestParam(required = false) String cast,
+            @Parameter(description = "Maximum number of movies to return (default: 20, max: 100)")
             @RequestParam(defaultValue = "20") Integer limit,
+            @Parameter(description = "Number of results to skip for pagination (default: 0)")
             @RequestParam(defaultValue = "0") Integer skip,
+            @Parameter(description = "Compound operator: must, should, mustNot, or filter (default: must)")
             @RequestParam(defaultValue = "must") String searchOperator) {
 
         com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
@@ -413,19 +413,16 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * GET /api/movies/find-similar-movies
-     *
-     * <p>Finds similar movies using vector search on plot embeddings.
-     * Demonstrates MongoDB Atlas Vector Search to find movies with similar plots.
-     *
-     * @param movieId ID of the movie to find similar movies for (required)
-     * @param limit Maximum number of similar movies to return (default: 10, max: 50)
-     * @return List of similar movies based on plot embeddings
-     */
+    @Operation(
+        summary = "Find similar movies using vector search",
+        description = "Find similar movies using MongoDB Atlas Vector Search on plot embeddings. " +
+                     "Demonstrates how to use vector search to find movies with similar plots based on semantic similarity."
+    )
     @GetMapping("/find-similar-movies")
     public ResponseEntity<SuccessResponse<List<Movie>>> findSimilarMovies(
+            @Parameter(description = "ID of the movie to find similar movies for", required = true)
             @RequestParam String movieId,
+            @Parameter(description = "Maximum number of similar movies to return (default: 10, max: 50)")
             @RequestParam(defaultValue = "10") Integer limit) {
 
         List<Movie> movies = movieService.findSimilarMovies(movieId, limit);

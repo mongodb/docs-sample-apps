@@ -72,7 +72,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
                 // Configure socket timeouts to prevent hanging connections
                 .applyToSocketSettings(socketBuilder ->
                     socketBuilder.connectTimeout(10000, TimeUnit.MILLISECONDS)  // 10s to establish connection
-                           .readTimeout(10000, TimeUnit.MILLISECONDS)           // 10s to wait for server response
+                           .readTimeout(60000, TimeUnit.MILLISECONDS)           // 60s to wait for server response (increased for aggregations)
                 )
                 // Configure server selection timeout
                 .applyToClusterSettings(clusterBuilder ->

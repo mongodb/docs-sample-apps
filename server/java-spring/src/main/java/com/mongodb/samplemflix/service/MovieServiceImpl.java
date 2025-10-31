@@ -349,17 +349,22 @@ public class MovieServiceImpl implements MovieService {
 
         // Build aggregation pipeline
         // This demonstrates $lookup (join), $unwind, $sort, $group, and $project operations
+        // Optimized to limit movies before $lookup to reduce processing time
         Aggregation aggregation = Aggregation.newAggregation(
                 // STAGE 1: Match movies with valid year data
                 Aggregation.match(matchCriteria),
 
-                // STAGE 2: Lookup (join) with comments collection
+                // STAGE 2: Limit movies before lookup (optimization: process fewer documents)
+                // We'll get more results than needed, then filter and re-limit after lookup
+                Aggregation.limit(resultLimit * 10),
+
+                // STAGE 3: Lookup (join) with comments collection
                 Aggregation.lookup("comments", "_id", "movie_id", "comments"),
 
-                // STAGE 3: Filter to only movies with comments
+                // STAGE 4: Filter to only movies with comments
                 Aggregation.match(Criteria.where("comments").ne(List.of())),
 
-                // STAGE 4: Add computed fields
+                // STAGE 5: Add computed fields
                 Aggregation.project()
                         .and(Movie.Fields.ID).as("_id")
                         .and(Movie.Fields.TITLE).as("title")
@@ -372,13 +377,13 @@ public class MovieServiceImpl implements MovieService {
                         .and(ArrayOperators.Size.lengthOfArray("comments")).as("totalComments")
                         .and(ArrayOperators.ArrayElemAt.arrayOf("comments.date").elementAt(0)).as("mostRecentCommentDate"),
 
-                // STAGE 5: Sort by most recent comment date (descending)
+                // STAGE 6: Sort by most recent comment date (descending)
                 Aggregation.sort(Sort.Direction.DESC, "mostRecentCommentDate"),
 
-                // STAGE 6: Limit results
+                // STAGE 7: Limit results to requested amount
                 Aggregation.limit(resultLimit),
 
-                // STAGE 7: Project final output with recent comments slice
+                // STAGE 8: Project final output with recent comments slice
                 Aggregation.project()
                         .and(ConditionalOperators.ifNull("_id").then("")).as("id")
                         .and("title").as("title")
@@ -535,8 +540,17 @@ public class MovieServiceImpl implements MovieService {
                     .collect(Collectors.toList());
         }
 
+        // Extract movie ID - handle both String and ObjectId types
+        String movieId = null;
+        Object idObj = doc.get("id");
+        if (idObj instanceof String) {
+            movieId = (String) idObj;
+        } else if (idObj instanceof ObjectId) {
+            movieId = ((ObjectId) idObj).toHexString();
+        }
+
         return MovieWithCommentsResult.builder()
-                .id(doc.getString("id"))
+                .id(movieId)
                 .title(doc.getString("title"))
                 .year(doc.getInteger("year"))
                 .plot(doc.getString("plot"))
