@@ -15,7 +15,7 @@ package com.mongodb.samplemflix.integration;
  * - GET /api/movies/{id}
  * - POST /api/movies
  * - POST /api/movies/batch
- * - PUT /api/movies/{id}
+ * - PATCH /api/movies/{id}
  * - PATCH /api/movies
  * - DELETE /api/movies/{id}
  * - DELETE /api/movies

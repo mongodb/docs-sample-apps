@@ -65,14 +65,34 @@ public interface MovieService {
     // Atlas Search endpoints
 
     /**
+     * Searches movies using MongoDB Atlas Search across multiple fields.
+     * Demonstrates text search using Atlas Search Index with compound operators.
+     *
+     * <p>Supports searching across:
+     * <ul>
+     * <li>plot - using phrase operator for exact phrase matching</li>
+     * <li>fullplot - using phrase operator for exact phrase matching</li>
+     * <li>directors - using text operator with fuzzy matching</li>
+     * <li>writers - using text operator with fuzzy matching</li>
+     * <li>cast - using text operator with fuzzy matching</li>
+     * </ul>
+     *
+     * @param searchRequest Search parameters including fields to search and compound operator
+     * @return List of movies matching the search criteria
+     */
+    List<Movie> searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest);
+
+    /**
      * Searches movies by plot using MongoDB Atlas Search.
      * Demonstrates text search using Atlas Search Index.
      *
+     * @deprecated Use {@link #searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest)} instead
      * @param plotQuery Text to search in the plot field
      * @param limit Maximum number of movies to return (default: 20, max: 100)
      * @param skip Number of results to skip for pagination (default: 0)
      * @return List of movies matching the search criteria
      */
+    @Deprecated
     List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip);
 
     /**

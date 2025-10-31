@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 /**
  * Data Transfer Object for updating an existing movie.
  *
- * <p>This DTO is used for PUT /api/movies/{id} requests.
+ * <p>This DTO is used for PATCH /api/movies/{id} requests.
  * All fields are optional since partial updates are allowed.
  * Any field that is null will not be updated in the database.
  */

@@ -8,7 +8,7 @@ The `AtlasSearchIntegrationTest` class tests the Atlas Search endpoints with a r
 
 1. The Atlas Search index is created correctly
 2. The index becomes ready for use (using polling)
-3. The `searchByPlot` endpoint returns correct results
+3. The `/search` endpoint returns correct results
 4. Pagination works correctly
 5. Empty results are handled properly
 

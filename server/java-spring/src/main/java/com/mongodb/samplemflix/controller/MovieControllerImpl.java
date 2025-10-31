@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/movies/{id} - Get a single movie by ID
  * - POST /api/movies - Create a new movie
  * - POST /api/movies/batch - Create multiple movies
- * - PUT /api/movies/{id} - Update a movie
+ * - PATCH /api/movies/{id} - Update a movie
  * - PATCH /api/movies - Update multiple movies
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/movies/aggregations/comments - Aggregate movies with most comments
  * - GET /api/movies/aggregations/years - Aggregate movies by year with statistics
  * - GET /api/movies/aggregations/directors - Aggregate directors with most movies
- * - GET /api/movies/searchByPlot - Text search using Atlas Search Index based on plot
+ * - GET /api/movies/search - Text search using Atlas Search Index across multiple fields (plot, fullplot, directors, writers, cast)
  * - GET /api/movies/findSimilarMovies - Vector search to find similar movies based on plot embeddings
  * </pre>
  */
@@ -152,23 +152,24 @@ public class MovieControllerImpl {
     }
     
     /**
-     * PUT /api/movies/{id}
+     * PATCH /api/movies/{id}
      *
-     * <p>Updates a single movie document.
+     * <p>Updates a single movie document with partial updates.
+     * Only the fields provided in the request will be updated.
      */
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<SuccessResponse<Movie>> updateMovie(
             @PathVariable String id,
             @RequestBody UpdateMovieRequest request) {
         Movie movie = movieService.updateMovie(id, request);
-        
+
         SuccessResponse<Movie> response = SuccessResponse.<Movie>builder()
                 .success(true)
                 .message("Movie updated successfully")
                 .data(movie)
                 .timestamp(Instant.now().toString())
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
     
@@ -351,23 +352,56 @@ public class MovieControllerImpl {
     // Atlas Search endpoints
 
     /**
-     * GET /api/movies/searchByPlot
+     * GET /api/movies/search
      *
-     * <p>Searches movies by plot using MongoDB Atlas Search.
-     * Demonstrates text search using Atlas Search Index based on plot field.
+     * <p>Searches movies using MongoDB Atlas Search across multiple fields.
+     * Demonstrates text search using Atlas Search Index with compound operators.
      *
-     * @param plot Text to search in the plot field (required)
+     * <p>Supports searching across:
+     * <ul>
+     * <li>plot - using phrase operator for exact phrase matching</li>
+     * <li>fullplot - using phrase operator for exact phrase matching</li>
+     * <li>directors - using text operator with fuzzy matching</li>
+     * <li>writers - using text operator with fuzzy matching</li>
+     * <li>cast - using text operator with fuzzy matching</li>
+     * </ul>
+     *
+     * <p>At least one search field must be provided.
+     *
+     * @param plot Text to search in the plot field (optional)
+     * @param fullplot Text to search in the fullplot field (optional)
+     * @param directors Text to search in the directors field (optional)
+     * @param writers Text to search in the writers field (optional)
+     * @param cast Text to search in the cast field (optional)
      * @param limit Maximum number of movies to return (default: 20, max: 100)
      * @param skip Number of results to skip for pagination (default: 0)
+     * @param searchOperator Compound operator: must, should, mustNot, filter (default: must)
      * @return List of movies matching the search criteria
      */
-    @GetMapping("/searchByPlot")
-    public ResponseEntity<SuccessResponse<List<Movie>>> searchMoviesByPlot(
-            @RequestParam String plot,
+    @GetMapping("/search")
+    public ResponseEntity<SuccessResponse<List<Movie>>> searchMovies(
+            @RequestParam(required = false) String plot,
+            @RequestParam(required = false) String fullplot,
+            @RequestParam(required = false) String directors,
+            @RequestParam(required = false) String writers,
+            @RequestParam(required = false) String cast,
             @RequestParam(defaultValue = "20") Integer limit,
-            @RequestParam(defaultValue = "0") Integer skip) {
+            @RequestParam(defaultValue = "0") Integer skip,
+            @RequestParam(defaultValue = "must") String searchOperator) {
 
-        List<Movie> movies = movieService.searchMoviesByPlot(plot, limit, skip);
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot(plot)
+                .fullplot(fullplot)
+                .directors(directors)
+                .writers(writers)
+                .cast(cast)
+                .limit(limit)
+                .skip(skip)
+                .searchOperator(searchOperator)
+                .build();
+
+        List<Movie> movies = movieService.searchMovies(searchRequest);
 
         SuccessResponse<List<Movie>> response = SuccessResponse.<List<Movie>>builder()
                 .success(true)

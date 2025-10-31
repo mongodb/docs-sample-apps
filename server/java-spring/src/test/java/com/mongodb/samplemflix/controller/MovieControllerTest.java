@@ -227,7 +227,7 @@ class MovieControllerTest {
     // ==================== UPDATE MOVIE TESTS ====================
 
     @Test
-    @DisplayName("PUT /api/movies/{id} - Should update movie successfully")
+    @DisplayName("PATCH /api/movies/{id} - Should update movie successfully")
     void testUpdateMovie_Success() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
@@ -241,7 +241,7 @@ class MovieControllerTest {
                 .thenReturn(updatedMovie);
 
         // Act & Assert
-        mockMvc.perform(put("/api/movies/{id}", movieId)
+        mockMvc.perform(patch("/api/movies/{id}", movieId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -251,7 +251,7 @@ class MovieControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/movies/{id} - Should return 404 when movie not found")
+    @DisplayName("PATCH /api/movies/{id} - Should return 404 when movie not found")
     void testUpdateMovie_NotFound() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
@@ -259,7 +259,7 @@ class MovieControllerTest {
                 .thenThrow(new ResourceNotFoundException("Movie not found"));
 
         // Act & Assert
-        mockMvc.perform(put("/api/movies/{id}", movieId)
+        mockMvc.perform(patch("/api/movies/{id}", movieId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isNotFound())
@@ -506,7 +506,7 @@ class MovieControllerTest {
     // ==================== ATLAS SEARCH ENDPOINT TESTS ====================
 
     @Test
-    @DisplayName("GET /api/movies/searchByPlot - Should search movies by plot successfully")
+    @DisplayName("GET /api/movies/search - Should search movies by plot successfully")
     void testSearchMoviesByPlot_Success() throws Exception {
         // Arrange
         Movie movie1 = Movie.builder()
@@ -525,11 +525,11 @@ class MovieControllerTest {
                 .genres(Arrays.asList("Sci-Fi", "Action"))
                 .build();
 
-        when(movieService.searchMoviesByPlot(eq("space adventure"), eq(20), eq(0)))
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
                 .thenReturn(Arrays.asList(movie1, movie2));
 
         // Act & Assert
-        mockMvc.perform(get("/api/movies/searchByPlot")
+        mockMvc.perform(get("/api/movies/search")
                         .param("plot", "space adventure"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -541,14 +541,14 @@ class MovieControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/movies/searchByPlot - Should accept limit and skip parameters")
+    @DisplayName("GET /api/movies/search - Should accept limit and skip parameters")
     void testSearchMoviesByPlot_WithPagination() throws Exception {
         // Arrange
-        when(movieService.searchMoviesByPlot(eq("adventure"), eq(10), eq(5)))
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
                 .thenReturn(Arrays.asList());
 
         // Act & Assert
-        mockMvc.perform(get("/api/movies/searchByPlot")
+        mockMvc.perform(get("/api/movies/search")
                         .param("plot", "adventure")
                         .param("limit", "10")
                         .param("skip", "5"))
@@ -558,22 +558,28 @@ class MovieControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/movies/searchByPlot - Should return 400 when plot parameter is missing")
+    @DisplayName("GET /api/movies/search - Should return 400 when no search parameters provided")
     void testSearchMoviesByPlot_MissingPlotParameter() throws Exception {
+        // Arrange
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
+                .thenThrow(new ValidationException("At least one search parameter must be provided"));
+
         // Act & Assert
-        mockMvc.perform(get("/api/movies/searchByPlot"))
-                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/movies/search"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 
     @Test
-    @DisplayName("GET /api/movies/searchByPlot - Should return 400 for validation error")
+    @DisplayName("GET /api/movies/search - Should return 400 for validation error")
     void testSearchMoviesByPlot_ValidationError() throws Exception {
         // Arrange
-        when(movieService.searchMoviesByPlot(anyString(), anyInt(), anyInt()))
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
                 .thenThrow(new ValidationException("Plot query cannot be empty"));
 
         // Act & Assert
-        mockMvc.perform(get("/api/movies/searchByPlot")
+        mockMvc.perform(get("/api/movies/search")
                         .param("plot", ""))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
@@ -581,18 +587,77 @@ class MovieControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/movies/searchByPlot - Should return empty list when no matches found")
+    @DisplayName("GET /api/movies/search - Should return empty list when no matches found")
     void testSearchMoviesByPlot_NoResults() throws Exception {
         // Arrange
-        when(movieService.searchMoviesByPlot(eq("nonexistent"), eq(20), eq(0)))
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
                 .thenReturn(Arrays.asList());
 
         // Act & Assert
-        mockMvc.perform(get("/api/movies/searchByPlot")
+        mockMvc.perform(get("/api/movies/search")
                         .param("plot", "nonexistent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/search - Should search by multiple fields")
+    void testSearchMovies_MultipleFields() throws Exception {
+        // Arrange
+        Movie movie = Movie.builder()
+                .id(new ObjectId())
+                .title("The Godfather")
+                .year(1972)
+                .plot("The aging patriarch of an organized crime dynasty transfers control to his son")
+                .directors(Arrays.asList("Francis Ford Coppola"))
+                .cast(Arrays.asList("Marlon Brando", "Al Pacino"))
+                .build();
+
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
+                .thenReturn(Arrays.asList(movie));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/search")
+                        .param("directors", "Coppola")
+                        .param("cast", "Pacino"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].title").value("The Godfather"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/search - Should accept searchOperator parameter")
+    void testSearchMovies_WithSearchOperator() throws Exception {
+        // Arrange
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/search")
+                        .param("plot", "adventure")
+                        .param("searchOperator", "should"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/search - Should return 400 for invalid searchOperator")
+    void testSearchMovies_InvalidSearchOperator() throws Exception {
+        // Arrange
+        when(movieService.searchMovies(any(com.mongodb.samplemflix.model.dto.MovieSearchRequest.class)))
+                .thenThrow(new ValidationException("Invalid search_operator 'invalid'. The search_operator must be one of: must, should, mustNot, filter"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/search")
+                        .param("plot", "adventure")
+                        .param("searchOperator", "invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 }

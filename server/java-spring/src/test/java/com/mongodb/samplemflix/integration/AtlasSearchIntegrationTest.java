@@ -9,6 +9,7 @@ import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.service.MovieService;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.bson.Document;
 import org.junit.jupiter.api.AfterAll;
@@ -266,7 +267,7 @@ class AtlasSearchIntegrationTest {
 
         // Create the index using the createSearchIndexes command
         Document createIndexCommand = new Document("createSearchIndexes", "movies")
-                .append("indexes", Arrays.asList(
+                .append("indexes", Collections.singletonList(
                         new Document("name", SEARCH_INDEX_NAME)
                                 .append("definition", indexDefinition)
                 ));

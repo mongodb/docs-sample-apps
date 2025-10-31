@@ -560,24 +560,91 @@ public class MovieServiceImpl implements MovieService {
     // Atlas Search methods
 
     @Override
-    public List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip) {
-        // Validate input
-        if (plotQuery == null || plotQuery.trim().isEmpty()) {
-            throw new ValidationException("Plot search query is required");
+    public List<Movie> searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest) {
+        // Validate that at least one search field is provided
+        if (!searchRequest.hasSearchFields()) {
+            throw new ValidationException("At least one search parameter must be provided");
+        }
+
+        // Validate search operator
+        String operator = searchRequest.getSearchOperator() != null ?
+                searchRequest.getSearchOperator() : "must";
+
+        if (!operator.equals("must") && !operator.equals("should") &&
+            !operator.equals("mustNot") && !operator.equals("filter")) {
+            throw new ValidationException(
+                "Invalid search_operator '" + operator + "'. " +
+                "The search_operator must be one of: must, should, mustNot, filter"
+            );
         }
 
         // Validate and set defaults for pagination
-        int resultLimit = Math.clamp(limit != null ? limit : 20, 1, 100);
-        int resultSkip = Math.max(skip != null ? skip : 0, 0);
+        int resultLimit = Math.clamp(
+            searchRequest.getLimit() != null ? searchRequest.getLimit() : 20, 1, 100
+        );
+        int resultSkip = Math.max(
+            searchRequest.getSkip() != null ? searchRequest.getSkip() : 0, 0
+        );
 
-        // Build the $search aggregation stage using Document
-        // Spring Data MongoDB doesn't have native support for $search, so we use Document
+        // Build search phrases list
+        java.util.List<Document> searchPhrases = new java.util.ArrayList<>();
+
+        // Add plot search if provided (using phrase operator)
+        if (searchRequest.getPlot() != null && !searchRequest.getPlot().trim().isEmpty()) {
+            searchPhrases.add(new Document("phrase", new Document()
+                    .append("query", searchRequest.getPlot().trim())
+                    .append("path", Movie.Fields.PLOT)
+            ));
+        }
+
+        // Add fullplot search if provided (using phrase operator)
+        if (searchRequest.getFullplot() != null && !searchRequest.getFullplot().trim().isEmpty()) {
+            searchPhrases.add(new Document("phrase", new Document()
+                    .append("query", searchRequest.getFullplot().trim())
+                    .append("path", Movie.Fields.FULLPLOT)
+            ));
+        }
+
+        // Add directors search if provided (using text operator with fuzzy matching)
+        if (searchRequest.getDirectors() != null && !searchRequest.getDirectors().trim().isEmpty()) {
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getDirectors().trim())
+                    .append("path", Movie.Fields.DIRECTORS)
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 5)
+                    )
+            ));
+        }
+
+        // Add writers search if provided (using text operator with fuzzy matching)
+        if (searchRequest.getWriters() != null && !searchRequest.getWriters().trim().isEmpty()) {
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getWriters().trim())
+                    .append("path", Movie.Fields.WRITERS)
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 5)
+                    )
+            ));
+        }
+
+        // Add cast search if provided (using text operator with fuzzy matching)
+        if (searchRequest.getCast() != null && !searchRequest.getCast().trim().isEmpty()) {
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getCast().trim())
+                    .append("path", Movie.Fields.CAST)
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 5)
+                    )
+            ));
+        }
+
+        // Build the $search aggregation stage with compound operator
         Document searchStage = new Document("$search", new Document()
                 .append("index", "movieSearchIndex")
-                .append("phrase", new Document()
-                        .append("query", plotQuery.trim())
-                        .append("path", Movie.Fields.PLOT)
-                )
+                .append("compound", new Document(operator, searchPhrases))
         );
 
         Document skipStage = new Document("$skip", resultSkip);
@@ -605,10 +672,10 @@ public class MovieServiceImpl implements MovieService {
         );
 
         // Execute the aggregation pipeline
-        // Use MongoTemplate's getCollection to run raw aggregation
-        // Spring Data MongoDB doesn't have native support for $search, so we use the MongoDB driver directly
         try {
-            List<Document> aggregationPipeline = List.of(searchStage, skipStage, limitStage, projectStage);
+            java.util.List<Document> aggregationPipeline = java.util.List.of(
+                searchStage, skipStage, limitStage, projectStage
+            );
 
             return mongoTemplate.getCollection("movies")
                     .aggregate(aggregationPipeline)
@@ -617,6 +684,21 @@ public class MovieServiceImpl implements MovieService {
         } catch (Exception e) {
             throw new DatabaseOperationException("Error performing Atlas Search: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Deprecated
+    public List<Movie> searchMoviesByPlot(String plotQuery, Integer limit, Integer skip) {
+        // Delegate to the new searchMovies method
+        com.mongodb.samplemflix.model.dto.MovieSearchRequest request =
+            com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
+                .plot(plotQuery)
+                .limit(limit)
+                .skip(skip)
+                .searchOperator("must")
+                .build();
+
+        return searchMovies(request);
     }
 
     @Override
