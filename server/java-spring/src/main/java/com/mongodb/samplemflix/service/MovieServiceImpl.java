@@ -347,10 +347,9 @@ public class MovieServiceImpl implements MovieService {
             matchCriteria = matchCriteria.and(Movie.Fields.ID).is(new ObjectId(movieId));
         }
 
-        // Determine final result limit based on query type
-        // When querying a specific movie, allow more results (50)
-        // When querying all movies, use a smaller limit (20) to reduce server load
-        int finalLimit = (movieId != null && !movieId.trim().isEmpty()) ? 50 : 20;
+        // Use the validated limit from the request parameter
+        // The limit has already been validated and clamped to 1-50 range
+        int finalLimit = resultLimit;
 
         // Build aggregation pipeline
         // This demonstrates $lookup (join), $addFields, $sort, and $project operations
@@ -389,7 +388,7 @@ public class MovieServiceImpl implements MovieService {
 
                 // STAGE 6: Limit results
                 // Apply limit AFTER sorting to get the correct top N movies by recent comment activity
-                // Limit is conditional: 50 for single movie queries, 20 for all movies
+                // Uses the limit from the request parameter (default: 10, max: 50)
                 Aggregation.limit(finalLimit),
 
                 // STAGE 7: Project final output with recent comments slice
