@@ -87,6 +87,12 @@ export default function EditMovieForm({
       Object.entries(updateData).filter(([_, value]) => value !== undefined)
     );
 
+    // Check if user entered anything for the batch update
+    if (Object.keys(updateData).length === 0) {
+      setErrors({ general: 'Please fill in at least one field to update' });
+      return;
+    }
+
     onSave(cleanedData);
   };
 
@@ -169,7 +175,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('rated', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="e.g., PG-13, R, G"
+              placeholder="PG-13"
             />
           </div>
 
@@ -219,7 +225,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('genres', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="Action, Drama, Comedy"
+              placeholder="e.g. Action, Drama, Comedy"
             />
           </div>
 
@@ -234,7 +240,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('directors', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="Director 1, Director 2"
+              placeholder="e.g. Director 1, Director 2"
             />
           </div>
 
@@ -249,7 +255,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('writers', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="Writer 1, Writer 2"
+              placeholder="e.g. Writer 1, Writer 2"
             />
           </div>
 
@@ -264,7 +270,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('cast', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="Actor 1, Actor 2, Actor 3"
+              placeholder="e.g. Actor 1, Actor 2, Actor 3"
             />
           </div>
 
@@ -279,7 +285,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('countries', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="USA, UK, France"
+              placeholder="e.g. USA, UK, France"
             />
           </div>
 
@@ -294,7 +300,7 @@ export default function EditMovieForm({
               onChange={(e) => handleInputChange('languages', e.target.value)}
               className={styles.input}
               disabled={isLoading}
-              placeholder="English, Spanish, French"
+              placeholder="e.g. English, Spanish, French"
             />
           </div>
         </div>

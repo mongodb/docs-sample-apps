@@ -82,15 +82,10 @@ export default function Movies() {
         setSuccessMessage('Movie created successfully!');
         setShowAddForm(false);
         
-        // If we have a movieId, redirect to the new movie's page after a brief delay
-        if (result.movieId) {
-          setTimeout(() => {
-            router.push(ROUTES.movie(result.movieId!));
-          }, 2000);
-        } else {
-          // Otherwise, refresh the movies list
-          loadMovies();
-        }
+        // Redirect to the new movie's page after a brief delay
+        setTimeout(() => {
+          router.push(ROUTES.movie(result.movieId!));
+        }, 2000);
       } else {
         setError(result.error || 'Failed to create movie');
       }

@@ -319,6 +319,7 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
 export async function updateMoviesBatch(movieIds: string[], updateData: Partial<Movie>): Promise<{ success: boolean; error?: string; matchedCount?: number; modifiedCount?: number }> {
   try {
     // Create filter to match the movie IDs
+    // Note: The server will handle ObjectId conversion
     const filter = {
       _id: {
         $in: movieIds
