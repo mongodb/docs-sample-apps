@@ -332,7 +332,7 @@ public class MovieServiceImpl implements MovieService {
     // Aggregation methods for reporting
 
     @Override
-    public List<MovieWithCommentsResult> getMoviesWithMostComments(Integer limit, String movieId) {
+    public List<MovieWithCommentsResult> getMoviesWithMostRecentComments(Integer limit, String movieId) {
         // Validate and set default limit
         int resultLimit = Math.clamp(limit != null ? limit : 10, 1, 50);
 
@@ -347,24 +347,30 @@ public class MovieServiceImpl implements MovieService {
             matchCriteria = matchCriteria.and(Movie.Fields.ID).is(new ObjectId(movieId));
         }
 
+        // Determine final result limit based on query type
+        // When querying a specific movie, allow more results (50)
+        // When querying all movies, use a smaller limit (20) to reduce server load
+        int finalLimit = (movieId != null && !movieId.trim().isEmpty()) ? 50 : 20;
+
         // Build aggregation pipeline
-        // This demonstrates $lookup (join), $unwind, $sort, $group, and $project operations
-        // Optimized to limit movies before $lookup to reduce processing time
+        // This demonstrates $lookup (join), $addFields, $sort, and $project operations
+        // Note: We perform $lookup on all matching movies, then sort and limit
+        // This ensures we get the movies with the MOST RECENT comments, not just the first N movies
         Aggregation aggregation = Aggregation.newAggregation(
-                // STAGE 1: Match movies with valid year data
+                // STAGE 1: Match movies with valid year data (and optional movie ID filter)
+                // Tip: Use $match early in the pipeline to reduce the dataset size
                 Aggregation.match(matchCriteria),
 
-                // STAGE 2: Limit movies before lookup (optimization: process fewer documents)
-                // We'll get more results than needed, then filter and re-limit after lookup
-                Aggregation.limit(resultLimit * 10),
-
-                // STAGE 3: Lookup (join) with comments collection
+                // STAGE 2: Lookup (join) with comments collection
+                // This performs a left outer join, giving each movie a 'comments' array
                 Aggregation.lookup("comments", "_id", "movie_id", "comments"),
 
-                // STAGE 4: Filter to only movies with comments
+                // STAGE 3: Filter to only movies that have comments
+                // This converts the left join to an inner join
                 Aggregation.match(Criteria.where("comments").ne(List.of())),
 
-                // STAGE 5: Add computed fields
+                // STAGE 4: Add computed fields
+                // Calculate totalComments and mostRecentCommentDate for sorting
                 Aggregation.project()
                         .and(Movie.Fields.ID).as("_id")
                         .and(Movie.Fields.TITLE).as("title")
@@ -377,13 +383,17 @@ public class MovieServiceImpl implements MovieService {
                         .and(ArrayOperators.Size.lengthOfArray("comments")).as("totalComments")
                         .and(ArrayOperators.ArrayElemAt.arrayOf("comments.date").elementAt(0)).as("mostRecentCommentDate"),
 
-                // STAGE 6: Sort by most recent comment date (descending)
+                // STAGE 5: Sort by most recent comment date (descending)
+                // This ensures we get movies with the MOST RECENT comment activity
                 Aggregation.sort(Sort.Direction.DESC, "mostRecentCommentDate"),
 
-                // STAGE 7: Limit results to requested amount
-                Aggregation.limit(resultLimit),
+                // STAGE 6: Limit results
+                // Apply limit AFTER sorting to get the correct top N movies by recent comment activity
+                // Limit is conditional: 50 for single movie queries, 20 for all movies
+                Aggregation.limit(finalLimit),
 
-                // STAGE 8: Project final output with recent comments slice
+                // STAGE 7: Project final output with recent comments slice
+                // Shape the response and include only the 5 most recent comments per movie
                 Aggregation.project()
                         .and(ConditionalOperators.ifNull("_id").then("")).as("id")
                         .and("title").as("title")
@@ -563,7 +573,7 @@ public class MovieServiceImpl implements MovieService {
                 .build();
     }
 
-    // Atlas Search methods
+    // MongoDB Search methods
 
     @Override
     public List<Movie> searchMovies(MovieSearchRequest searchRequest) {
@@ -688,7 +698,7 @@ public class MovieServiceImpl implements MovieService {
                     .map(doc -> mongoTemplate.getConverter().read(Movie.class, doc))
                     .into(new java.util.ArrayList<>());
         } catch (Exception e) {
-            throw new DatabaseOperationException("Error performing Atlas Search: " + e.getMessage());
+            throw new DatabaseOperationException("Error performing MongoDB Search: " + e.getMessage());
         }
     }
 

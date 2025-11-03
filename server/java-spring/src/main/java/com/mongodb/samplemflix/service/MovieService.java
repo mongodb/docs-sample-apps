@@ -45,7 +45,7 @@ public interface MovieService {
      * @param movieId Optional movie ID to filter by specific movie
      * @return List of movies with their recent comments
      */
-    List<MovieWithCommentsResult> getMoviesWithMostComments(Integer limit, String movieId);
+    List<MovieWithCommentsResult> getMoviesWithMostRecentComments(Integer limit, String movieId);
 
     /**
      * Aggregates movies by year with statistics.
@@ -62,11 +62,11 @@ public interface MovieService {
      */
     List<DirectorStatisticsResult> getDirectorsWithMostMovies(Integer limit);
 
-    // Atlas Search endpoints
+    // MongoDB Search endpoints
 
     /**
-     * Searches movies using MongoDB Atlas Search across multiple fields.
-     * Demonstrates text search using Atlas Search Index with compound operators.
+     * Searches movies using MongoDB Search across multiple fields.
+     * Demonstrates text search using a Search Index with compound operators.
      *
      * <p>Supports searching across:
      * <ul>

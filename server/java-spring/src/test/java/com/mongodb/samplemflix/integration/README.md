@@ -19,7 +19,7 @@ These tests require:
 - **MongoDB Atlas cluster** (not local MongoDB or Testcontainers)
 - **Atlas Search capability** enabled on the cluster
 - **MONGODB_URI** environment variable pointing to your Atlas cluster
-- **ENABLE_ATLAS_SEARCH_TESTS=true** environment variable to enable the tests
+- **ENABLE_SEARCH_TESTS=true** environment variable to enable the tests
 
 ## Running the Tests
 
@@ -28,7 +28,7 @@ These tests require:
 By default, these tests are **disabled** to prevent accidental runs against production databases. To enable them:
 
 ```bash
-export ENABLE_ATLAS_SEARCH_TESTS=true
+export ENABLE_SEARCH_TESTS=true
 ```
 
 ### Set MongoDB URI
@@ -103,10 +103,10 @@ Verifies that the `skip` parameter works for pagination and returns different re
 
 ### Tests are Skipped
 
-If you see "Skipping Atlas Search tests - ENABLE_ATLAS_SEARCH_TESTS not set", make sure you've set the environment variable:
+If you see "Skipping Search tests - ENABLE_SEARCH_TESTS not set", make sure you've set the environment variable:
 
 ```bash
-export ENABLE_ATLAS_SEARCH_TESTS=true
+export ENABLE_SEARCH_TESTS=true
 ```
 
 ### Index Creation Timeout

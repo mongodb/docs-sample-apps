@@ -433,7 +433,7 @@ class MovieServiceTest {
 
     @Test
     @DisplayName("Should get movies with most comments")
-    void testGetMoviesWithMostComments_Success() {
+    void testGetMoviesWithMostRecentComments_Success() {
         // Arrange
         Integer limit = 10;
         String movieId = null;
@@ -464,7 +464,7 @@ class MovieServiceTest {
                 .thenReturn(mockResults);
 
         // Act
-        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostComments(limit, movieId);
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostRecentComments(limit, movieId);
 
         // Assert
         assertNotNull(results);
@@ -479,7 +479,7 @@ class MovieServiceTest {
 
     @Test
     @DisplayName("Should get movies with most comments filtered by movie ID")
-    void testGetMoviesWithMostComments_WithMovieId() {
+    void testGetMoviesWithMostComments_WithMovieIdRecent() {
         // Arrange
         Integer limit = 10;
         String movieId = testId.toHexString();
@@ -491,7 +491,7 @@ class MovieServiceTest {
                 .thenReturn(mockResults);
 
         // Act
-        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostComments(limit, movieId);
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostRecentComments(limit, movieId);
 
         // Assert
         assertNotNull(results);
@@ -500,14 +500,14 @@ class MovieServiceTest {
 
     @Test
     @DisplayName("Should throw ValidationException for invalid movie ID in getMoviesWithMostComments")
-    void testGetMoviesWithMostComments_InvalidMovieId() {
+    void testGetMoviesWithMostRecentComments_InvalidMovieId() {
         // Arrange
         Integer limit = 10;
         String invalidMovieId = "invalid-id";
 
         // Act & Assert
         assertThrows(ValidationException.class,
-                () -> movieService.getMoviesWithMostComments(limit, invalidMovieId));
+                () -> movieService.getMoviesWithMostRecentComments(limit, invalidMovieId));
         verify(mongoTemplate, never()).aggregate(any(Aggregation.class), anyString(), any());
     }
 

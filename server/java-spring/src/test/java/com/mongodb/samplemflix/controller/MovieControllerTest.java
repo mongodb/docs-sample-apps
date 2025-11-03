@@ -361,7 +361,7 @@ class MovieControllerTest {
                 .mostRecentCommentDate(new Date())
                 .build();
 
-        when(movieService.getMoviesWithMostComments(anyInt(), isNull())).thenReturn(Arrays.asList(result));
+        when(movieService.getMoviesWithMostRecentComments(anyInt(), isNull())).thenReturn(Arrays.asList(result));
 
         // Act & Assert
         mockMvc.perform(get("/api/movies/aggregations/comments"))
@@ -380,7 +380,7 @@ class MovieControllerTest {
     @DisplayName("GET /api/movies/aggregations/comments - Should accept limit parameter")
     void testGetMoviesWithMostComments_WithLimit() throws Exception {
         // Arrange
-        when(movieService.getMoviesWithMostComments(eq(5), isNull())).thenReturn(Arrays.asList());
+        when(movieService.getMoviesWithMostRecentComments(eq(5), isNull())).thenReturn(Arrays.asList());
 
         // Act & Assert
         mockMvc.perform(get("/api/movies/aggregations/comments")
@@ -395,7 +395,7 @@ class MovieControllerTest {
     void testGetMoviesWithMostComments_WithMovieId() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
-        when(movieService.getMoviesWithMostComments(anyInt(), eq(movieId))).thenReturn(Arrays.asList());
+        when(movieService.getMoviesWithMostRecentComments(anyInt(), eq(movieId))).thenReturn(Arrays.asList());
 
         // Act & Assert
         mockMvc.perform(get("/api/movies/aggregations/comments")
@@ -410,7 +410,7 @@ class MovieControllerTest {
     void testGetMoviesWithMostComments_InvalidMovieId() throws Exception {
         // Arrange
         String invalidMovieId = "invalid-id";
-        when(movieService.getMoviesWithMostComments(anyInt(), eq(invalidMovieId)))
+        when(movieService.getMoviesWithMostRecentComments(anyInt(), eq(invalidMovieId)))
                 .thenThrow(new ValidationException("Invalid movie ID format"));
 
         // Act & Assert
@@ -503,7 +503,7 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.data").isArray());
     }
 
-    // ==================== ATLAS SEARCH ENDPOINT TESTS ====================
+    // ==================== MongoDB SEARCH ENDPOINT TESTS ====================
 
     @Test
     @DisplayName("GET /api/movies/search - Should search movies by plot successfully")

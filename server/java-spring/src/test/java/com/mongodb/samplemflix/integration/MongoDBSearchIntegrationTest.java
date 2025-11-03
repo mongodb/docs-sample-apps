@@ -23,24 +23,24 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Integration tests for Atlas Search functionality.
+ * Integration tests for MongoDB Search functionality.
  *
- * <p>These tests verify the Atlas Search endpoints work correctly with a real MongoDB Atlas instance.
+ * <p>These tests verify the MongoDB Search endpoints work correctly with a real MongoDB Atlas instance.
  * The tests require:
  * <ul>
  *   <li>A MongoDB Atlas cluster (not local MongoDB)</li>
  *   <li>MONGODB_URI environment variable pointing to Atlas</li>
- *   <li>Atlas Search index creation and polling for readiness</li>
+ *   <li>MongoDB Search index creation and polling for readiness</li>
  * </ul>
  *
  * <p>Note: These tests are disabled by default and should only be run against a test Atlas cluster.
- * To enable, set the environment variable ENABLE_ATLAS_SEARCH_TESTS=true
+ * To enable, set the environment variable ENABLE_SEARCH_TESTS=true
  */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@DisplayName("Atlas Search Integration Tests")
-class AtlasSearchIntegrationTest {
+@DisplayName("MongoDB Search Integration Tests")
+class MongoDBSearchIntegrationTest {
 
     @Autowired
     private MovieService movieService;
@@ -58,24 +58,24 @@ class AtlasSearchIntegrationTest {
     @BeforeAll
     void setUp() throws Exception {
         // Skip tests if not running against Atlas
-        if (!isAtlasSearchEnabled()) {
-            System.out.println("Skipping Atlas Search tests - ENABLE_ATLAS_SEARCH_TESTS not set");
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping MongoDB Search tests - ENABLE_SEARCH_TESTS not set");
             return;
         }
 
-        System.out.println("Setting up Atlas Search integration tests...");
+        System.out.println("Setting up MongoDB Search integration tests...");
 
         // Create test data
         createTestMovies();
 
-        // Create Atlas Search index
+        // Create Search index
         createSearchIndex();
 
         // Wait for index to be ready
         waitForSearchIndexReady();
 
         // Wait a bit for the newly created documents to be indexed
-        // Atlas Search indexes documents asynchronously
+        // MongoDB Search indexes documents asynchronously
         System.out.println("Waiting for test documents to be indexed...");
         try {
             Thread.sleep(10000); // Wait 10 seconds for indexing
@@ -83,16 +83,16 @@ class AtlasSearchIntegrationTest {
             Thread.currentThread().interrupt();
         }
 
-        System.out.println("Atlas Search index is ready for testing");
+        System.out.println("MongoDB Search index is ready for testing");
     }
 
     @AfterAll
     void tearDown() {
-        if (!isAtlasSearchEnabled()) {
+        if (!isSearchEnabled()) {
             return;
         }
 
-        System.out.println("Cleaning up Atlas Search test data...");
+        System.out.println("Cleaning up MongoDB Search test data...");
 
         // Clean up test movies
         if (!testMovieIds.isEmpty()) {
@@ -107,10 +107,10 @@ class AtlasSearchIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should search movies by plot using Atlas Search")
+    @DisplayName("Should search movies by plot using MongoDB Search")
     void testSearchMoviesByPlot_Success() {
-        if (!isAtlasSearchEnabled()) {
-            System.out.println("Skipping test - Atlas Search not enabled");
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping test - Search not enabled");
             return;
         }
 
@@ -138,8 +138,8 @@ class AtlasSearchIntegrationTest {
     @Test
     @DisplayName("Should return empty list when no movies match search query")
     void testSearchMoviesByPlot_NoResults() {
-        if (!isAtlasSearchEnabled()) {
-            System.out.println("Skipping test - Atlas Search not enabled");
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping test - Search not enabled");
             return;
         }
 
@@ -161,8 +161,8 @@ class AtlasSearchIntegrationTest {
     @Test
     @DisplayName("Should respect limit parameter in search")
     void testSearchMoviesByPlot_WithLimit() {
-        if (!isAtlasSearchEnabled()) {
-            System.out.println("Skipping test - Atlas Search not enabled");
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping test - Search not enabled");
             return;
         }
 
@@ -184,8 +184,8 @@ class AtlasSearchIntegrationTest {
     @Test
     @DisplayName("Should support pagination with skip parameter")
     void testSearchMoviesByPlot_WithPagination() {
-        if (!isAtlasSearchEnabled()) {
-            System.out.println("Skipping test - Atlas Search not enabled");
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping test - Search not enabled");
             return;
         }
 
@@ -225,8 +225,8 @@ class AtlasSearchIntegrationTest {
 
     // ==================== HELPER METHODS ====================
 
-    private boolean isAtlasSearchEnabled() {
-        String enabled = System.getenv("ENABLE_ATLAS_SEARCH_TESTS");
+    private boolean isSearchEnabled() {
+        String enabled = System.getenv("ENABLE_SEARCH_TESTS");
         return "true".equalsIgnoreCase(enabled);
     }
 
@@ -262,7 +262,7 @@ class AtlasSearchIntegrationTest {
     }
 
     private void createSearchIndex() throws Exception {
-        System.out.println("Creating Atlas Search index...");
+        System.out.println("Creating Search index...");
 
         MongoCollection<Document> collection = mongoTemplate.getCollection("movies");
 

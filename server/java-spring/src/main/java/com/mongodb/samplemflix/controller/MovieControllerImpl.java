@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/movies/aggregations/comments - Aggregate movies with most comments
  * - GET /api/movies/aggregations/years - Aggregate movies by year with statistics
  * - GET /api/movies/aggregations/directors - Aggregate directors with most movies
- * - GET /api/movies/search - Text search using Atlas Search Index across multiple fields (plot, fullplot, directors, writers, cast)
+ * - GET /api/movies/search - Text search using MongoDB Search Index across multiple fields (plot, fullplot, directors, writers, cast)
  * - GET /api/movies/find-similar-movies - Vector search to find similar movies based on plot embeddings
  * </pre>
  */
@@ -288,13 +288,13 @@ public class MovieControllerImpl {
                      "Demonstrates how to combine data from the movies and comments collections."
     )
     @GetMapping("/aggregations/comments")
-    public ResponseEntity<SuccessResponse<List<MovieWithCommentsResult>>> getMoviesWithMostComments(
+    public ResponseEntity<SuccessResponse<List<MovieWithCommentsResult>>> getMoviesWithMostRecentComments(
             @Parameter(description = "Maximum number of movies to return (default: 10, max: 50)")
             @RequestParam(defaultValue = "10") Integer limit,
             @Parameter(description = "Optional movie ID to filter by specific movie")
             @RequestParam(required = false) String movieId) {
 
-        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostComments(limit, movieId);
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostRecentComments(limit, movieId);
 
         // Calculate total comments across all movies
         int totalComments = results.stream()
@@ -361,11 +361,11 @@ public class MovieControllerImpl {
         return ResponseEntity.ok(response);
     }
 
-    // Atlas Search endpoints
+    // MongoDB Search endpoints
 
     @Operation(
-        summary = "Search movies using MongoDB Atlas Search",
-        description = "Search movies using MongoDB Atlas Search across multiple fields (plot, fullplot, directors, writers, cast). " +
+        summary = "Search movies using MongoDB Search",
+        description = "Search movies using MongoDB Search across multiple fields (plot, fullplot, directors, writers, cast). " +
                      "You can combine multiple fields in a single query and control how they are combined using the searchOperator parameter. " +
                      "At least one search field must be provided. " +
                      "Plot and fullplot use phrase operator for exact matching, while directors, writers, and cast use text operator with fuzzy matching."
@@ -415,7 +415,7 @@ public class MovieControllerImpl {
 
     @Operation(
         summary = "Find similar movies using vector search",
-        description = "Find similar movies using MongoDB Atlas Vector Search on plot embeddings. " +
+        description = "Find similar movies using MongoDB Vector Search on plot embeddings. " +
                      "Demonstrates how to use vector search to find movies with similar plots based on semantic similarity."
     )
     @GetMapping("/find-similar-movies")

@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Data Transfer Object for Atlas Search query parameters.
+ * Data Transfer Object for MongoDB Search query parameters.
  *
  * <p>This DTO is used to parse and validate query parameters for GET /api/movies/search requests.
- * It supports searching across multiple fields using MongoDB Atlas Search with compound operators.
+ * It supports searching across multiple fields using MongoDB Search with compound operators.
  */
 @Data
 @Builder
@@ -86,4 +86,3 @@ public class MovieSearchRequest {
                (cast != null && !cast.trim().isEmpty());
     }
 }
-
