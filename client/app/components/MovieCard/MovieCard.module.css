@@ -1,7 +1,7 @@
 /**
- * Movies Page Styles
+ * Movies Card Styles
  * 
- * CSS Module for the movies page component.
+ * CSS Module for the movies card component.
  * Provides responsive grid layout and movie card styling.
  */
 
@@ -19,12 +19,38 @@
   padding: 16px;
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
 }
 
 .movieCard:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.movieCard.selected {
+  border-color: #0070f3;
+  box-shadow: 0 2px 4px rgba(0, 112, 243, 0.2);
+}
+
+.selectionCheckbox {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .moviePoster {
@@ -39,6 +65,7 @@
 
 .moviePoster img {
   border-radius: 4px;
+  object-fit: cover;
 }
 
 .posterPlaceholder {
@@ -86,6 +113,7 @@
 }
 
 .detailsButton {
+  display: block;
   width: 100%;
   background: #0066cc;
   color: white;
@@ -95,6 +123,8 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
+  text-align: center;
   transition: background-color 0.2s ease;
 }
 

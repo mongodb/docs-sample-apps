@@ -1,5 +1,7 @@
 
-import loadingStyles from "./loading.module.css";
+import pageStyles from "./page.module.css";
+import movieStyles from "./movies.module.css";
+import { MovieCardSkeleton, PageSelectorSkeleton, PaginationSkeleton } from "../components/LoadingSkeleton";
 
 /**
  * Loading Component for Movies Page
@@ -9,13 +11,21 @@ import loadingStyles from "./loading.module.css";
  */
 export default function Loading() {
   return (
-    <div>
-      <main>
-        <h1 className={loadingStyles.pageTitle}>Movies</h1>
-        <div className={loadingStyles.loadingContainer}>
-          <div className={loadingStyles.loadingSpinner}></div>
-          <p className={loadingStyles.loadingMessage}>Loading movies from the database...</p>
+    <div className={pageStyles.page}>
+      <main className={pageStyles.main}>
+        <h1 className={movieStyles.pageTitle}>Movies</h1>
+        <p className={movieStyles.movieCount}>Loading movies from the sample_mflix database...</p>
+        
+        <PageSelectorSkeleton />
+        
+        {/* Movies Grid Skeleton */}
+        <div className={movieStyles.moviesGrid}>
+          {[...Array(20)].map((_, i) => (
+            <MovieCardSkeleton key={i} />
+          ))}
         </div>
+        
+        <PaginationSkeleton />
       </main>
     </div>
   );

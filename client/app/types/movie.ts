@@ -12,11 +12,45 @@ export interface Movie {
   title: string;
   year?: number;
   plot?: string;
+  fullplot?: string;
+  released?: string;
+  runtime?: number;
   poster?: string;
   genres?: string[];
+  directors?: string[];
+  writers?: string[];
+  cast?: string[];
+  countries?: string[];
+  languages?: string[];
+  rated?: string;
+  awards?: {
+    wins?: number;
+    nominations?: number;
+    text?: string;
+  };
   imdb?: {
     rating?: number;
+    votes?: number;
+    id?: number;
   };
+  tomatoes?: {
+    viewer?: {
+      rating?: number;
+      numReviews?: number;
+      meter?: number;
+    };
+    critic?: {
+      rating?: number;
+      numReviews?: number;
+      meter?: number;
+    };
+    fresh?: number;
+    rotten?: number;
+    production?: string;
+    lastUpdated?: string;
+  };
+  metacritic?: number;
+  type?: string;
 }
 
 /**
@@ -27,11 +61,11 @@ export interface MoviesApiResponse {
   success: boolean;
   data: Movie[];
   message?: string;
-}
-
-/**
- * Props interface for MovieCard component
- */
-export interface MovieCardProps {
-  movie: Movie;
+  timestamp: string;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
