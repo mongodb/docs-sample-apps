@@ -12,10 +12,14 @@ import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
+import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
+import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.repository.MovieRepository;
 import java.util.*;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +29,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Query;
 
 /**
@@ -421,5 +427,185 @@ class MovieServiceTest {
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> movieService.findAndDeleteMovie(validId));
         verify(mongoTemplate).findAndRemove(any(Query.class), eq(Movie.class));
+    }
+
+    // ==================== AGGREGATION TESTS ====================
+
+    @Test
+    @DisplayName("Should get movies with most comments")
+    void testGetMoviesWithMostRecentComments_Success() {
+        // Arrange
+        Integer limit = 10;
+        String movieId = null;
+
+        Document doc1 = new Document()
+                .append("id", testId.toHexString())
+                .append("title", "Test Movie")
+                .append("year", 2024)
+                .append("plot", "Test plot")
+                .append("poster", "http://example.com/poster.jpg")
+                .append("genres", Arrays.asList("Action", "Drama"))
+                .append("imdb", new Document("rating", 8.5).append("votes", 1000))
+                .append("recentComments", Arrays.asList(
+                        new Document()
+                                .append("_id", new ObjectId())
+                                .append("name", "John Doe")
+                                .append("email", "john@example.com")
+                                .append("text", "Great movie!")
+                                .append("date", new Date())
+                ))
+                .append("totalComments", 5)
+                .append("mostRecentCommentDate", new Date());
+
+        @SuppressWarnings("unchecked")
+        AggregationResults<Document> mockResults = mock(AggregationResults.class);
+        when(mockResults.getMappedResults()).thenReturn(Arrays.asList(doc1));
+        when(mongoTemplate.aggregate(any(Aggregation.class), eq("movies"), eq(Document.class)))
+                .thenReturn(mockResults);
+
+        // Act
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostRecentComments(limit, movieId);
+
+        // Assert
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals("Test Movie", results.get(0).getTitle());
+        assertEquals(2024, results.get(0).getYear());
+        assertEquals(5, results.get(0).getTotalComments());
+        assertNotNull(results.get(0).getRecentComments());
+        assertEquals(1, results.get(0).getRecentComments().size());
+        verify(mongoTemplate).aggregate(any(Aggregation.class), eq("movies"), eq(Document.class));
+    }
+
+    @Test
+    @DisplayName("Should get movies with most comments filtered by movie ID")
+    void testGetMoviesWithMostComments_WithMovieIdRecent() {
+        // Arrange
+        Integer limit = 10;
+        String movieId = testId.toHexString();
+
+        @SuppressWarnings("unchecked")
+        AggregationResults<Document> mockResults = mock(AggregationResults.class);
+        when(mockResults.getMappedResults()).thenReturn(Arrays.asList());
+        when(mongoTemplate.aggregate(any(Aggregation.class), eq("movies"), eq(Document.class)))
+                .thenReturn(mockResults);
+
+        // Act
+        List<MovieWithCommentsResult> results = movieService.getMoviesWithMostRecentComments(limit, movieId);
+
+        // Assert
+        assertNotNull(results);
+        verify(mongoTemplate).aggregate(any(Aggregation.class), eq("movies"), eq(Document.class));
+    }
+
+    @Test
+    @DisplayName("Should throw ValidationException for invalid movie ID in getMoviesWithMostComments")
+    void testGetMoviesWithMostRecentComments_InvalidMovieId() {
+        // Arrange
+        Integer limit = 10;
+        String invalidMovieId = "invalid-id";
+
+        // Act & Assert
+        assertThrows(ValidationException.class,
+                () -> movieService.getMoviesWithMostRecentComments(limit, invalidMovieId));
+        verify(mongoTemplate, never()).aggregate(any(Aggregation.class), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Should get movies by year with statistics")
+    void testGetMoviesByYearWithStats_Success() {
+        // Arrange
+        MoviesByYearResult result1 = MoviesByYearResult.builder()
+                .year(2024)
+                .movieCount(10)
+                .averageRating(7.5)
+                .highestRating(9.0)
+                .lowestRating(6.0)
+                .totalVotes(5000L)
+                .build();
+
+        MoviesByYearResult result2 = MoviesByYearResult.builder()
+                .year(2023)
+                .movieCount(15)
+                .averageRating(7.8)
+                .highestRating(9.5)
+                .lowestRating(6.5)
+                .totalVotes(7500L)
+                .build();
+
+        @SuppressWarnings("unchecked")
+        AggregationResults<MoviesByYearResult> mockResults = mock(AggregationResults.class);
+        when(mockResults.getMappedResults()).thenReturn(Arrays.asList(result1, result2));
+        when(mongoTemplate.aggregate(any(Aggregation.class), eq("movies"), eq(MoviesByYearResult.class)))
+                .thenReturn(mockResults);
+
+        // Act
+        List<MoviesByYearResult> results = movieService.getMoviesByYearWithStats();
+
+        // Assert
+        assertNotNull(results);
+        assertEquals(2, results.size());
+        assertEquals(2024, results.get(0).getYear());
+        assertEquals(10, results.get(0).getMovieCount());
+        assertEquals(7.5, results.get(0).getAverageRating());
+        assertEquals(2023, results.get(1).getYear());
+        verify(mongoTemplate).aggregate(any(Aggregation.class), eq("movies"), eq(MoviesByYearResult.class));
+    }
+
+    @Test
+    @DisplayName("Should get directors with most movies")
+    void testGetDirectorsWithMostMovies_Success() {
+        // Arrange
+        Integer limit = 20;
+
+        DirectorStatisticsResult result1 = DirectorStatisticsResult.builder()
+                .director("Christopher Nolan")
+                .movieCount(10)
+                .averageRating(8.5)
+                .build();
+
+        DirectorStatisticsResult result2 = DirectorStatisticsResult.builder()
+                .director("Steven Spielberg")
+                .movieCount(25)
+                .averageRating(8.2)
+                .build();
+
+        @SuppressWarnings("unchecked")
+        AggregationResults<DirectorStatisticsResult> mockResults = mock(AggregationResults.class);
+        when(mockResults.getMappedResults()).thenReturn(Arrays.asList(result1, result2));
+        when(mongoTemplate.aggregate(any(Aggregation.class), eq("movies"), eq(DirectorStatisticsResult.class)))
+                .thenReturn(mockResults);
+
+        // Act
+        List<DirectorStatisticsResult> results = movieService.getDirectorsWithMostMovies(limit);
+
+        // Assert
+        assertNotNull(results);
+        assertEquals(2, results.size());
+        assertEquals("Christopher Nolan", results.get(0).getDirector());
+        assertEquals(10, results.get(0).getMovieCount());
+        assertEquals(8.5, results.get(0).getAverageRating());
+        assertEquals("Steven Spielberg", results.get(1).getDirector());
+        verify(mongoTemplate).aggregate(any(Aggregation.class), eq("movies"), eq(DirectorStatisticsResult.class));
+    }
+
+    @Test
+    @DisplayName("Should use default limit when null in getDirectorsWithMostMovies")
+    void testGetDirectorsWithMostMovies_DefaultLimit() {
+        // Arrange
+        Integer limit = null;
+
+        @SuppressWarnings("unchecked")
+        AggregationResults<DirectorStatisticsResult> mockResults = mock(AggregationResults.class);
+        when(mockResults.getMappedResults()).thenReturn(Arrays.asList());
+        when(mongoTemplate.aggregate(any(Aggregation.class), eq("movies"), eq(DirectorStatisticsResult.class)))
+                .thenReturn(mockResults);
+
+        // Act
+        List<DirectorStatisticsResult> results = movieService.getDirectorsWithMostMovies(limit);
+
+        // Assert
+        assertNotNull(results);
+        verify(mongoTemplate).aggregate(any(Aggregation.class), eq("movies"), eq(DirectorStatisticsResult.class));
     }
 }

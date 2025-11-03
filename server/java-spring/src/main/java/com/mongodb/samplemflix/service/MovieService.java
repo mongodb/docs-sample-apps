@@ -5,7 +5,10 @@ import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
+import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
+import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
+import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import java.util.List;
 import org.bson.Document;
@@ -32,4 +35,60 @@ public interface MovieService {
     DeleteResponse deleteMoviesBatch(Document filter);
 
     Movie findAndDeleteMovie(String id);
+
+    // Aggregation endpoints for reporting
+
+    /**
+     * Aggregates movies with their most recent comments.
+     *
+     * @param limit Maximum number of movies to return
+     * @param movieId Optional movie ID to filter by specific movie
+     * @return List of movies with their recent comments
+     */
+    List<MovieWithCommentsResult> getMoviesWithMostRecentComments(Integer limit, String movieId);
+
+    /**
+     * Aggregates movies by year with statistics.
+     *
+     * @return List of yearly statistics including movie count and average rating
+     */
+    List<MoviesByYearResult> getMoviesByYearWithStats();
+
+    /**
+     * Aggregates directors with the most movies.
+     *
+     * @param limit Maximum number of directors to return
+     * @return List of directors with their movie count and average rating
+     */
+    List<DirectorStatisticsResult> getDirectorsWithMostMovies(Integer limit);
+
+    // MongoDB Search endpoints
+
+    /**
+     * Searches movies using MongoDB Search across multiple fields.
+     * Demonstrates text search using a Search Index with compound operators.
+     *
+     * <p>Supports searching across:
+     * <ul>
+     * <li>plot - using phrase operator for exact phrase matching</li>
+     * <li>fullplot - using phrase operator for exact phrase matching</li>
+     * <li>directors - using text operator with fuzzy matching</li>
+     * <li>writers - using text operator with fuzzy matching</li>
+     * <li>cast - using text operator with fuzzy matching</li>
+     * </ul>
+     *
+     * @param searchRequest Search parameters including fields to search and compound operator
+     * @return List of movies matching the search criteria
+     */
+    List<Movie> searchMovies(com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest);
+
+    /**
+     * Finds similar movies using vector search on plot embeddings.
+     * Demonstrates MongoDB Atlas Vector Search.
+     *
+     * @param movieId ID of the movie to find similar movies for
+     * @param limit Maximum number of similar movies to return (default: 10, max: 50)
+     * @return List of similar movies based on plot embeddings
+     */
+    List<Movie> findSimilarMovies(String movieId, Integer limit);
 }

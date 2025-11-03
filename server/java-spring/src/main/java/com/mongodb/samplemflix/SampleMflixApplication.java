@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import java.util.Map;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,7 +27,9 @@ public class SampleMflixApplication {
 
     /**
      * Root endpoint providing basic information about the API.
+     * Hidden from Swagger UI documentation.
      */
+    @Hidden
     @GetMapping("/")
     public Map<String, Object> root() {
         return Map.of(

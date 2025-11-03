@@ -15,11 +15,16 @@ package com.mongodb.samplemflix.integration;
  * - GET /api/movies/{id}
  * - POST /api/movies
  * - POST /api/movies/batch
- * - PUT /api/movies/{id}
+ * - PATCH /api/movies/{id}
  * - PATCH /api/movies
  * - DELETE /api/movies/{id}
  * - DELETE /api/movies
  * - DELETE /api/movies/{id}/find-and-delete
+ *
+ * TODO: Implement integration tests for aggregation endpoints:
+ * - GET /api/movies/aggregations/comments (with and without limit/movieId)
+ * - GET /api/movies/aggregations/years
+ * - GET /api/movies/aggregations/directors (with and without limit)
  *
  * TODO: Test error scenarios:
  * - Invalid ObjectId format
@@ -31,6 +36,7 @@ package com.mongodb.samplemflix.integration;
  * - Large dataset queries
  * - Pagination performance
  * - Text search performance
+ * - Aggregation pipeline performance
  */
 public class MovieIntegrationTest {
 
@@ -38,5 +44,6 @@ public class MovieIntegrationTest {
     // TODO: Add @Testcontainers annotation
     // TODO: Add MongoDB container configuration
     // TODO: Add test data setup methods
-    // TODO: Add integration test methods
+    // TODO: Add integration test methods for CRUD operations
+    // TODO: Add integration test methods for aggregation endpoints
 }

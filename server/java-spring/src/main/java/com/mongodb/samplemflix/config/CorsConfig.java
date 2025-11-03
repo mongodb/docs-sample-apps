@@ -1,6 +1,5 @@
 package com.mongodb.samplemflix.config;
 
-import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,22 +29,29 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        
-        // Allow credentials (cookies, authorization headers)
-        config.setAllowCredentials(true);
-        
-        // Set allowed origins from environment variable
-        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        
+
+        // Allow wildcard origins for Swagger UI
+        config.setAllowCredentials(false);
+
+        // Set allowed origins - include localhost for Swagger UI
+        // Parse the configured origins and add localhost variations for Swagger UI
+        String[] origins = allowedOrigins.split(",");
+        for (String origin : origins) {
+            config.addAllowedOrigin(origin.trim());
+        }
+        // Add localhost origins for Swagger UI (on any port)
+        config.addAllowedOriginPattern("http://localhost:*");
+        config.addAllowedOriginPattern("http://127.0.0.1:*");
+
         // Allow all headers
         config.addAllowedHeader("*");
-        
+
         // Allow all HTTP methods
         config.addAllowedMethod("*");
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-        
+
         return new CorsFilter(source);
     }
 }

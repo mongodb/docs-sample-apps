@@ -66,6 +66,7 @@
             <artifactId>commons-lang3</artifactId>
             <version>${commons.lang3.version}</version>
         </dependency>
+
         <!-- SpringDoc OpenAPI (Swagger UI) -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -85,6 +86,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Jackson Databind for JSON serialization/deserialization -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
     </dependencies>
     
     <build>
@@ -103,6 +110,17 @@
                 </configuration>
             </plugin>
 
+            <!-- Maven Compiler Plugin - Suppress annotation processing warnings -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Xlint:-options</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
             <!-- Maven Surefire Plugin - Configure Mockito agent for Java 21+ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -114,6 +132,7 @@
                     </argLine>
                 </configuration>
             </plugin>
+
             <!-- Sort and remove unused imports -->
             <plugin>
                 <groupId>net.revelc.code</groupId>
