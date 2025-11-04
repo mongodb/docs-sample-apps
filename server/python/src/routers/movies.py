@@ -340,6 +340,7 @@ async def vector_search_movies(
                     # Handle invalid ObjectId conversion
                     result["_id"] = str(result["_id"]) if result["_id"] else None
         
+        # This code converts the raw results into VectorSearchResult objects
         results = [VectorSearchResult(**doc) for doc in raw_results]
         
         return create_success_response(
