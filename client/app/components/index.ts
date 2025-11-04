@@ -6,6 +6,7 @@ export { default as ActionButtons } from './ActionButtons';
 export { default as EditMovieForm } from './EditMovieForm';
 export { default as AddMovieForm } from './AddMovieForm';
 export { default as BatchEditMovieForm } from './BatchEditMovieForm';
+export { default as SearchMovieModal } from './SearchMovieModal';
 export { 
   Skeleton, 
   MovieCardSkeleton, 

@@ -363,3 +363,66 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
     };
   }
 }
+
+/**
+ * Search movies using MongoDB Search across multiple fields
+ */
+export async function searchMovies(searchParams: {
+  plot?: string;
+  fullplot?: string;
+  directors?: string;
+  writers?: string;
+  cast?: string;
+  limit?: number;
+  skip?: number;
+  search_operator?: 'must' | 'should' | 'mustNot' | 'filter';
+}): Promise<{ success: boolean; error?: string; movies?: Movie[]; resultCount?: number }> {
+  try {
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    
+    if (searchParams.plot) queryParams.append('plot', searchParams.plot);
+    if (searchParams.fullplot) queryParams.append('fullplot', searchParams.fullplot);
+    if (searchParams.directors) queryParams.append('directors', searchParams.directors);
+    if (searchParams.writers) queryParams.append('writers', searchParams.writers);
+    if (searchParams.cast) queryParams.append('cast', searchParams.cast);
+    if (searchParams.limit) queryParams.append('limit', searchParams.limit.toString());
+    if (searchParams.skip) queryParams.append('skip', searchParams.skip.toString());
+    if (searchParams.search_operator) queryParams.append('search_operator', searchParams.search_operator);
+
+    const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to search movies: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return { 
+      success: true, 
+      movies: result.data || [],
+      resultCount: result.data?.length || 0
+    };
+  } catch (error) {
+    console.error('Error searching movies:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while searching movies' 
+    };
+  }
+}

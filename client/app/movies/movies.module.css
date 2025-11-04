@@ -28,6 +28,59 @@
   flex-wrap: wrap;
 }
 
+.searchControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchButton {
+  padding: 0.75rem 1.5rem;
+  background: #6f42c1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+}
+
+.searchButton:hover:not(:disabled) {
+  background: #5a359a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(111, 66, 193, 0.3);
+}
+
+.searchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.clearSearchButton {
+  padding: 0.5rem 1rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clearSearchButton:hover:not(:disabled) {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
 .selectAllButton {
   padding: 0.5rem 1rem;
   background: #6c757d;
@@ -268,6 +321,11 @@
     justify-content: center;
   }
 
+  .searchControls {
+    justify-content: center;
+    width: 100%;
+  }
+
   .pageTitle {
     font-size: 28px;
     text-align: center;
@@ -310,7 +368,9 @@
 
   .selectAllButton,
   .batchDeleteButton,
-  .batchUpdateButton {
+  .batchUpdateButton,
+  .searchButton,
+  .clearSearchButton {
     width: 100%;
     padding: 0.75rem 1rem;
   }
