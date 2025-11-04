@@ -278,17 +278,63 @@ public class DatabaseVerification {
             return;
         }
 
-        // Log instructions for creating vector search index
-        // Note: Vector search indexes must be created through Atlas UI or API
-        logger.info(
-            "To enable vector search, create a vector search index named '{}' on the '{}' collection " +
-            "with the following specification:\n" +
-            "  - Field: plot_embedding_voyage_3_large\n" +
-            "  - Dimensions: 2048\n" +
-            "  - Similarity: cosine\n" +
-            "Visit: https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/",
-            VECTOR_INDEX_NAME,
-            EMBEDDED_MOVIES_COLLECTION
-        );
+        // Create vector search index programmatically
+        createVectorSearchIndex(embeddedMoviesCollection);
+    }
+
+    /**
+     * Creates a vector search index on the embedded_movies collection if it doesn't already exist.
+     *
+     * <p>This method creates a vector search index named 'vector_index' for the
+     * plot_embedding_voyage_3_large field with 2048 dimensions and cosine similarity.
+     *
+     * @param embeddedMoviesCollection the embedded_movies collection to create the index on
+     */
+    private void createVectorSearchIndex(MongoCollection<Document> embeddedMoviesCollection) {
+        try {
+            // Check if the vector search index already exists
+            boolean indexExists = false;
+            for (Document index : embeddedMoviesCollection.listSearchIndexes()) {
+                if (VECTOR_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Vector search index '{}' already exists", VECTOR_INDEX_NAME);
+                    break;
+                }
+            }
+
+            if (!indexExists) {
+                // Define the vector search index specification
+                Document vectorField = new Document()
+                        .append("type", "vector")
+                        .append("path", "plot_embedding_voyage_3_large")
+                        .append("numDimensions", 2048)
+                        .append("similarity", "cosine");
+
+                Document indexDefinition = new Document()
+                        .append("fields", java.util.Arrays.asList(vectorField));
+
+                Document searchIndexModel = new Document()
+                        .append("name", VECTOR_INDEX_NAME)
+                        .append("type", "vectorSearch")
+                        .append("definition", indexDefinition);
+
+                // Create the index using the createSearchIndex command
+                String indexName = embeddedMoviesCollection.createSearchIndex(searchIndexModel);
+
+                logger.info("Vector search index '{}' created successfully. Index may take a few moments to build.", indexName);
+                logger.info("Vector search is now ready to use on the '{}' collection", EMBEDDED_MOVIES_COLLECTION);
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to create vector search index: {}", e.getMessage());
+            logger.warn(
+                "To manually create the vector search index, visit the Atlas UI and create an index named '{}' with:\n" +
+                "  - Field: plot_embedding_voyage_3_large\n" +
+                "  - Dimensions: 2048\n" +
+                "  - Similarity: cosine\n" +
+                "Visit: https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/",
+                VECTOR_INDEX_NAME
+            );
+        }
     }
 }
