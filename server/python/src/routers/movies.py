@@ -14,12 +14,30 @@ This file contains all the business logic for movie operations.
 Each method demonstrates different MongoDB operations using the PyMongo driver.
 
 Implemented Endpoints:
-- GET /api/movies/ :
-    Retrieve a list of movies with optional filtering, sorting, and pagination.
-    Supports text search, genre, year, rating filters, and customizable sorting.
+
+- GET /api/movies/search :
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
+    Supports compound search operators and fuzzy matching.
+
+- GET /api/movies/vector-search :
+    Search movies using MongoDB Vector Search to enable semantic search capabilities over
+    the plot field.
+
+- GET /api/movies/aggregations/reportingByComments :
+    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
+
+- GET /api/movies/aggregations/reportingByYear :
+    Aggregate movies by year with average rating and movie count.
+
+- GET /api/movies/aggregations/reportingByDirectors :
+    Aggregate directors with the most movies and their statistics.
 
 - GET /api/movies/{id} :
     Retrieve a single movie by its ID.
+
+- GET /api/movies/ :
+    Retrieve a list of movies with optional filtering, sorting, and pagination.
+    Supports text search, genre, year, rating filters, and customizable sorting.
 
 - POST /api/movies/ :
     Create a new movie.
@@ -41,23 +59,6 @@ Implemented Endpoints:
 
 - DELETE /api/movies/{id}/find-and-delete :
     Find and delete a movie in a single atomic operation.
-
-- GET /api/movies/aggregations/reportingByComments :
-    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
-
-- GET /api/movies/aggregations/reportingByYear :
-    Aggregate movies by year with average rating and movie count.
-
-- GET /api/movies/aggregations/reportingByDirectors :
-    Aggregate directors with the most movies and their statistics.
-
-- GET /api/movies/search :
-    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
-    Supports compound search operators and fuzzy matching.
-
-- GET /api/movies/vector-search :
-    Search movies using MongoDB Vector Search to enable semantic search capabilities over
-    the plot field.
 
 Helper Functions:
 - execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the
