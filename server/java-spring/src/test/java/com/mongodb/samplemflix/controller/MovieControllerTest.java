@@ -12,6 +12,7 @@ import com.mongodb.samplemflix.exception.ResourceNotFoundException;
 import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
+import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
 import com.mongodb.samplemflix.model.dto.CreateMovieRequest;
 import com.mongodb.samplemflix.model.dto.DeleteResponse;
 import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
@@ -19,6 +20,7 @@ import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
 import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
+import com.mongodb.samplemflix.model.dto.VectorSearchResult;
 import com.mongodb.samplemflix.service.MovieService;
 import java.util.Arrays;
 import java.util.Date;
@@ -26,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.bson.BsonObjectId;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -659,5 +662,278 @@ class MovieControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    // ==================== VECTOR SEARCH ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/movies/vector-search - Should perform vector search successfully")
+    void testVectorSearchMovies_Success() throws Exception {
+        // Arrange
+        VectorSearchResult result1 = VectorSearchResult.builder()
+                .id(testId.toHexString())
+                .title("Space Raiders")
+                .plot("A futuristic space adventure")
+                .score(0.85)
+                .build();
+
+        VectorSearchResult result2 = VectorSearchResult.builder()
+                .id(new ObjectId().toHexString())
+                .title("Galaxy Quest")
+                .plot("An epic space journey")
+                .score(0.78)
+                .build();
+
+        when(movieService.vectorSearchMovies(eq("space adventure"), eq(3)))
+                .thenReturn(Arrays.asList(result1, result2));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/vector-search")
+                        .param("q", "space adventure")
+                        .param("limit", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("Space Raiders"))
+                .andExpect(jsonPath("$.data[0].plot").value("A futuristic space adventure"))
+                .andExpect(jsonPath("$.data[0].score").value(0.85))
+                .andExpect(jsonPath("$.data[1].title").value("Galaxy Quest"))
+                .andExpect(jsonPath("$.data[1].score").value(0.78));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/vector-search - Should use default limit")
+    void testVectorSearchMovies_DefaultLimit() throws Exception {
+        // Arrange
+        when(movieService.vectorSearchMovies(eq("adventure"), eq(10)))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/vector-search")
+                        .param("q", "adventure"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/vector-search - Should return 400 when query is missing")
+    void testVectorSearchMovies_MissingQuery() throws Exception {
+        // Arrange
+        when(movieService.vectorSearchMovies(isNull(), anyInt()))
+                .thenThrow(new ValidationException("Search query is required"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/vector-search"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/vector-search - Should return 400 when API key is missing")
+    void testVectorSearchMovies_MissingApiKey() throws Exception {
+        // Arrange
+        when(movieService.vectorSearchMovies(eq("test"), anyInt()))
+                .thenThrow(new ValidationException("Vector search unavailable: VOYAGE_API_KEY not configured"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/vector-search")
+                        .param("q", "test"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.message").value(containsString("VOYAGE_API_KEY")));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/vector-search - Should return empty list when no results")
+    void testVectorSearchMovies_NoResults() throws Exception {
+        // Arrange
+        when(movieService.vectorSearchMovies(eq("nonexistent"), anyInt()))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/vector-search")
+                        .param("q", "nonexistent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    // ==================== FIND SIMILAR MOVIES ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/movies/find-similar-movies - Should find similar movies successfully")
+    void testFindSimilarMovies_Success() throws Exception {
+        // Arrange
+        String movieId = testId.toHexString();
+
+        Movie similarMovie1 = Movie.builder()
+                .id(new ObjectId())
+                .title("Similar Movie 1")
+                .year(2024)
+                .plot("A similar plot")
+                .build();
+
+        Movie similarMovie2 = Movie.builder()
+                .id(new ObjectId())
+                .title("Similar Movie 2")
+                .year(2023)
+                .plot("Another similar plot")
+                .build();
+
+        when(movieService.findSimilarMovies(eq(movieId), eq(5)))
+                .thenReturn(Arrays.asList(similarMovie1, similarMovie2));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/find-similar-movies")
+                        .param("movieId", movieId)
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("Similar Movie 1"))
+                .andExpect(jsonPath("$.data[1].title").value("Similar Movie 2"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/find-similar-movies - Should use default limit")
+    void testFindSimilarMovies_DefaultLimit() throws Exception {
+        // Arrange
+        String movieId = testId.toHexString();
+        when(movieService.findSimilarMovies(eq(movieId), eq(10)))
+                .thenReturn(Arrays.asList());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/find-similar-movies")
+                        .param("movieId", movieId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/find-similar-movies - Should return 400 for invalid movie ID")
+    void testFindSimilarMovies_InvalidId() throws Exception {
+        // Arrange
+        String invalidId = "invalid-id";
+        when(movieService.findSimilarMovies(eq(invalidId), anyInt()))
+                .thenThrow(new ValidationException("Invalid movie ID format"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/find-similar-movies")
+                        .param("movieId", invalidId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/find-similar-movies - Should return 404 when movie not found")
+    void testFindSimilarMovies_MovieNotFound() throws Exception {
+        // Arrange
+        String movieId = testId.toHexString();
+        when(movieService.findSimilarMovies(eq(movieId), anyInt()))
+                .thenThrow(new ResourceNotFoundException("Movie not found"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies/find-similar-movies")
+                        .param("movieId", movieId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    // ==================== BATCH UPDATE ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("PATCH /api/movies/batch - Should update movies batch successfully")
+    void testUpdateMoviesBatch_Success() throws Exception {
+        // Arrange
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("filter", Map.of("year", 2024));
+        requestBody.put("update", Map.of("$set", Map.of("rating", "PG-13")));
+
+        BatchUpdateResponse response = new BatchUpdateResponse(5L, 5L);
+        when(movieService.updateMoviesBatch(any(Document.class), any(Document.class)))
+                .thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.matchedCount").value(5))
+                .andExpect(jsonPath("$.data.modifiedCount").value(5));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/movies - Should handle empty filter")
+    void testUpdateMoviesBatch_EmptyFilter() throws Exception {
+        // Arrange
+        BatchUpdateResponse updateResponse = new BatchUpdateResponse(0L, 0L);
+
+        when(movieService.updateMoviesBatch(any(Document.class), any(Document.class)))
+                .thenReturn(updateResponse);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("filter", Map.of());
+        requestBody.put("update", Map.of("$set", Map.of("rating", "PG-13")));
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.matchedCount").value(0))
+                .andExpect(jsonPath("$.data.modifiedCount").value(0));
+    }
+
+    // ==================== BATCH DELETE ENDPOINT TESTS ====================
+
+    @Test
+    @DisplayName("DELETE /api/movies/batch - Should delete movies batch successfully")
+    void testDeleteMoviesBatch_Success() throws Exception {
+        // Arrange
+        Map<String, Object> requestBody = Map.of("filter", Map.of("year", Map.of("$lt", 1950)));
+
+        DeleteResponse response = new DeleteResponse(10L);
+        when(movieService.deleteMoviesBatch(any(Document.class)))
+                .thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deletedCount").value(10));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/movies - Should handle empty filter")
+    void testDeleteMoviesBatch_EmptyFilter() throws Exception {
+        // Arrange
+        DeleteResponse deleteResponse = new DeleteResponse(0L);
+
+        when(movieService.deleteMoviesBatch(any(Document.class)))
+                .thenReturn(deleteResponse);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("filter", Map.of());
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deletedCount").value(0));
     }
 }
