@@ -31,8 +31,12 @@ export default function Movies() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
-  const [searchResultCount, setSearchResultCount] = useState(0);
+  const [searchHasNextPage, setSearchHasNextPage] = useState(false);
+  const [searchHasPrevPage, setSearchHasPrevPage] = useState(false);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchLimit, setSearchLimit] = useState(20);
   const [currentSearchParams, setCurrentSearchParams] = useState<SearchParams | null>(null);
   
   const page = parseInt(searchParams.get('page') || '1');
@@ -217,20 +221,35 @@ export default function Movies() {
     setError(null);
     setSuccessMessage(null);
 
-    const result = await searchMovies(searchParams);
+    // For new searches, start from page 1
+    const searchSkip = 0;
+    const searchLimitToUse = searchParams.limit || 20;
+    
+    const searchParamsWithPagination = {
+      ...searchParams,
+      limit: searchLimitToUse,
+      skip: searchSkip,
+    };
+
+    const result = await searchMovies(searchParamsWithPagination);
 
     if (result.success) {
       setSearchResults(result.movies || []);
-      setSearchResultCount(result.resultCount || 0);
+      setSearchHasNextPage(result.hasNextPage || false);
+      setSearchHasPrevPage(result.hasPrevPage || false);
+      setSearchTotalCount(result.totalCount || 0);
       setIsSearchMode(true);
+      setSearchPage(1);
+      setSearchLimit(searchLimitToUse);
       setCurrentSearchParams(searchParams);
       setShowSearchModal(false);
       setSelectedMovies(new Set()); // Clear selection when switching to search mode
       
-      if (result.resultCount === 0) {
+      const totalCount = result.totalCount || 0;
+      if (totalCount === 0) {
         setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
       } else {
-        setSuccessMessage(`Found ${result.resultCount} movie${result.resultCount !== 1 ? 's' : ''} matching your search.`);
+        setSuccessMessage(`Found ${totalCount} total movies matching your search criteria.`);
       }
     } else {
       setError(result.error || 'Failed to search movies');
@@ -242,7 +261,10 @@ export default function Movies() {
   const handleClearSearch = () => {
     setIsSearchMode(false);
     setSearchResults([]);
-    setSearchResultCount(0);
+    setSearchHasNextPage(false);
+    setSearchHasPrevPage(false);
+    setSearchTotalCount(0);
+    setSearchPage(1);
     setCurrentSearchParams(null);
     setSelectedMovies(new Set());
     setError(null);
@@ -252,6 +274,38 @@ export default function Movies() {
 
   // Get the movies to display based on current mode
   const displayMovies = isSearchMode ? searchResults : movies;
+
+  const handleSearchPageChange = async (newPage: number) => {
+    if (!currentSearchParams) return;
+    
+    setIsSearching(true);
+    setError(null);
+    
+    const searchSkip = (newPage - 1) * searchLimit;
+    const searchParamsWithPagination = {
+      ...currentSearchParams,
+      limit: searchLimit,
+      skip: searchSkip,
+    };
+
+    try {
+      const result = await searchMovies(searchParamsWithPagination);
+      
+      if (result.success) {
+        setSearchResults(result.movies || []);
+        setSearchHasNextPage(result.hasNextPage || false);
+        setSearchHasPrevPage(result.hasPrevPage || false);
+        setSearchTotalCount(result.totalCount || 0);
+        setSearchPage(newPage);
+      } else {
+        setError(result.error || 'Failed to load search results');
+      }
+    } catch (error) {
+      setError('Failed to load search results');
+    }
+    
+    setIsSearching(false);
+  };
 
   if (isLoading && !showAddForm) {
     return (
@@ -271,7 +325,7 @@ export default function Movies() {
       <main className={pageStyles.main}>
         <div className={movieStyles.pageHeader}>
           <h1 className={movieStyles.pageTitle}>
-            {isSearchMode ? `Search Results (${searchResultCount})` : 'Movies'}
+            {isSearchMode ? `Search Results` : 'Movies'}
           </h1>
           
           <div className={movieStyles.headerActions}>
@@ -366,8 +420,6 @@ export default function Movies() {
             onSearch={handleSearchSubmit}
             onCancel={handleCancelSearch}
             isLoading={isSearching}
-            searchResults={searchResults}
-            resultCount={searchResultCount}
           />
         )}
 
@@ -415,8 +467,54 @@ export default function Movies() {
                   ))}
                 </div>
                 
-                {/* Only show pagination for regular mode, not search results */}
-                {!isSearchMode && (
+                {/* Show pagination based on current mode */}
+                {isSearchMode ? (
+                  <nav className={movieStyles.pagination} aria-label="Search results pagination">
+                    <div className={movieStyles.paginationContainer}>
+                      {/* Previous Button */}
+                      {searchHasPrevPage ? (
+                        <button
+                          onClick={() => handleSearchPageChange(searchPage - 1)}
+                          className={movieStyles.pageButton}
+                          disabled={isSearching}
+                          aria-label="Go to previous page"
+                        >
+                          ← Previous
+                        </button>
+                      ) : (
+                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                          ← Previous
+                        </span>
+                      )}
+
+                      {/* Current Page Info */}
+                      <div className={movieStyles.pageInfo}>
+                        Page {searchPage}
+                      </div>
+
+                      {/* Next Button */}
+                      {searchHasNextPage ? (
+                        <button
+                          onClick={() => handleSearchPageChange(searchPage + 1)}
+                          className={movieStyles.pageButton}
+                          disabled={isSearching}
+                          aria-label="Go to next page"
+                        >
+                          Next →
+                        </button>
+                      ) : (
+                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                          Next →
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className={movieStyles.additionalInfo}>
+                      {searchLimit} movies per page
+                    </div>
+                  </nav>
+                ) : (
                   <Pagination
                     currentPage={page}
                     hasNextPage={hasNextPage}

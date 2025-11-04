@@ -105,7 +105,7 @@ export async function updateMovie(id: string, updateData: Partial<Movie>): Promi
     const { _id, ...dataToUpdate } = updateData;
 
     const response = await fetch(`${API_BASE_URL}/api/movies/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -183,7 +183,7 @@ export async function deleteMovie(id: string): Promise<{ success: boolean; error
  */
 export async function createMovie(movieData: Omit<Movie, '_id'>): Promise<{ success: boolean; error?: string; movieId?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -326,7 +326,7 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -365,7 +365,7 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
 }
 
 /**
- * Search movies using MongoDB Search across multiple fields
+ * Search movies using MongoDB Search across multiple fields with pagination support
  */
 export async function searchMovies(searchParams: {
   plot?: string;
@@ -376,9 +376,12 @@ export async function searchMovies(searchParams: {
   limit?: number;
   skip?: number;
   search_operator?: 'must' | 'should' | 'mustNot' | 'filter';
-}): Promise<{ success: boolean; error?: string; movies?: Movie[]; resultCount?: number }> {
+}): Promise<{ success: boolean; error?: string; movies?: Movie[]; hasNextPage?: boolean; hasPrevPage?: boolean; totalCount?: number }> {
   try {
     // Build query parameters
+    const limit = searchParams.limit || 20;
+    const skip = searchParams.skip || 0;
+    
     const queryParams = new URLSearchParams();
     
     if (searchParams.plot) queryParams.append('plot', searchParams.plot);
@@ -386,8 +389,8 @@ export async function searchMovies(searchParams: {
     if (searchParams.directors) queryParams.append('directors', searchParams.directors);
     if (searchParams.writers) queryParams.append('writers', searchParams.writers);
     if (searchParams.cast) queryParams.append('cast', searchParams.cast);
-    if (searchParams.limit) queryParams.append('limit', searchParams.limit.toString());
-    if (searchParams.skip) queryParams.append('skip', searchParams.skip.toString());
+    queryParams.append('limit', limit.toString());
+    queryParams.append('skip', skip.toString());
     if (searchParams.search_operator) queryParams.append('search_operator', searchParams.search_operator);
 
     const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams}`, {
@@ -413,10 +416,18 @@ export async function searchMovies(searchParams: {
       };
     }
 
+    const responseData = result.data || {};
+    const movies = responseData.movies || [];
+    const totalCount = responseData.totalCount || 0;
+    const hasNextPage = skip + limit < totalCount;
+    const hasPrevPage = skip > 0;
+
     return { 
       success: true, 
-      movies: result.data || [],
-      resultCount: result.data?.length || 0
+      movies,
+      hasNextPage,
+      hasPrevPage,
+      totalCount
     };
   } catch (error) {
     console.error('Error searching movies:', error);

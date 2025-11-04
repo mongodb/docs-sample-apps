@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/movies/{id} - Get a single movie by ID
  * - POST /api/movies - Create a new movie
  * - POST /api/movies/batch - Create multiple movies
- * - PUT /api/movies/{id} - Update a movie
+ * - PATCH /api/movies/{id} - Update a movie
  * - PATCH /api/movies - Update multiple movies
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
@@ -144,11 +144,11 @@ public class MovieControllerImpl {
     }
     
     /**
-     * PUT /api/movies/{id}
+     * PATCH /api/movies/{id}
      *
      * <p>Updates a single movie document.
      */
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<SuccessResponse<Movie>> updateMovie(
             @PathVariable String id,
             @RequestBody UpdateMovieRequest request) {

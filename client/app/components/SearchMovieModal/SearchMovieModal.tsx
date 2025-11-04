@@ -8,15 +8,12 @@
  */
 
 import { useState } from 'react';
-import { Movie } from '../../types/movie';
-import styles from '../EditMovieForm/EditMovieForm.module.css';
+import styles from './SearchMovieModal.module.css';
 
 interface SearchMovieModalProps {
   onSearch: (searchParams: SearchParams) => void;
   onCancel: () => void;
   isLoading?: boolean;
-  searchResults?: Movie[];
-  resultCount?: number;
 }
 
 export interface SearchParams {
@@ -53,9 +50,7 @@ const getInitialFormData = (): SearchFormData => ({
 export default function SearchMovieModal({ 
   onSearch, 
   onCancel, 
-  isLoading = false,
-  searchResults = [],
-  resultCount = 0
+  isLoading = false
 }: SearchMovieModalProps) {
   const [formData, setFormData] = useState<SearchFormData>(getInitialFormData());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -145,19 +140,12 @@ export default function SearchMovieModal({
     <div className={styles.formContainer}>
       <h2 className={styles.formTitle}>Search Movies</h2>
       <p className={styles.batchDescription}>
-        Search across movie plots, directors, writers, and cast. Use MongoDB Search with fuzzy matching for names.
+        Search across movie plots, directors, writers, and cast.
       </p>
       
       {errors.general && (
         <div className={styles.generalError}>
           {errors.general}
-        </div>
-      )}
-
-      {/* Show results count if we have results */}
-      {searchResults.length > 0 && (
-        <div className={styles.batchDescription} style={{ backgroundColor: '#d1f2eb', borderColor: '#b7e5d1' }}>
-          Found {resultCount} movie{resultCount !== 1 ? 's' : ''} matching your search criteria
         </div>
       )}
 
@@ -176,7 +164,7 @@ export default function SearchMovieModal({
               onChange={(e) => handleInputChange('plot', e.target.value)}
               className={`${styles.input} ${errors.plot ? styles.inputError : ''}`}
               disabled={isLoading}
-              placeholder="Search in plot summaries"
+                            placeholder="Exact phrase search in plot summaries"
             />
             {errors.plot && <span className={styles.error}>{errors.plot}</span>}
           </div>
@@ -210,7 +198,7 @@ export default function SearchMovieModal({
               onChange={(e) => handleInputChange('directors', e.target.value)}
               className={`${styles.input} ${errors.directors ? styles.inputError : ''}`}
               disabled={isLoading}
-              placeholder="Director names (fuzzy search enabled)"
+              placeholder="Director names"
             />
             {errors.directors && <span className={styles.error}>{errors.directors}</span>}
           </div>
@@ -227,7 +215,7 @@ export default function SearchMovieModal({
               onChange={(e) => handleInputChange('writers', e.target.value)}
               className={`${styles.input} ${errors.writers ? styles.inputError : ''}`}
               disabled={isLoading}
-              placeholder="Writer names (fuzzy search enabled)"
+              placeholder="Writer names"
             />
             {errors.writers && <span className={styles.error}>{errors.writers}</span>}
           </div>
@@ -244,7 +232,7 @@ export default function SearchMovieModal({
               onChange={(e) => handleInputChange('cast', e.target.value)}
               className={`${styles.input} ${errors.cast ? styles.inputError : ''}`}
               disabled={isLoading}
-              placeholder="Actor names (fuzzy search enabled)"
+              placeholder="Actor names"
             />
             {errors.cast && <span className={styles.error}>{errors.cast}</span>}
           </div>
@@ -286,7 +274,7 @@ export default function SearchMovieModal({
               </option>
             ))}
           </select>
-          <small style={{ color: '#6c757d', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+          <small className={styles.searchOperatorDescription}>
             {searchOperatorOptions.find(opt => opt.value === formData.search_operator)?.description}
           </small>
         </div>
@@ -296,9 +284,8 @@ export default function SearchMovieModal({
           <button
             type="button"
             onClick={handleClear}
-            className={`${styles.button} ${styles.cancelButton}`}
+            className={`${styles.button} ${styles.clearButton}`}
             disabled={isLoading}
-            style={{ backgroundColor: '#6c757d', borderColor: '#6c757d' }}
           >
             Clear
           </button>

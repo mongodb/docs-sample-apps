@@ -54,12 +54,12 @@ router.post("/", asyncHandler(movieController.createMovie));
 router.post("/batch", asyncHandler(movieController.createMoviesBatch));
 
 /**
- * PUT /api/movies/:id
+ * PATCH /api/movies/:id
  *
  * Updates a single movie document.
  * Demonstrates the updateOne() operation.
  */
-router.put("/:id", asyncHandler(movieController.updateMovie));
+router.patch("/:id", asyncHandler(movieController.updateMovie));
 
 /**
  * PATCH /api/movies

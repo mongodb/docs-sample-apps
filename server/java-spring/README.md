@@ -108,7 +108,7 @@ Once the application is running, you can access:
 - `GET /api/movies/{id}` - Get a single movie by ID
 - `POST /api/movies` - Create a new movie
 - `POST /api/movies/batch` - Create multiple movies
-- `PUT /api/movies/{id}` - Update a movie
+- `PATCH /api/movies/{id}` - Update a movie
 - `PATCH /api/movies` - Update multiple movies
 - `DELETE /api/movies/{id}` - Delete a movie
 - `DELETE /api/movies` - Delete multiple movies

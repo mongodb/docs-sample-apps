@@ -4,13 +4,19 @@ from src.routers import movies
 from src.utils.errorHandler import register_error_handlers
 from src.database.mongo_client import db
 import traceback
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
 # Add CORS middleware
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Add your frontend URLs
+    allow_origins=[origin.strip() for origin in cors_origins],  # Load from environment variable
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

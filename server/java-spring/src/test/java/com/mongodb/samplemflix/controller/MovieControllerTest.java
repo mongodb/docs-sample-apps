@@ -223,7 +223,7 @@ class MovieControllerTest {
     // ==================== UPDATE MOVIE TESTS ====================
 
     @Test
-    @DisplayName("PUT /api/movies/{id} - Should update movie successfully")
+    @DisplayName("PATCH /api/movies/{id} - Should update movie successfully")
     void testUpdateMovie_Success() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
@@ -237,7 +237,7 @@ class MovieControllerTest {
                 .thenReturn(updatedMovie);
 
         // Act & Assert
-        mockMvc.perform(put("/api/movies/{id}", movieId)
+        mockMvc.perform(patch("/api/movies/{id}", movieId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -247,7 +247,7 @@ class MovieControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/movies/{id} - Should return 404 when movie not found")
+    @DisplayName("PATCH /api/movies/{id} - Should return 404 when movie not found")
     void testUpdateMovie_NotFound() throws Exception {
         // Arrange
         String movieId = testId.toHexString();
@@ -255,7 +255,7 @@ class MovieControllerTest {
                 .thenThrow(new ResourceNotFoundException("Movie not found"));
 
         // Act & Assert
-        mockMvc.perform(put("/api/movies/{id}", movieId)
+        mockMvc.perform(patch("/api/movies/{id}", movieId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isNotFound())
