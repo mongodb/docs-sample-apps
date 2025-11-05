@@ -19,6 +19,9 @@ logs
 # Test coverage
 coverage/
 
+# Test results
+test-results.json
+
 # Optional npm cache directory
 .npm
 
