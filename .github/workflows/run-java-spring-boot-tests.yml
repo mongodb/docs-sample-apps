@@ -17,6 +17,10 @@ jobs:
       run:
         working-directory: server/java-spring
 
+    env:
+      MONGODB_URI: ${{ secrets.MFLIX_URI }}
+      ENABLE_SEARCH_TESTS: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -32,17 +36,10 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run unit tests
-        run: |
-          export MONGODB_URI="${{ secrets.MFLIX_URI }}"
-          ./mvnw test
-        shell: bash
+        run: ./mvnw test
 
       - name: Run integration tests
-        run: |
-          export MONGODB_URI="${{ secrets.MFLIX_URI }}"
-          export ENABLE_SEARCH_TESTS=true
-          ./mvnw test -Dtest=MongoDBSearchIntegrationTest
-        shell: bash
+        run: ./mvnw test -Dtest=MongoDBSearchIntegrationTest
         continue-on-error: true
 
       - name: Upload test results
