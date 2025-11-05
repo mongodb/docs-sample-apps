@@ -270,7 +270,7 @@ public class DatabaseVerification {
         if (sampleDoc != null && !sampleDoc.containsKey("plot_embedding_voyage_3_large")) {
             logger.warn(
                 "Documents in embedded_movies collection do not have 'plot_embedding_voyage_3_large' field. " +
-                "Vector search functionality will not work."
+                "Vector search functionality will not work. Please ensure the embedded_movies collection is populated with plot embeddings in the 'plot_embedding_voyage_3_large' field."
             );
             return;
         }

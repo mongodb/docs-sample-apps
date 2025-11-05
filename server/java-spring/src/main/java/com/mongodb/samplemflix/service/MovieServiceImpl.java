@@ -811,7 +811,7 @@ public class MovieServiceImpl implements MovieService {
         // Check if Voyage API key is configured
         if (voyageApiKey == null || voyageApiKey.trim().isEmpty()) {
             throw new ValidationException(
-                "Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to application.properties"
+                "Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the application.properties file"
             );
         }
 
