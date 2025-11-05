@@ -301,24 +301,28 @@ public class DatabaseVerification {
 
             if (!indexExists) {
                 // Define the vector search index specification
-                Document vectorField = new Document()
+                // For vectorSearch type, use fields as an array with path, type, numDimensions, and similarity
+                Document vectorFieldDefinition = new Document()
                         .append("type", "vector")
                         .append("path", "plot_embedding_voyage_3_large")
                         .append("numDimensions", 2048)
                         .append("similarity", "cosine");
 
                 Document indexDefinition = new Document()
-                        .append("fields", java.util.Arrays.asList(vectorField));
+                        .append("fields", java.util.Collections.singletonList(vectorFieldDefinition));
 
-                Document searchIndexModel = new Document()
-                        .append("name", VECTOR_INDEX_NAME)
-                        .append("type", "vectorSearch")
-                        .append("definition", indexDefinition);
+                // Use the createSearchIndexes command
+                Document createIndexCommand = new Document("createSearchIndexes", EMBEDDED_MOVIES_COLLECTION)
+                        .append("indexes", java.util.Collections.singletonList(
+                                new Document("name", VECTOR_INDEX_NAME)
+                                        .append("type", "vectorSearch")
+                                        .append("definition", indexDefinition)
+                        ));
 
-                // Create the index using the createSearchIndex command
-                String indexName = embeddedMoviesCollection.createSearchIndex(searchIndexModel);
+                // Execute the command
+                database.runCommand(createIndexCommand);
 
-                logger.info("Vector search index '{}' created successfully. Index may take a few moments to build.", indexName);
+                logger.info("Vector search index '{}' created successfully. Index may take a few moments to build.", VECTOR_INDEX_NAME);
                 logger.info("Vector search is now ready to use on the '{}' collection", EMBEDDED_MOVIES_COLLECTION);
             }
 

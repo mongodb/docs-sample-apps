@@ -820,7 +820,7 @@ public class MovieServiceImpl implements MovieService {
 
         try {
             // Generate embedding using Voyage AI REST API
-            // We use the REST API directly to specify output_dimension=2048
+            // We call the API directly to specify output_dimension=2048
             List<Double> queryVector = generateVoyageEmbedding(query, voyageApiKey);
 
             // Build the $vectorSearch aggregation stage
@@ -866,23 +866,24 @@ public class MovieServiceImpl implements MovieService {
     /**
      * Generates a vector embedding using the Voyage AI REST API.
      *
-     * <p>This method calls the Voyage AI API directly to generate embeddings with
-     * the specified output dimension (2048) to match the collection's embeddings.
+     * <p>This method calls the Voyage AI API directly to generate embeddings with 2048 dimensions.
+     * The voyage-3-large model supports multiple dimensions (256, 512, 1024, 2048), and we explicitly
+     * request 2048 to match the vector search index configuration.
      *
      * @param text The text to generate an embedding for
      * @param apiKey The Voyage AI API key
      * @return List of doubles representing the embedding vector
-     * @throws IOException If there's an error calling the API
-     * @throws InterruptedException If the HTTP request is interrupted
+     * @throws IOException if the HTTP request fails
+     * @throws InterruptedException if the HTTP request is interrupted
      */
-    private List<Double> generateVoyageEmbedding(String text, String apiKey)
-            throws IOException, InterruptedException {
+    private List<Double> generateVoyageEmbedding(String text, String apiKey) throws IOException, InterruptedException {
+        // Create HTTP client
         HttpClient client = HttpClient.newHttpClient();
 
-        // Build the request body
+        // Build the request body with output_dimension set to 2048
         String requestBody = String.format(
-            "{\"input\":[\"%s\"],\"model\":\"voyage-3-large\",\"output_dimension\":2048,\"input_type\":\"query\"}",
-            text.replace("\"", "\\\"")
+                "{\"input\": [\"%s\"], \"model\": \"voyage-3-large\", \"output_dimension\": 2048, \"input_type\": \"query\"}",
+                text.replace("\"", "\\\"").replace("\n", "\\n")
         );
 
         // Create the HTTP request
@@ -896,16 +897,17 @@ public class MovieServiceImpl implements MovieService {
         // Send the request and get the response
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+        // Check for successful response
         if (response.statusCode() != 200) {
-            throw new DatabaseOperationException(
-                "Voyage AI API error: " + response.statusCode() + " - " + response.body()
-            );
+            throw new IOException("Voyage AI API returned status code " + response.statusCode() + ": " + response.body());
         }
 
-        // Parse the response to extract the embedding
-        JsonNode jsonResponse = objectMapper.readTree(response.body());
-        JsonNode embeddingNode = jsonResponse.get("data").get(0).get("embedding");
+        // Parse the JSON response to extract the embedding
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(response.body());
+        JsonNode embeddingNode = root.path("data").get(0).path("embedding");
 
+        // Convert the embedding to a List<Double>
         List<Double> embedding = new ArrayList<>();
         for (JsonNode value : embeddingNode) {
             embedding.add(value.asDouble());
