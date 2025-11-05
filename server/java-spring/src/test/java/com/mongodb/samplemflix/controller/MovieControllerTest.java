@@ -536,11 +536,12 @@ class MovieControllerTest {
                         .param("plot", "space adventure"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].title").value("Space Adventure"))
-                .andExpect(jsonPath("$.data[0].plot").value(containsString("space adventure")))
-                .andExpect(jsonPath("$.data[1].title").value("Space Quest"));
+                .andExpect(jsonPath("$.data.movies").isArray())
+                .andExpect(jsonPath("$.data.movies", hasSize(2)))
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.movies[0].title").value("Space Adventure"))
+                .andExpect(jsonPath("$.data.movies[0].plot").value(containsString("space adventure")))
+                .andExpect(jsonPath("$.data.movies[1].title").value("Space Quest"));
     }
 
     @Test
@@ -557,7 +558,8 @@ class MovieControllerTest {
                         .param("skip", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.movies").isArray())
+                .andExpect(jsonPath("$.data.totalCount").value(0));
     }
 
     @Test
@@ -601,8 +603,9 @@ class MovieControllerTest {
                         .param("plot", "nonexistent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data.movies").isArray())
+                .andExpect(jsonPath("$.data.movies", hasSize(0)))
+                .andExpect(jsonPath("$.data.totalCount").value(0));
     }
 
     @Test
@@ -627,9 +630,10 @@ class MovieControllerTest {
                         .param("cast", "Pacino"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data", hasSize(1)))
-                .andExpect(jsonPath("$.data[0].title").value("The Godfather"));
+                .andExpect(jsonPath("$.data.movies").isArray())
+                .andExpect(jsonPath("$.data.movies", hasSize(1)))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.movies[0].title").value("The Godfather"));
     }
 
     @Test
@@ -645,7 +649,8 @@ class MovieControllerTest {
                         .param("searchOperator", "should"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.movies").isArray())
+                .andExpect(jsonPath("$.data.totalCount").value(0));
     }
 
     @Test
