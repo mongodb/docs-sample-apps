@@ -1,0 +1,58 @@
+name: Run Java Spring Boot Tests
+
+on:
+  pull_request:
+    branches:
+      - development
+  push:
+    branches:
+      - development
+
+jobs:
+  test:
+    name: Run Java Spring Boot Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server/java-spring
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Run unit tests
+        run: ./mvnw test
+        env:
+          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+
+      - name: Run integration tests
+        run: ./mvnw test -Dtest=MongoDBSearchIntegrationTest
+        env:
+          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+          ENABLE_SEARCH_TESTS: true
+        continue-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: server/java-spring/target/surefire-reports/
+          retention-days: 30
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        if: always()
+        with:
+          paths: server/java-spring/target/surefire-reports/TEST-*.xml
