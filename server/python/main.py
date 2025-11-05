@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import movies
-from src.utils.errorHandler import register_error_handlers
+from src.utils.errorHandler import register_error_handlers, create_error_response
 from src.database.mongo_client import db, get_collection
 import traceback
 import os
@@ -34,7 +34,6 @@ async def ensure_search_index():
         indexes = [idx async for idx in result]
         index_names = [index["name"] for index in indexes]
         if "movieSearchIndex" in index_names:
-            print("MongoDB Search index already exists.")
             return
 
         # Create a mapping if the movieSearchIndex does not exist
@@ -58,9 +57,12 @@ async def ensure_search_index():
                 "definition": index_definition
             }]
         })
-        print("MongoDB Search index created.")
     except Exception as e:
-        print(f"Error creating the search index: {e}")
+        raise RuntimeError(
+            f"Failed to create search index 'movieSearchIndex': {str(e)}. "
+            f"Search functionality may not work properly. "
+            f"Please check your MongoDB Atlas configuration and ensure the cluster supports search indexes."
+        )
 
 @app.on_event("startup")
 async def vector_search_index():
@@ -69,7 +71,6 @@ async def vector_search_index():
     This ensures the index is ready before any vector search requests are made.
     """
     try:
-        
         embedded_movies_collection = get_collection("embedded_movies")
         
         # Get list of existing indexes - convert AsyncCommandCursor to list
@@ -98,9 +99,12 @@ async def vector_search_index():
             
             # Create the index
             result = await embedded_movies_collection.create_search_index(index_definition)
-            print("Vector search index 'vector_index' ready to query.")
             
     except Exception as e:
-        print(f"Error during vector search index setup: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
+        raise RuntimeError(
+            f"Failed to create vector search index 'vector_index': {str(e)}. "
+            f"Vector search functionality will not be available. "
+            f"Please check your MongoDB Atlas configuration, ensure the cluster supports vector search, "
+            f"and verify the 'embedded_movies' collection exists with the required embedding field."
+        )
 

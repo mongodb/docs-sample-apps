@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Path, Body
-from src.database.mongo_client import db, get_collection
+from src.database.mongo_client import db, get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
 
 from typing import List
@@ -16,23 +16,6 @@ This file contains all the business logic for movie operations.
 Each method demonstrates different MongoDB operations using the PyMongo driver.
 
 Implemented Endpoints:
-
-- GET /api/movies/search :
-    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
-    Supports compound search operators and fuzzy matching.
-
-- GET /api/movies/vector-search :
-    Search movies using MongoDB Vector Search to enable semantic search capabilities over
-    the plot field.
-
-- GET /api/movies/aggregations/reportingByComments :
-    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
-
-- GET /api/movies/aggregations/reportingByYear :
-    Aggregate movies by year with average rating and movie count.
-
-- GET /api/movies/aggregations/reportingByDirectors :
-    Aggregate directors with the most movies and their statistics.
 
 - GET /api/movies/{id} :
     Retrieve a single movie by its ID.
@@ -62,6 +45,24 @@ Implemented Endpoints:
 - DELETE /api/movies/{id}/find-and-delete :
     Find and delete a movie in a single atomic operation.
 
+- GET /api/movies/aggregations/reportingByComments :
+    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
+
+- GET /api/movies/aggregations/reportingByYear :
+    Aggregate movies by year with average rating and movie count.
+
+- GET /api/movies/aggregations/reportingByDirectors :
+    Aggregate directors with the most movies and their statistics.
+
+- GET /api/movies/search :
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
+    Supports compound search operators and fuzzy matching.
+
+- GET /api/movies/vector-search :
+    Search movies using MongoDB Vector Search to enable semantic search capabilities over
+    the plot field.
+
+
 Helper Functions:
 - execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the
 results.
@@ -70,688 +71,6 @@ results.
 '''
 
 router = APIRouter()
-
-#----------------------------------------------------------------------------------------------------------
-# MongoDB Search
-#
-# MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
-# This function was made with the assumption that the UI will have fields for plot,fullplot, 
-# directors, writers, and cast to search on. Or some sort of combined search field.
-# Also this fuzzy operator is being used to allow for some misspellings in the search terms
-# but that allows for very generous matching. This can be adjusted as needed.
-#----------------------------------------------------------------------------------------------------------
-"""
-
-    GET /api/movies/search
-
-    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
-    You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
-
-    Query Parameters:
-        plot (str, optional): Text to search against the plot field.
-        fullplot (str, optional): Text to search against the fullplot field.
-        directors (str, optional): Text to search against the directors field.
-        writers (str, optional): Text to search against the writers field.
-        cast (str, optional): Text to search against the cast field.
-        limit (int, optional): Number of results to return (default: 20)
-        skip (int, optional): Number of results to skip for pagination (default: 0)
-        search_operator (str, optional): How to combine multiple search fields. 
-            Must be one of "must", "should", "mustNot", or "filter". Default is "must".
-
-    Returns:
-        SuccessResponse[SearchMoviesResponse]: A response object containing the list of matching movies and total count.
-"""
-@router.get(
-    "/search",
-    response_model=SuccessResponse[SearchMoviesResponse],
-    status_code=200,
-    summary="Search movies using MongoDB Search."
-)
-async def search_movies(
-    plot: str = Query(default=None),
-    fullplot: str = Query(default=None),
-    directors: str = Query(default=None),
-    writers: str = Query(default=None),
-    cast: str = Query(default=None),
-    limit:int = Query(default=20, ge=1, le=100),
-    skip:int = Query(default=0, ge=0),
-    search_operator: str = Query(default="must")
-) -> SuccessResponse[SearchMoviesResponse]:
-    
-    search_phrases = []
-
-    # Validate the search_operator parameter to ensure it's a valid compound operator
-    valid_operators = {"must", "should", "mustNot", "filter"}
-    if search_operator not in valid_operators:
-        return create_error_response(
-        message=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}.",
-        code="INVALID_SEARCH_OPERATOR",
-        details=None
-    )
-
-    # Build the search_phrases list based on which fields were provided by the user.
-    # Each phrase becomes a separate clause in the MongoDB Search compound query.
-
-    if plot:
-        search_phrases.append({
-            # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
-            # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
-            "phrase": {
-                "query": plot,
-                "path": "plot",
-            }
-        })
-    if fullplot:
-        search_phrases.append({
-            "phrase": {
-                "query": fullplot,
-                "path": "fullplot",
-            }
-        })
-    if directors:
-        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
-        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
-        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
-        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
-        #             (Higher values make the search stricter and faster.)
-        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
-
-        search_phrases.append({
-            "text": {
-                "query": directors,
-                "path": "directors",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-
-            }
-        })
-    if writers:
-        # See comments above regarding fuzzy search options.
-        search_phrases.append({
-            "text": {
-                "query": writers,
-                "path": "writers",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-            }
-        })
-    if cast:
-        # See comments above regarding fuzzy search options.
-        search_phrases.append({
-            "text": {
-                "query": cast,
-                "path": "cast",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-            }
-        })
-
-    if not search_phrases:
-        return create_error_response(
-            message="At least one search parameter must be provided.",
-            code="NO_SEARCH_PARAMETERS",
-            details=None
-        )
-
-    # Build the aggregation pipeline for MongoDB Search.
-    # The $search stage uses the specified compound operator (must, should, etc.)
-    aggregation_pipeline = [
-        {
-            "$search": {
-                "index": "movieSearchIndex",
-                "compound": {
-                    search_operator: search_phrases
-                }
-            }
-        },
-        {
-            "$facet": {
-                "totalCount": [
-                    {"$count": "count"}
-                ],
-                "results": [
-                    {"$skip": skip},
-                    {"$limit": limit},
-                    # Project only the fields needed in the response
-                    {
-                        "$project": {
-                            "_id": 1,
-                            "title": 1,
-                            "year": 1,
-                            "plot": 1,
-                            "fullplot": 1,
-                            "released":1,
-                            "runtime": 1,
-                            "poster": 1,
-                            "genres": 1,
-                            "directors": 1,
-                            "writers": 1,
-                            "cast": 1,
-                            "countries": 1,
-                            "languages": 1,
-                            "rated": 1,
-                            "awards": 1,
-                            "imdb": 1,
-                        }
-                    }
-                ]
-            }
-        }
-    ]
-
-    # Execute the aggregation pipeline using the helper function
-    try:
-        results = await execute_aggregation(aggregation_pipeline)
-    except Exception as e:
-        return create_error_response(
-            message="An error occurred while performing the search.",
-            code="DATABASE_ERROR",
-            details=str(e)
-        )    
-
-    # Extract total count and movies from facet results
-    facet_result = results[0] if results else {}
-    total_count = facet_result.get("totalCount", [{}])[0].get("count", 0)
-    movies_data = facet_result.get("results", [])
-    
-    # Convert ObjectId to string for each movie in the results
-    movies = []
-    for movie in movies_data:
-        movie["_id"] = str(movie["_id"])
-        movies.append(movie)
-
-    return create_success_response(
-        SearchMoviesResponse(movies=movies, totalCount=total_count), 
-        f"Found {total_count} movies matching the search criteria."
-      )
-
-#----------------------------------------------------------------------------------------------------------
-# MongoDB Vector Search
-#
-# MongoDB Vector Search based on searching the plot_embedding_voyage_3_large field.
-#----------------------------------------------------------------------------------------------------------
-"""
-
-    GET /api/movies/vector-search
-
-    Search movies using MongoDB Vector Search to find movies with similar plots.
-    Uses embeddings generated by the Voyage AI model to perform semantic similarity search.
-
-    Query Parameters:
-        q (str, required): Search query text to find movies with similar plots.
-        limit (int, optional): Number of results to return (default: 10, max: 50).
-
-    Returns:
-        SuccessResponse[List[VectorSearchResult]]: A response object containing movies with similarity scores.
-        Each result includes:
-            - _id: Movie ObjectId
-            - title: Movie title  
-            - plot: Movie plot text
-            - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
-"""
-# Specify your Voyage API key and embedding model
-model = "voyage-3-large"
-outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
-
-# Vector Search Endpoint
-@router.get("/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
-async def vector_search_movies(
-    q: str = Query(..., description="Search query to find similar movies by plot"),
-    limit: int = Query(default=10, ge=1, le=50, description="Number of results to return")
-):
-    """
-    Vector search endpoint for finding movies with similar plots.
-    
-    Args:
-        q: The search query string
-        limit: Maximum number of results to return
-    
-    Returns:
-        SuccessResponse containing a list of movies with similarity scores
-    """
-    if not voyage_ai_available():
-        return create_error_response(
-            message="Vector search unavailable",
-            code="SERVICE_UNAVAILABLE",
-            details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
-        )
-    
-    try:
-        # Initialize the client here to avoid import-time errors
-        vo = voyageai.Client()
-        
-        # The vector search index was already created at startup time
-        # Generate embedding for the search query
-        query_embedding = get_embedding(q, input_type="query", client=vo)
-        
-        # Get the embedded movies collection
-        embedded_movies_collection = get_collection("embedded_movies")
-        
-        # Define vector search pipeline
-        pipeline = [
-            {
-                "$vectorSearch": {
-                    "index": "vector_index",
-                    "path": "plot_embedding_voyage_3_large",
-                    "queryVector": query_embedding, #2048
-                    "numCandidates": limit * 15,  # Search more candidates for better results
-                    "limit": limit
-                }
-            },
-            {
-                "$project": {
-                    "_id": 1,
-                    "title": 1,
-                    "plot": 1,
-                    "score": {
-                        "$meta": "vectorSearchScore"
-                    }
-                }
-            }
-        ]
-
-        raw_results = await execute_aggregation_on_collection(embedded_movies_collection, pipeline)
-        
-        # Convert ObjectId to string and create VectorSearchResult objects
-        for result in raw_results:
-            if "_id" in result and result["_id"]:
-                try:
-                    result["_id"] = str(result["_id"])
-                except (InvalidId, TypeError):
-                    # Handle invalid ObjectId conversion
-                    result["_id"] = str(result["_id"]) if result["_id"] else None
-        
-        # This code converts the raw results into VectorSearchResult objects
-        results = [VectorSearchResult(**doc) for doc in raw_results]
-        
-        return create_success_response(
-            results, 
-            f"Found {len(results)} similar movies for query: '{q}'"
-        )
-        
-    except Exception as e:
-        return create_error_response(
-            message="Vector search failed",
-            code="INTERNAL_SERVER_ERROR",
-            details=str(e)
-        )
-    
-"""
-    GET /api/movies/aggregations/reportingByComments
-    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
-    Joins movies with comments collection to show recent comment activity.
-    Query Parameters:
-        limit (int, optional): Number of results to return (default: 10, max: 50).
-        movie_id (str, optional): Filter by specific movie ObjectId.
-    Returns:
-        SuccessResponse[List[dict]]: A response object containing movies with their most recent comments.
-"""
-
-@router.get("/aggregations/reportingByComments",
-            response_model=SuccessResponse[List[dict]],
-            status_code=200,
-            summary="Aggregate movies with their most recent comments.")
-async def aggregate_movies_recent_commented(
-    limit: int = Query(default=10, ge=1, le=50),
-    movie_id: str = Query(default=None)
-):
-    
-    # Add a multi-stage aggregation that:
-    # 1. Filters movies by valid year range
-    # 2. Joins with comments collection (like SQL JOIN)
-    # 3. Filters to only movies that have comments
-    # 4. Sorts comments by date and extracts most recent ones
-    # 5. Sorts movies by their most recent comment date
-    # 6. Shapes the final output with transformed comment structure
-    
-    pipeline = [
-        # STAGE 1: $match - Initial Filter
-        # Filter movies to only those with valid year data
-        # Tip: Use $match early to reduce the initial dataset for better performance
-        {
-            "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
-            }
-        }
-    ]
-
-    # Add movie_id filter if provided
-    if movie_id:
-        try:
-            object_id = ObjectId(movie_id)
-            pipeline[0]["$match"]["_id"] = object_id
-        except Exception:
-            return create_error_response(
-                message="Invalid movie ID format",
-                code="INTERNAL_SERVER_ERROR",
-                details="The provided movie_id is not a valid ObjectId"
-            )
-    
-    # Add remaining pipeline stages
-    pipeline.extend([
-        # STAGE 2: $lookup - Join with the 'comments' Collection
-        # This gives each movie document a 'comments' array containing all its comments
-        {
-            "$lookup": {
-                "from": "comments",
-                "localField": "_id",
-                "foreignField": "movie_id",
-                "as": "comments"
-            }
-        },
-        # STAGE 3: $match - Filter Movies with at Least One Comment
-        # This helps reduces dataset to only movies with user engagement
-        {
-            "$match": {
-                "comments": {"$ne": []}
-            }
-        },
-        # STAGE 4: $addFields - Add New Computed Fields
-        {
-            "$addFields": {
-                # Add computed field 'recentComments' that extracts only the N most recent comments (up to 'limit')
-                "recentComments": {
-                    "$slice": [
-                        {
-                            "$sortArray": {
-                                "input": "$comments",
-                                "sortBy": {"date": -1}  # -1 = descending (newest first)
-                            }
-                        },
-                        limit  # Number of comments to keep
-                    ]
-                },
-                # Add computed field 'mostRecentCommentDate' that gets the date of the most recent comment (to use in the next $sort stage)
-                "mostRecentCommentDate": {
-                    "$max": "$comments.date"
-                }
-            }
-        },
-        # STAGE 5: $sort - Sort Movies by Most Recent Comment Date
-        {
-            "$sort": {"mostRecentCommentDate": -1}
-        },
-        # STAGE 6: $limit - Restrict Result Set Size
-        # - If querying single movie: return up to 50 results
-        # - If querying all movies: return up to 20 results
-        # Tip: This prevents overwhelming the client with too much data
-        {
-            "$limit": 50 if movie_id else 20
-        },
-        # STAGE 7: $project - Shape Final Response Output
-        {
-            "$project": {
-                # Include basic movie fields
-                "title": 1,
-                "year": 1,
-                "genres": 1,
-                "_id": 1,
-                # Extract nested field: imdb.rating -> imdbRating
-                "imdbRating": "$imdb.rating",
-                # Use $map to reshape computed 'recentComments' field with cleaner field names
-                "recentComments": {
-                    "$map": {
-                        "input": "$recentComments",
-                        "as": "comment",
-                        "in": {
-                            "userName": "$$comment.name",      # Rename: name -> userName
-                            "userEmail": "$$comment.email",    # Rename: email -> userEmail
-                            "text": "$$comment.text",          # Keep: text
-                            "date": "$$comment.date"           # Keep: date
-                        }
-                    }
-                },
-                # Calculate the total number of comments into 'totalComments' (not just 'recentComments')
-                # Used in display (e.g., "Showing 5 of 127 comments")
-                "totalComments": {"$size": "$comments"}
-            }
-        }
-    ])
-    # Execute the aggregation
-    try:
-        results = await execute_aggregation(pipeline)
-    except Exception as e:
-        return create_error_response(
-            message="Database error occurred during aggregation",
-            code="INTERNAL_SERVER_ERROR",
-            details=str(e)
-        )
-
-    # Convert ObjectId to string for response
-    for result in results:
-        if "_id" in result:
-            result["_id"] = str(result["_id"])
-    
-    # Calculate total comments from all movies
-    total_comments = sum(result.get("totalComments", 0) for result in results)
-    
-    return create_success_response(
-        results, 
-        f"Found {total_comments} comments from movie{'s' if len(results) != 1 else ''}"
-    )
-
-
-"""
-    GET /api/movies/aggregations/reportingByYear
-    Aggregate movies by year with average rating and movie count.
-    Reports yearly statistics including average rating and total movies per year.
-    Returns:
-        SuccessResponse[List[dict]]: A response object containing yearly movie statistics.
-"""
-
-@router.get("/aggregations/reportingByYear",
-            response_model=SuccessResponse[List[dict]],
-            status_code=200,
-            summary="Aggregate movies by year with average rating and movie count.")
-async def aggregate_movies_by_year():
-    # Define aggregation pipeline to group movies by year with statistics
-    # This pipeline demonstrates grouping, statistical calculations, and data cleaning
-
-    # Add a multi-stage aggregation that:
-    # 1. Filters movies by valid year range (data quality filter)
-    # 2. Groups movies by release year and calculates statistics per year
-    # 3. Shapes the final output with clean field names and rounded averages
-    # 4. Sorts results by year (newest first) for chronological presentation
-    
-    pipeline = [
-        # STAGE 1: $match - Data Quality Filter
-        # Clean data: ensure year is an integer and within reasonable range
-        # Tip: Filter early to reduce dataset size and improve performance
-        {
-            "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
-            }
-        },
-        
-        # STAGE 2: $group - Aggregate Movies by Year
-        # Group all movies by their release year and calculate various statistics
-        {
-            "$group": {
-                "_id": "$year",  # Group by year field
-                "movieCount": {"$sum": 1},  # Count total movies per year
-                
-                # Calculate average rating (only for valid numeric ratings)
-                "averageRating": {
-                    "$avg": {
-                        "$cond": [
-                            {"$and": [
-                                {"$ne": ["$imdb.rating", None]},           # Not null
-                                {"$ne": ["$imdb.rating", ""]},             # Not empty string
-                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}  # Is numeric
-                            ]},
-                            "$imdb.rating",  # Include valid IMDB ratings
-                            "$$REMOVE"       # Exclude invalid IMDB ratings
-                        ]
-                    }
-                },
-                
-                # Find highest rating for the year (same validation as average rating)
-                "highestRating": {
-                    "$max": {
-                        "$cond": [
-                            {"$and": [
-                                {"$ne": ["$imdb.rating", None]},
-                                {"$ne": ["$imdb.rating", ""]},
-                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}
-                            ]},
-                            "$imdb.rating",
-                            "$$REMOVE"
-                        ]
-                    }
-                },
-                
-                # Find lowest rating for the year (same validation as average and highest rating)
-                "lowestRating": {
-                    "$min": {
-                        "$cond": [
-                            {"$and": [
-                                {"$ne": ["$imdb.rating", None]},
-                                {"$ne": ["$imdb.rating", ""]},
-                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}
-                            ]},
-                            "$imdb.rating",
-                            "$$REMOVE"
-                        ]
-                    }
-                },
-                
-                # Sum total votes across all movies in the year
-                "totalVotes": {"$sum": "$imdb.votes"}
-            }
-        },
-        
-        # STAGE 3: $project - Shape Final Output
-        # Transform the grouped data into a clean, readable format
-        {
-            "$project": {
-                "year": "$_id",  # Rename _id back to year because grouping was done by year but values were stored in _id
-                "movieCount": 1,
-                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
-                "highestRating": 1,
-                "lowestRating": 1,
-                "totalVotes": 1,
-                "_id": 0  # Exclude the _id field from output
-            }
-        },
-        
-        # STAGE 4: $sort - Sort by Year (Newest First)
-        # Sort results in descending order to show most recent years first
-        {"$sort": {"year": -1}}  # -1 = descending order
-    ]
-
-    # Execute the aggregation
-    try:
-        results = await execute_aggregation(pipeline)
-    except Exception as e:
-        return create_error_response(
-            message="Database error occurred during aggregation",
-            code="INTERNAL_SERVER_ERROR",
-            details=str(e)
-        )
-    
-    return create_success_response(
-        results, 
-        f"Aggregated statistics for {len(results)} years"
-    )
-
-
-"""
-    GET /api/movies/aggregations/reportingByDirectors
-    Aggregate directors with the most movies and their statistics.
-    Reports directors sorted by number of movies directed.
-    Query Parameters:
-        limit (int, optional): Number of results to return (default: 20, max: 100).
-    Returns:
-        SuccessResponse[List[dict]]: A response object containing director statistics.
-"""
-
-@router.get("/aggregations/reportingByDirectors",
-            response_model=SuccessResponse[List[dict]],
-            status_code=200,
-            summary="Aggregate directors with the most movies and their statistics.")
-async def aggregate_directors_most_movies(
-    limit: int = Query(default=20, ge=1, le=100)
-):
-    # Define aggregation pipeline to find directors with the most movies
-    # This pipeline demonstrates array unwinding, filtering, and ranking
-    
-    # Add a multi-stage aggregation that:
-    # 1. Filters movies with valid directors and year data (data quality filter)
-    # 2. Unwinds directors array to create separate documents per director
-    # 3. Cleans director names by filtering out null/empty names
-    # 4. Groups movies by individual director and calculates statistics per director
-    # 5. Sorts directors based on movie count
-    # 6. Limits results to top N directors
-    # 7. Shapes the final output with clean field names and rounded averages
-
-    pipeline = [
-        # STAGE 1: $match - Initial Data Quality Filter
-        # Filter movies that have director information and valid years
-        {
-            "$match": {
-                "directors": {"$exists": True, "$ne": None, "$ne": []},  # Has directors array
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}  # Valid year range
-            }
-        },
-        
-        # STAGE 2: $unwind - Flatten Directors Array
-        # Convert each movie's directors array into separate documents
-        # Example: Movie with ["Director A", "Director B"] becomes 2 documents
-        {
-            "$unwind": "$directors"
-        },
-        
-        # STAGE 3: $match - Clean Director Names
-        # Filter out any null or empty director names after unwinding
-        {
-            "$match": {
-                "directors": {"$ne": None, "$ne": ""}
-            }
-        },
-        
-        # STAGE 4: $group - Aggregate by Director
-        # Group all movies by director name and calculate statistics
-        {
-            "$group": {
-                "_id": "$directors",  # Group by individual director name
-                "movieCount": {"$sum": 1},  # Count movies per director
-                "averageRating": {"$avg": "$imdb.rating"}  # Average rating of director's movies
-            }
-        },
-        
-        # STAGE 5: $sort - Rank Directors by Movie Count
-        # Sort directors by number of movies (highest first)
-        {"$sort": {"movieCount": -1}},  # -1 = descending (most movies first)
-        
-        # STAGE 6: $limit - Restrict Results
-        # Limit to top N directors based on user input
-        {"$limit": limit},
-        
-        # STAGE 7: $project - Shape Final Output
-        # Transform the grouped data into a clean, readable format
-        {
-            "$project": {
-                "director": "$_id",  # Rename _id to director
-                "movieCount": 1,
-                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
-                "_id": 0  # Exclude the _id field from output
-            }
-        }
-    ]
-
-    # Execute the aggregation
-    try:
-        results = await execute_aggregation(pipeline)
-    except Exception as e:
-        return create_error_response(
-            message="Database error occurred during aggregation",
-            code="INTERNAL_SERVER_ERROR",
-            details=str(e)
-        )
-    
-    return create_success_response(
-        results, 
-        f"Found {len(results)} directors with most movies"
-    )
-
-
 
 #------------------------------------
 # Place get_movie_by_id endpoint here
@@ -1000,32 +319,25 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
     movies_dicts = []
 
     for movie in movies:
-        movies_dicts.append(movie.model_dump(exclude_unset=True, exclude_none=True))
+        movie_dict = movie.model_dump(exclude_unset=True, exclude_none=True)
+        # Remove _id if it exists to let MongoDB generate it automatically
+        movie_dict.pop('_id', None)
+        movies_dicts.append(movie_dict)
 
     try:
         result = await movies_collection.insert_many(movies_dicts)
+        return create_success_response({
+            "insertedCount": len(result.inserted_ids),
+            "insertedIds": [str(_id) for _id in result.inserted_ids]
+            },
+            f"Successfully created {len(result.inserted_ids)} movies."
+        )
     except Exception as e:
         return create_error_response(
-            message="An error occurred while creating movies.",
-            code="DATABASE_ERROR",
-            details=str(e)
-        )    
-    
-    try:
-        result = await movies_collection.insert_many(movies_dicts)
-    except Exception as e:
-        return create_error_response(
-            message="Database error occurred during batch creation",
+            message="Database error occurred",
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-    
-    return create_success_response({
-        "insertedCount": len(result.inserted_ids),
-        "insertedIds": [str(_id) for _id in result.inserted_ids]
-        },
-        f"Successfully created {len(result.inserted_ids)} movies."
-    )
 
 #------------------------------------
 # Place update_movie endpoint here
@@ -1097,7 +409,6 @@ async def update_movie(
         )
     
     updatedMovie = await movies_collection.find_one({"_id": movie_id})
-    print(updatedMovie)
     updatedMovie["_id"] = str(updatedMovie["_id"])
 
     return create_success_response(updatedMovie, f"Movie updated successfully. Modified {len(update_dict)} fields.")
@@ -1280,8 +591,6 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
         f'Delete operation completed. Removed {result.deleted_count} movies.'
     )
 
-
-
 #------------------------------------
 # Place find_and_delete_movie endpoint here
 #------------------------------------
@@ -1333,6 +642,694 @@ async def find_and_delete_movie(id: str):
     
     return create_success_response(deleted_movie, "Movie found and deleted successfully")
 
+"""
+    GET /api/movies/aggregations/reportingByComments
+    Aggregate movies with their most recent comments using MongoDB $lookup aggregation.
+    Joins movies with comments collection to show recent comment activity.
+    Query Parameters:
+        limit (int, optional): Number of results to return (default: 10, max: 50).
+        movie_id (str, optional): Filter by specific movie ObjectId.
+    Returns:
+        SuccessResponse[List[dict]]: A response object containing movies with their most recent comments.
+"""
+
+@router.get("/aggregations/reportingByComments",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            summary="Aggregate movies with their most recent comments.")
+async def aggregate_movies_recent_commented(
+    limit: int = Query(default=10, ge=1, le=50),
+    movie_id: str = Query(default=None)
+):
+    
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies by valid year range
+    # 2. Joins with comments collection (like SQL JOIN)
+    # 3. Filters to only movies that have comments
+    # 4. Sorts comments by date and extracts most recent ones
+    # 5. Sorts movies by their most recent comment date
+    # 6. Shapes the final output with transformed comment structure
+    
+    pipeline = [
+        # STAGE 1: $match - Initial Filter
+        # Filter movies to only those with valid year data
+        {
+            "$match": {
+                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+            }
+        }
+    ]
+
+    # Add movie_id filter if provided
+    if movie_id:
+        try:
+            object_id = ObjectId(movie_id)
+            pipeline[0]["$match"]["_id"] = object_id
+        except Exception:
+            return create_error_response(
+                message="Invalid movie ID format",
+                code="INTERNAL_SERVER_ERROR",
+                details="The provided movie_id is not a valid ObjectId"
+            )
+    
+    # Add remaining pipeline stages
+    pipeline.extend([
+        # STAGE 2: $lookup - Join with the 'comments' Collection
+        # This gives each movie document a 'comments' array containing all its comments
+        {
+            "$lookup": {
+                "from": "comments",
+                "localField": "_id",
+                "foreignField": "movie_id",
+                "as": "comments"
+            }
+        },
+        # STAGE 3: $match - Filter Movies with at Least One Comment
+        # This helps reduces dataset to only movies with user engagement
+        {
+            "$match": {
+                "comments": {"$ne": []}
+            }
+        },
+        # STAGE 4: $addFields - Add New Computed Fields
+        {
+            "$addFields": {
+                # Add computed field 'recentComments' that extracts only the N most recent comments (up to 'limit')
+                "recentComments": {
+                    "$slice": [
+                        {
+                            "$sortArray": {
+                                "input": "$comments",
+                                "sortBy": {"date": -1}  # -1 = descending (newest first)
+                            }
+                        },
+                        limit  # Number of comments to keep
+                    ]
+                },
+                # Add computed field 'mostRecentCommentDate' that gets the date of the most recent comment (to use in the next $sort stage)
+                "mostRecentCommentDate": {
+                    "$max": "$comments.date"
+                }
+            }
+        },
+        # STAGE 5: $sort - Sort Movies by Most Recent Comment Date
+        {
+            "$sort": {"mostRecentCommentDate": -1}
+        },
+        # STAGE 6: $limit - Restrict Result Set Size
+        # - If querying single movie: return up to 50 results
+        # - If querying all movies: return up to 20 results
+        # Tip: This prevents overwhelming the client with too much data
+        {
+            "$limit": 50 if movie_id else 20
+        },
+        # STAGE 7: $project - Shape Final Response Output
+        {
+            "$project": {
+                # Include basic movie fields
+                "title": 1,
+                "year": 1,
+                "genres": 1,
+                "_id": 1,
+                # Extract nested field: imdb.rating -> imdbRating
+                "imdbRating": "$imdb.rating",
+                # Use $map to reshape computed 'recentComments' field with cleaner field names
+                "recentComments": {
+                    "$map": {
+                        "input": "$recentComments",
+                        "as": "comment",
+                        "in": {
+                            "userName": "$$comment.name",      # Rename: name -> userName
+                            "userEmail": "$$comment.email",    # Rename: email -> userEmail
+                            "text": "$$comment.text",          # Keep: text
+                            "date": "$$comment.date"           # Keep: date
+                        }
+                    }
+                },
+                # Calculate the total number of comments into 'totalComments' (not just 'recentComments')
+                # Used in display (e.g., "Showing 5 of 127 comments")
+                "totalComments": {"$size": "$comments"}
+            }
+        }
+    ])
+    # Execute the aggregation
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+
+    # Convert ObjectId to string for response
+    for result in results:
+        if "_id" in result:
+            result["_id"] = str(result["_id"])
+    
+    # Calculate total comments from all movies
+    total_comments = sum(result.get("totalComments", 0) for result in results)
+    
+    return create_success_response(
+        results, 
+        f"Found {total_comments} comments from movie{'s' if len(results) != 1 else ''}"
+    )
+
+"""
+    GET /api/movies/aggregations/reportingByYear
+    Aggregate movies by year with average rating and movie count.
+    Reports yearly statistics including average rating and total movies per year.
+    Returns:
+        SuccessResponse[List[dict]]: A response object containing yearly movie statistics.
+"""
+
+@router.get("/aggregations/reportingByYear",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            summary="Aggregate movies by year with average rating and movie count.")
+async def aggregate_movies_by_year():
+    # Define aggregation pipeline to group movies by year with statistics
+    # This pipeline demonstrates grouping, statistical calculations, and data cleaning
+
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies by valid year range (data quality filter)
+    # 2. Groups movies by release year and calculates statistics per year
+    # 3. Shapes the final output with clean field names and rounded averages
+    # 4. Sorts results by year (newest first) for chronological presentation
+    
+    pipeline = [
+        # STAGE 1: $match - Data Quality Filter
+        # Clean data: ensure year is an integer and within reasonable range
+        # Tip: Filter early to reduce dataset size and improve performance
+        {
+            "$match": {
+                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+            }
+        },
+        
+        # STAGE 2: $group - Aggregate Movies by Year
+        # Group all movies by their release year and calculate various statistics
+        {
+            "$group": {
+                "_id": "$year",  # Group by year field
+                "movieCount": {"$sum": 1},  # Count total movies per year
+                
+                # Calculate average rating (only for valid numeric ratings)
+                "averageRating": {
+                    "$avg": {
+                        "$cond": [
+                            {"$and": [
+                                {"$ne": ["$imdb.rating", None]},           # Not null
+                                {"$ne": ["$imdb.rating", ""]},             # Not empty string
+                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}  # Is numeric
+                            ]},
+                            "$imdb.rating",  # Include valid IMDB ratings
+                            "$$REMOVE"       # Exclude invalid IMDB ratings
+                        ]
+                    }
+                },
+                
+                # Find highest rating for the year (same validation as average rating)
+                "highestRating": {
+                    "$max": {
+                        "$cond": [
+                            {"$and": [
+                                {"$ne": ["$imdb.rating", None]},
+                                {"$ne": ["$imdb.rating", ""]},
+                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}
+                            ]},
+                            "$imdb.rating",
+                            "$$REMOVE"
+                        ]
+                    }
+                },
+                
+                # Find lowest rating for the year (same validation as average and highest rating)
+                "lowestRating": {
+                    "$min": {
+                        "$cond": [
+                            {"$and": [
+                                {"$ne": ["$imdb.rating", None]},
+                                {"$ne": ["$imdb.rating", ""]},
+                                {"$eq": [{"$type": "$imdb.rating"}, "double"]}
+                            ]},
+                            "$imdb.rating",
+                            "$$REMOVE"
+                        ]
+                    }
+                },
+                
+                # Sum total votes across all movies in the year
+                "totalVotes": {"$sum": "$imdb.votes"}
+            }
+        },
+        
+        # STAGE 3: $project - Shape Final Output
+        # Transform the grouped data into a clean, readable format
+        {
+            "$project": {
+                "year": "$_id",  # Rename _id back to year because grouping was done by year but values were stored in _id
+                "movieCount": 1,
+                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
+                "highestRating": 1,
+                "lowestRating": 1,
+                "totalVotes": 1,
+                "_id": 0  # Exclude the _id field from output
+            }
+        },
+        
+        # STAGE 4: $sort - Sort by Year (Newest First)
+        # Sort results in descending order to show most recent years first
+        {"$sort": {"year": -1}}  # -1 = descending order
+    ]
+
+    # Execute the aggregation
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+    
+    return create_success_response(
+        results, 
+        f"Aggregated statistics for {len(results)} years"
+    )
+
+"""
+    GET /api/movies/aggregations/reportingByDirectors
+    Aggregate directors with the most movies and their statistics.
+    Reports directors sorted by number of movies directed.
+    Query Parameters:
+        limit (int, optional): Number of results to return (default: 20, max: 100).
+    Returns:
+        SuccessResponse[List[dict]]: A response object containing director statistics.
+"""
+
+@router.get("/aggregations/reportingByDirectors",
+            response_model=SuccessResponse[List[dict]],
+            status_code=200,
+            summary="Aggregate directors with the most movies and their statistics.")
+async def aggregate_directors_most_movies(
+    limit: int = Query(default=20, ge=1, le=100)
+):
+    # Define aggregation pipeline to find directors with the most movies
+    # This pipeline demonstrates array unwinding, filtering, and ranking
+    
+    # Add a multi-stage aggregation that:
+    # 1. Filters movies with valid directors and year data (data quality filter)
+    # 2. Unwinds directors array to create separate documents per director
+    # 3. Cleans director names by filtering out null/empty names
+    # 4. Groups movies by individual director and calculates statistics per director
+    # 5. Sorts directors based on movie count
+    # 6. Limits results to top N directors
+    # 7. Shapes the final output with clean field names and rounded averages
+
+    pipeline = [
+        # STAGE 1: $match - Initial Data Quality Filter
+        # Filter movies that have director information and valid years
+        {
+            "$match": {
+                "directors": {"$exists": True, "$ne": None, "$ne": []},  # Has directors array
+                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}  # Valid year range
+            }
+        },
+        
+        # STAGE 2: $unwind - Flatten Directors Array
+        # Convert each movie's directors array into separate documents
+        # Example: Movie with ["Director A", "Director B"] becomes 2 documents
+        {
+            "$unwind": "$directors"
+        },
+        
+        # STAGE 3: $match - Clean Director Names
+        # Filter out any null or empty director names after unwinding
+        {
+            "$match": {
+                "directors": {"$ne": None, "$ne": ""}
+            }
+        },
+        
+        # STAGE 4: $group - Aggregate by Director
+        # Group all movies by director name and calculate statistics
+        {
+            "$group": {
+                "_id": "$directors",  # Group by individual director name
+                "movieCount": {"$sum": 1},  # Count movies per director
+                "averageRating": {"$avg": "$imdb.rating"}  # Average rating of director's movies
+            }
+        },
+        
+        # STAGE 5: $sort - Rank Directors by Movie Count
+        # Sort directors by number of movies (highest first)
+        {"$sort": {"movieCount": -1}},  # -1 = descending (most movies first)
+        
+        # STAGE 6: $limit - Restrict Results
+        # Limit to top N directors based on user input
+        {"$limit": limit},
+        
+        # STAGE 7: $project - Shape Final Output
+        # Transform the grouped data into a clean, readable format
+        {
+            "$project": {
+                "director": "$_id",  # Rename _id to director
+                "movieCount": 1,
+                "averageRating": {"$round": ["$averageRating", 2]},  # Round to 2 decimal places
+                "_id": 0  # Exclude the _id field from output
+            }
+        }
+    ]
+
+    # Execute the aggregation
+    try:
+        results = await execute_aggregation(pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="Database error occurred during aggregation",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+    
+    return create_success_response(
+        results, 
+        f"Found {len(results)} directors with most movies"
+    )
+
+#----------------------------------------------------------------------------------------------------------
+# MongoDB Search
+#
+# MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
+# This function was made with the assumption that the UI will have fields for plot,fullplot, 
+# directors, writers, and cast to search on. Or some sort of combined search field.
+# Also this fuzzy operator is being used to allow for some misspellings in the search terms
+# but that allows for very generous matching. This can be adjusted as needed.
+#----------------------------------------------------------------------------------------------------------
+"""
+
+    GET /api/movies/search
+
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
+    You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
+
+    Query Parameters:
+        plot (str, optional): Text to search against the plot field.
+        fullplot (str, optional): Text to search against the fullplot field.
+        directors (str, optional): Text to search against the directors field.
+        writers (str, optional): Text to search against the writers field.
+        cast (str, optional): Text to search against the cast field.
+        limit (int, optional): Number of results to return (default: 20)
+        skip (int, optional): Number of results to skip for pagination (default: 0)
+        search_operator (str, optional): How to combine multiple search fields. 
+            Must be one of "must", "should", "mustNot", or "filter". Default is "must".
+
+    Returns:
+        SuccessResponse[SearchMoviesResponse]: A response object containing the list of matching movies and total count.
+"""
+@router.get(
+    "/search/mongodb-search",
+    response_model=SuccessResponse[SearchMoviesResponse],
+    status_code=200,
+    summary="Search movies using MongoDB Search."
+)
+async def search_movies(
+    plot: str = Query(default=None),
+    fullplot: str = Query(default=None),
+    directors: str = Query(default=None),
+    writers: str = Query(default=None),
+    cast: str = Query(default=None),
+    limit:int = Query(default=20, ge=1, le=100),
+    skip:int = Query(default=0, ge=0),
+    search_operator: str = Query(default="must")
+) -> SuccessResponse[SearchMoviesResponse]:
+    
+    search_phrases = []
+
+    # Validate the search_operator parameter to ensure it's a valid compound operator
+    valid_operators = {"must", "should", "mustNot", "filter"}
+    if search_operator not in valid_operators:
+        return create_error_response(
+        message=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}.",
+        code="INVALID_SEARCH_OPERATOR",
+        details=None
+    )
+
+    # Build the search_phrases list based on which fields were provided by the user.
+    # Each phrase becomes a separate clause in the MongoDB Search compound query.
+
+    if plot:
+        search_phrases.append({
+            # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
+            # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
+            "phrase": {
+                "query": plot,
+                "path": "plot",
+            }
+        })
+    if fullplot:
+        search_phrases.append({
+            "phrase": {
+                "query": fullplot,
+                "path": "fullplot",
+            }
+        })
+    if directors:
+        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
+        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
+        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
+        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
+        #             (Higher values make the search stricter and faster.)
+        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
+
+        search_phrases.append({
+            "text": {
+                "query": directors,
+                "path": "directors",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+
+            }
+        })
+    if writers:
+        # See comments above regarding fuzzy search options.
+        search_phrases.append({
+            "text": {
+                "query": writers,
+                "path": "writers",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            }
+        })
+    if cast:
+        # See comments above regarding fuzzy search options.
+        search_phrases.append({
+            "text": {
+                "query": cast,
+                "path": "cast",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            }
+        })
+
+    if not search_phrases:
+        return create_error_response(
+            message="At least one search parameter must be provided.",
+            code="NO_SEARCH_PARAMETERS",
+            details=None
+        )
+
+    # Build the aggregation pipeline for MongoDB Search.
+    # The $search stage uses the specified compound operator (must, should, etc.)
+    aggregation_pipeline = [
+        {
+            "$search": {
+                "index": "movieSearchIndex",
+                "compound": {
+                    search_operator: search_phrases
+                }
+            }
+        },
+        {
+            "$facet": {
+                "totalCount": [
+                    {"$count": "count"}
+                ],
+                "results": [
+                    {"$skip": skip},
+                    {"$limit": limit},
+                    # Project only the fields needed in the response
+                    {
+                        "$project": {
+                            "_id": 1,
+                            "title": 1,
+                            "year": 1,
+                            "plot": 1,
+                            "fullplot": 1,
+                            "released":1,
+                            "runtime": 1,
+                            "poster": 1,
+                            "genres": 1,
+                            "directors": 1,
+                            "writers": 1,
+                            "cast": 1,
+                            "countries": 1,
+                            "languages": 1,
+                            "rated": 1,
+                            "awards": 1,
+                            "imdb": 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    # Execute the aggregation pipeline using the helper function
+    try:
+        results = await execute_aggregation(aggregation_pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while performing the search.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
+
+    # Extract total count and movies from facet results with proper bounds checking
+    if not results or len(results) == 0:
+        return create_success_response(
+            SearchMoviesResponse(movies=[], totalCount=0), 
+            "No movies found matching the search criteria."
+        )
+    
+    facet_result = results[0]
+    
+    # Safely extract total count
+    total_count_array = facet_result.get("totalCount", [])
+    total_count = total_count_array[0].get("count", 0) if total_count_array else 0
+    
+    # Safely extract movies data
+    movies_data = facet_result.get("results", [])
+    
+    # Convert ObjectId to string for each movie in the results
+    movies = []
+    for movie in movies_data:
+        movie["_id"] = str(movie["_id"])
+        movies.append(movie)
+
+    return create_success_response(
+        SearchMoviesResponse(movies=movies, totalCount=total_count), 
+        f"Found {total_count} movies matching the search criteria."
+      )
+
+#----------------------------------------------------------------------------------------------------------
+# MongoDB Vector Search
+#
+# MongoDB Vector Search based on searching the plot_embedding_voyage_3_large field.
+#----------------------------------------------------------------------------------------------------------
+"""
+
+    GET /api/movies/vector-search
+
+    Search movies using MongoDB Vector Search to find movies with similar plots.
+    Uses embeddings generated by the Voyage AI model to perform semantic similarity search.
+
+    Query Parameters:
+        q (str, required): Search query text to find movies with similar plots.
+        limit (int, optional): Number of results to return (default: 10, max: 50).
+
+    Returns:
+        SuccessResponse[List[VectorSearchResult]]: A response object containing movies with similarity scores.
+        Each result includes:
+            - _id: Movie ObjectId
+            - title: Movie title  
+            - plot: Movie plot text
+            - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
+"""
+# Specify your Voyage API key and embedding model
+model = "voyage-3-large"
+outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
+
+# Vector Search Endpoint
+@router.get("/search/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
+async def vector_search_movies(
+    q: str = Query(..., description="Search query to find similar movies by plot"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of results to return")
+):
+    """
+    Vector search endpoint for finding movies with similar plots.
+    
+    Args:
+        q: The search query string
+        limit: Maximum number of results to return
+    
+    Returns:
+        SuccessResponse containing a list of movies with similarity scores
+    """
+    if not voyage_ai_available():
+        return create_error_response(
+            message="Vector search unavailable",
+            code="SERVICE_UNAVAILABLE",
+            details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
+        )
+    
+    try:
+        # Initialize the client here to avoid import-time errors
+        vo = voyageai.Client()
+        
+        # The vector search index was already created at startup time
+        # Generate embedding for the search query
+        query_embedding = get_embedding(q, input_type="query", client=vo)
+        
+        # Get the embedded movies collection
+        embedded_movies_collection = get_collection("embedded_movies")
+        
+        # Define vector search pipeline
+        pipeline = [
+            {
+                "$vectorSearch": {
+                    "index": "vector_index",
+                    "path": "plot_embedding_voyage_3_large",
+                    "queryVector": query_embedding, #2048
+                    "numCandidates": limit * 15,  # Search more candidates for better results
+                    "limit": limit
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "title": 1,
+                    "plot": 1,
+                    "score": {
+                        "$meta": "vectorSearchScore"
+                    }
+                }
+            }
+        ]
+
+        raw_results = await execute_aggregation_on_collection(embedded_movies_collection, pipeline)
+        
+        # Convert ObjectId to string and create VectorSearchResult objects
+        for result in raw_results:
+            if "_id" in result and result["_id"]:
+                try:
+                    result["_id"] = str(result["_id"])
+                except (InvalidId, TypeError):
+                    # Handle invalid ObjectId conversion
+                    result["_id"] = str(result["_id"]) if result["_id"] else None
+        
+        # This code converts the raw results into VectorSearchResult objects
+        results = [VectorSearchResult(**doc) for doc in raw_results]
+        
+        return create_success_response(
+            results, 
+            f"Found {len(results)} similar movies for query: '{q}'"
+        )
+        
+    except Exception as e:
+        return create_error_response(
+            message="Vector search failed",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
+
 #------------------------------------
 #Helper Functions
 #------------------------------------
@@ -1349,17 +1346,11 @@ async def find_and_delete_movie(id: str):
 
 async def execute_aggregation(pipeline: list) -> list:
     """Helper function to execute aggregation pipeline and return results"""
-    print(f"Executing pipeline: {pipeline}")  # Debug logging
     
     movies_collection = get_collection("movies")
     # For the async Pymongo driver, we need to await the aggregate call
     cursor = await movies_collection.aggregate(pipeline)
     results = await cursor.to_list(length=None)  # Convert cursor to list to collect all data at once rather than processing data per document
-    
-    print(f"Aggregation returned {len(results)} results")  # Debug logging
-    if len(results) <= 3:  # Log first few results for debugging
-        for i, doc in enumerate(results):
-            print(f"Result {i+1}: {doc}")
     
     return results
 
@@ -1376,16 +1367,9 @@ async def execute_aggregation(pipeline: list) -> list:
 
 async def execute_aggregation_on_collection(collection, pipeline: list) -> list:
     """Helper function to execute aggregation pipeline on a specified collection and return results"""
-    print(f"Executing pipeline: {pipeline}")  # Debug logging
-    print(f"Collection: {collection.name if hasattr(collection, 'name') else 'embedded_movies'}")
 
     cursor = await collection.aggregate(pipeline)
     results = await cursor.to_list(length=None)  # Convert cursor to list
-
-    print(f"Aggregation returned {len(results)} results")  # Debug logging
-    if len(results) <= 3:  # Log first few results for debugging
-        for i, doc in enumerate(results):
-            print(f"Result {i+1}: {doc}")
 
     return results
 
