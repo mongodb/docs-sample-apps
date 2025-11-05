@@ -33,7 +33,10 @@ public class DatabaseVerification {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseVerification.class);
 
     private static final String MOVIES_COLLECTION = "movies";
+    private static final String COMMENTS_COLLECTION = "comments";
     private static final String TEXT_INDEX_NAME = "text_search_index";
+    private static final String YEAR_INDEX_NAME = "year_index";
+    private static final String MOVIE_ID_INDEX_NAME = "movie_id_index";
 
     private final MongoDatabase database;
 
@@ -57,6 +60,9 @@ public class DatabaseVerification {
         try {
             // Verify movies collection exists and has data
             verifyMoviesCollection();
+
+            // Verify comments collection and create indexes for aggregation performance
+            verifyCommentsCollection();
 
             logger.info("Database verification completed successfully");
 
@@ -97,6 +103,9 @@ public class DatabaseVerification {
 
         // Create text search index for full-text search functionality
         createTextSearchIndex(moviesCollection);
+
+        // Create year index for aggregation performance
+        createYearIndex(moviesCollection);
     }
 
     /**
@@ -144,6 +153,85 @@ public class DatabaseVerification {
             // (though text search queries will fail)
             logger.error("Could not create text search index: {}", e.getMessage());
             logger.warn("Text search functionality may not work without the index");
+        }
+    }
+
+    /**
+     * Creates an index on the year field for the movies collection.
+     *
+     * <p>This index improves performance for aggregation queries that filter by year,
+     * such as the movies with comments aggregation.
+     *
+     * @param moviesCollection the movies collection to create the index on
+     */
+    private void createYearIndex(MongoCollection<Document> moviesCollection) {
+        try {
+            IndexOptions indexOptions = new IndexOptions()
+                    .name(YEAR_INDEX_NAME)
+                    .background(true);
+
+            moviesCollection.createIndex(
+                Indexes.ascending(Movie.Fields.YEAR),
+                indexOptions
+            );
+
+            logger.info("Year index '{}' created/verified for movies collection", YEAR_INDEX_NAME);
+
+        } catch (Exception e) {
+            logger.error("Could not create year index: {}", e.getMessage());
+            logger.warn("Aggregation queries filtering by year may be slower without the index");
+        }
+    }
+
+    /**
+     * Verifies the comments collection and creates necessary indexes.
+     *
+     * <p>This method creates an index on the movie_id field to improve $lookup performance
+     * when joining movies with comments in aggregation pipelines.
+     */
+    private void verifyCommentsCollection() {
+        MongoCollection<Document> commentsCollection = database.getCollection(COMMENTS_COLLECTION);
+
+        // Check if collection has documents
+        long count = commentsCollection.estimatedDocumentCount();
+
+        logger.info("Comments collection found with {} documents", count);
+
+        if (count == 0) {
+            logger.warn(
+                "Comments collection is empty. Please ensure sample_mflix data is loaded."
+            );
+        }
+
+        // Create movie_id index for $lookup performance
+        createMovieIdIndex(commentsCollection);
+    }
+
+    /**
+     * Creates an index on the movie_id field for the comments collection.
+     *
+     * <p>This index is critical for $lookup performance when joining movies with comments.
+     * Without this index, the $lookup operation will perform a collection scan for each movie,
+     * which can cause timeouts on large datasets.
+     *
+     * @param commentsCollection the comments collection to create the index on
+     */
+    private void createMovieIdIndex(MongoCollection<Document> commentsCollection) {
+        try {
+            IndexOptions indexOptions = new IndexOptions()
+                    .name(MOVIE_ID_INDEX_NAME)
+                    .background(true);
+
+            commentsCollection.createIndex(
+                Indexes.ascending("movie_id"),
+                indexOptions
+            );
+
+            logger.info("Movie ID index '{}' created/verified for comments collection", MOVIE_ID_INDEX_NAME);
+
+        } catch (Exception e) {
+            logger.error("Could not create movie_id index: {}", e.getMessage());
+            logger.warn("$lookup aggregations joining movies with comments may timeout without the index");
         }
     }
 }

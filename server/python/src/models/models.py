@@ -115,6 +115,16 @@ class MovieFilter(BaseModel):
 class SearchMoviesResponse(BaseModel):
     movies: list[Movie]
     totalCount: int
+      
+class VectorSearchResult(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    title: str
+    plot: Optional[str] = None
+    score: float
+
+    model_config = {
+        "populate_by_name": True
+    }
 
 class SuccessResponse(BaseModel, Generic[T]):
     success: bool = True

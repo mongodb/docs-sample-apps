@@ -8,11 +8,11 @@ This application provides a REST API for managing movie data from MongoDB's samp
 
 - Spring Data MongoDB for simplified data access
 - CRUD operations (Create, Read, Update, Delete)
-- Text search functionality
+- MongoDB Atlas Search with multi-field search and compound operators
 - Filtering, sorting, and pagination
 - Comprehensive error handling
 - API documentation with Swagger/OpenAPI
-- MongoTemplate for complex queries
+- MongoTemplate for complex queries and aggregation pipelines
 
 ## Prerequisites
 
@@ -104,6 +104,7 @@ Once the application is running, you can access:
 
 ### Movies (✅ Implemented)
 
+#### CRUD Operations
 - `GET /api/movies` - Get all movies (with filtering, sorting, pagination)
 - `GET /api/movies/{id}` - Get a single movie by ID
 - `POST /api/movies` - Create a new movie
@@ -113,6 +114,48 @@ Once the application is running, you can access:
 - `DELETE /api/movies/{id}` - Delete a movie
 - `DELETE /api/movies` - Delete multiple movies
 - `DELETE /api/movies/{id}/find-and-delete` - Find and delete a movie
+
+#### Aggregations
+- `GET /api/movies/aggregations/comments` - Get movies with most comments
+- `GET /api/movies/aggregations/years` - Aggregate movies by year with statistics
+- `GET /api/movies/aggregations/directors` - Aggregate directors with most movies
+
+#### Atlas Search
+- `GET /api/movies/search` - Search movies using MongoDB Atlas Search
+
+  **Query Parameters:**
+  - `plot` (optional) - Search in plot field using phrase matching
+  - `fullplot` (optional) - Search in fullplot field using phrase matching
+  - `directors` (optional) - Search in directors field with fuzzy matching
+  - `writers` (optional) - Search in writers field with fuzzy matching
+  - `cast` (optional) - Search in cast field with fuzzy matching
+  - `searchOperator` (optional) - Compound operator: `must` (default), `should`, `mustNot`, `filter`
+  - `limit` (optional) - Maximum results to return (default: 20, max: 100)
+  - `skip` (optional) - Number of results to skip for pagination (default: 0)
+
+  **Examples:**
+  ```bash
+  # Search by plot
+  GET /api/movies/search?plot=space+adventure
+
+  # Search by multiple fields with AND logic
+  GET /api/movies/search?directors=Coppola&cast=Pacino&searchOperator=must
+
+  # Search by multiple fields with OR logic
+  GET /api/movies/search?plot=crime&directors=Scorsese&searchOperator=should
+
+  # Search with pagination
+  GET /api/movies/search?cast=Tom+Hanks&limit=10&skip=20
+  ```
+
+  **Note:** At least one search field must be provided. The `searchOperator` determines how multiple search criteria are combined:
+  - `must` - All criteria must match (AND logic)
+  - `should` - At least one criterion should match (OR logic)
+  - `mustNot` - Criteria must not match (NOT logic)
+  - `filter` - Criteria must match but don't affect scoring
+
+#### Vector Search
+- `GET /api/movies/find-similar-movies` - Find similar movies using vector search on plot embeddings
 
 ## Development
 
@@ -139,11 +182,19 @@ java -jar target/sample-mflix-spring-1.0.0.jar
 
 - **Movies CRUD API** - Full create, read, update, delete operations
 - **Spring Data MongoDB** - Repository pattern with MongoTemplate for complex queries
-- **Text Search** - Full-text search on movie titles, plots, and genres
+- **MongoDB Atlas Search** - Multi-field search with compound operators (must, should, mustNot, filter)
+  - Phrase matching on plot and fullplot fields
+  - Fuzzy text matching on directors, writers, and cast fields
+  - Support for complex search queries with multiple criteria
+- **MongoDB Aggregations** - Statistical aggregations by year, directors, and comments
+- **Vector Search** - Find similar movies using plot embeddings (requires Atlas Vector Search)
 - **Filtering & Pagination** - Query parameters for filtering, sorting, and pagination
 - **Custom Exception Handling** - Global exception handler with proper HTTP status codes
 - **Type-Safe DTOs** - Specific response types instead of generic Maps
-- **Unit Tests** - 35 tests covering service and controller layers
+- **Comprehensive Testing** - 60 tests covering service, controller, and integration layers
+  - 29 controller unit tests
+  - 27 service unit tests
+  - 4 Atlas Search integration tests (requires Atlas cluster)
 - **OpenAPI Documentation** - Swagger UI available at `/swagger-ui.html`
 - **Database Verification** - Startup checks for database connectivity and indexes
 
@@ -165,8 +216,15 @@ This application is designed as an educational sample to demonstrate:
 2. Best practices for Spring Boot REST API development
 3. Proper separation of concerns (Controller → Service → Repository)
 4. MongoDB CRUD operations and query patterns
-5. Error handling and validation in Spring Boot
-6. Using MongoTemplate for complex queries alongside Spring Data repositories
+5. **MongoDB Atlas Search** - Multi-field text search with compound operators
+   - Phrase matching for exact phrase searches
+   - Fuzzy text matching for typo-tolerant searches
+   - Compound operators (must, should, mustNot, filter) for complex queries
+6. **MongoDB Aggregation Pipelines** - Statistical aggregations and data transformations
+7. **Vector Search** - Semantic similarity search using embeddings
+8. Error handling and validation in Spring Boot
+9. Using MongoTemplate for complex queries alongside Spring Data repositories
+10. Comprehensive testing strategies (unit tests, integration tests)
 
 ## Troubleshooting
 

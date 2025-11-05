@@ -8,13 +8,13 @@ import org.springframework.stereotype.Repository;
 /**
  * Spring Data MongoDB repository for movie data access.
  *
- * This repository extends MongoRepository which provides:
+ * <p>This repository extends MongoRepository which provides:
  * - Basic CRUD operations (save, findById, findAll, delete, etc.)
  * - Pagination and sorting support
  * - Query derivation from method names
  * - Custom query support via @Query annotation
  *
- * For complex queries not supported by Spring Data, you can inject MongoTemplate
+ * <p>For complex queries not supported by Spring Data, you can inject MongoTemplate
  * in the service layer.
  */
 @Repository
