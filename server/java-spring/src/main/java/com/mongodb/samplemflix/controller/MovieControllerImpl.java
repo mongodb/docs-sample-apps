@@ -412,7 +412,7 @@ public class MovieControllerImpl {
 
         List<Movie> movies = movieService.searchMovies(searchRequest);
 
-        // Wrap results in SearchMoviesResponse to match Python backend structure
+        // Wrap results in SearchMoviesResponse
         SearchMoviesResponse searchResponse = SearchMoviesResponse.builder()
                 .movies(movies)
                 .totalCount(movies.size())
