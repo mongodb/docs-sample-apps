@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Path, Body
-from src.database.mongo_client import db, get_collection
+from src.database.mongo_client import db, get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
 
 from typing import List
@@ -341,7 +341,18 @@ async def vector_search_movies(
                     "title": 1,
                     "plot": 1,
                     "poster": 1,
-                    "year": 1,
+                    "year": {
+                        "$cond": {
+                            "if": {
+                                "$and": [
+                                    {"$ne": ["$year", None]},
+                                    {"$eq": [{"$type": "$year"}, "int"]}
+                                ]
+                            },
+                            "then": "$year",
+                            "else": None
+                        }
+                    },
                     "genres": 1,
                     "directors": 1,
                     "cast": 1,
