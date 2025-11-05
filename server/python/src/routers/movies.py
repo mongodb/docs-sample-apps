@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Path, Body
 from src.database.mongo_client import db, get_collection
-from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
+from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
 
 from typing import List
 from datetime import datetime
@@ -9,6 +9,7 @@ from bson import ObjectId
 import re
 from bson.errors import InvalidId
 import voyageai
+
 
 '''
 This file contains all the business logic for movie operations.
