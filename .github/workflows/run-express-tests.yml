@@ -30,7 +30,7 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm test
+        run: npm test -- --json --outputFile=test-results.json || true
         env:
           MONGODB_URI: ${{ secrets.MFLIX_URI }}
 
@@ -39,5 +39,13 @@ jobs:
         if: always()
         with:
           name: test-results
-          path: server/express/coverage/
+          path: |
+            server/express/coverage/
+            server/express/test-results.json
           retention-days: 30
+
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          chmod +x .github/scripts/generate-test-summary-jest.sh
+          .github/scripts/generate-test-summary-jest.sh server/express/test-results.json

@@ -51,8 +51,8 @@ jobs:
           path: server/java-spring/target/surefire-reports/
           retention-days: 30
 
-      - name: Test Summary
-        uses: test-summary/action@v2
+      - name: Generate Test Summary
         if: always()
-        with:
-          paths: server/java-spring/target/surefire-reports/TEST-*.xml
+        run: |
+          chmod +x .github/scripts/generate-test-summary-surefire.sh
+          .github/scripts/generate-test-summary-surefire.sh server/java-spring/target/surefire-reports
