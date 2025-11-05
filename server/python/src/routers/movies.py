@@ -15,7 +15,19 @@ import voyageai
 This file contains all the business logic for movie operations.
 Each method demonstrates different MongoDB operations using the PyMongo driver.
 
+The /search and /vector-search endpoints are at the top of the file because they must be
+before the /{id} endpoint to avoid route conflicts where the /search and /vector-search
+endpoints match the /{id} pattern rather than the intended paths.
+
 Implemented Endpoints:
+
+- GET /api/movies/search :
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
+    Supports compound search operators and fuzzy matching.
+
+- GET /api/movies/vector-search :
+    Search movies using MongoDB Vector Search to enable semantic search capabilities over
+    the plot field.
 
 - GET /api/movies/{id} :
     Retrieve a single movie by its ID.
@@ -54,15 +66,6 @@ Implemented Endpoints:
 - GET /api/movies/aggregations/reportingByDirectors :
     Aggregate directors with the most movies and their statistics.
 
-- GET /api/movies/search :
-    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
-    Supports compound search operators and fuzzy matching.
-
-- GET /api/movies/vector-search :
-    Search movies using MongoDB Vector Search to enable semantic search capabilities over
-    the plot field.
-
-
 Helper Functions:
 - execute_aggregation(pipeline): Executes a MongoDB aggregation pipeline and returns the
 results.
@@ -71,6 +74,319 @@ results.
 '''
 
 router = APIRouter()
+
+#----------------------------------------------------------------------------------------------------------
+# MongoDB Search
+#
+# MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
+# This function was made with the assumption that the UI will have fields for plot,fullplot, 
+# directors, writers, and cast to search on. Or some sort of combined search field.
+# Also this fuzzy operator is being used to allow for some misspellings in the search terms
+# but that allows for very generous matching. This can be adjusted as needed.
+#----------------------------------------------------------------------------------------------------------
+"""
+
+    GET /api/movies/search
+
+    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
+    You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
+
+    Query Parameters:
+        plot (str, optional): Text to search against the plot field.
+        fullplot (str, optional): Text to search against the fullplot field.
+        directors (str, optional): Text to search against the directors field.
+        writers (str, optional): Text to search against the writers field.
+        cast (str, optional): Text to search against the cast field.
+        limit (int, optional): Number of results to return (default: 20)
+        skip (int, optional): Number of results to skip for pagination (default: 0)
+        search_operator (str, optional): How to combine multiple search fields. 
+            Must be one of "must", "should", "mustNot", or "filter". Default is "must".
+
+    Returns:
+        SuccessResponse[SearchMoviesResponse]: A response object containing the list of matching movies and total count.
+"""
+@router.get(
+    "/search",
+    response_model=SuccessResponse[SearchMoviesResponse],
+    status_code=200,
+    summary="Search movies using MongoDB Search."
+)
+async def search_movies(
+    plot: str = Query(default=None),
+    fullplot: str = Query(default=None),
+    directors: str = Query(default=None),
+    writers: str = Query(default=None),
+    cast: str = Query(default=None),
+    limit:int = Query(default=20, ge=1, le=100),
+    skip:int = Query(default=0, ge=0),
+    search_operator: str = Query(default="must")
+) -> SuccessResponse[SearchMoviesResponse]:
+    
+    search_phrases = []
+
+    # Validate the search_operator parameter to ensure it's a valid compound operator
+    valid_operators = {"must", "should", "mustNot", "filter"}
+    if search_operator not in valid_operators:
+        return create_error_response(
+        message=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}.",
+        code="INVALID_SEARCH_OPERATOR",
+        details=None
+    )
+
+    # Build the search_phrases list based on which fields were provided by the user.
+    # Each phrase becomes a separate clause in the MongoDB Search compound query.
+
+    if plot:
+        search_phrases.append({
+            # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
+            # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
+            "phrase": {
+                "query": plot,
+                "path": "plot",
+            }
+        })
+    if fullplot:
+        search_phrases.append({
+            "phrase": {
+                "query": fullplot,
+                "path": "fullplot",
+            }
+        })
+    if directors:
+        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
+        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
+        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
+        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
+        #             (Higher values make the search stricter and faster.)
+        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
+
+        search_phrases.append({
+            "text": {
+                "query": directors,
+                "path": "directors",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+
+            }
+        })
+    if writers:
+        # See comments above regarding fuzzy search options.
+        search_phrases.append({
+            "text": {
+                "query": writers,
+                "path": "writers",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            }
+        })
+    if cast:
+        # See comments above regarding fuzzy search options.
+        search_phrases.append({
+            "text": {
+                "query": cast,
+                "path": "cast",
+                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            }
+        })
+
+    if not search_phrases:
+        return create_error_response(
+            message="At least one search parameter must be provided.",
+            code="NO_SEARCH_PARAMETERS",
+            details=None
+        )
+
+    # Build the aggregation pipeline for MongoDB Search.
+    # The $search stage uses the specified compound operator (must, should, etc.)
+    aggregation_pipeline = [
+        {
+            "$search": {
+                "index": "movieSearchIndex",
+                "compound": {
+                    search_operator: search_phrases
+                }
+            }
+        },
+        {
+            "$facet": {
+                "totalCount": [
+                    {"$count": "count"}
+                ],
+                "results": [
+                    {"$skip": skip},
+                    {"$limit": limit},
+                    # Project only the fields needed in the response
+                    {
+                        "$project": {
+                            "_id": 1,
+                            "title": 1,
+                            "year": 1,
+                            "plot": 1,
+                            "fullplot": 1,
+                            "released":1,
+                            "runtime": 1,
+                            "poster": 1,
+                            "genres": 1,
+                            "directors": 1,
+                            "writers": 1,
+                            "cast": 1,
+                            "countries": 1,
+                            "languages": 1,
+                            "rated": 1,
+                            "awards": 1,
+                            "imdb": 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    # Execute the aggregation pipeline using the helper function
+    try:
+        results = await execute_aggregation(aggregation_pipeline)
+    except Exception as e:
+        return create_error_response(
+            message="An error occurred while performing the search.",
+            code="DATABASE_ERROR",
+            details=str(e)
+        )    
+
+    # Extract total count and movies from facet results with proper bounds checking
+    if not results or len(results) == 0:
+        return create_success_response(
+            SearchMoviesResponse(movies=[], totalCount=0), 
+            "No movies found matching the search criteria."
+        )
+    
+    facet_result = results[0]
+    
+    # Safely extract total count
+    total_count_array = facet_result.get("totalCount", [])
+    total_count = total_count_array[0].get("count", 0) if total_count_array else 0
+    
+    # Safely extract movies data
+    movies_data = facet_result.get("results", [])
+    
+    # Convert ObjectId to string for each movie in the results
+    movies = []
+    for movie in movies_data:
+        movie["_id"] = str(movie["_id"])
+        movies.append(movie)
+
+    return create_success_response(
+        SearchMoviesResponse(movies=movies, totalCount=total_count), 
+        f"Found {total_count} movies matching the search criteria."
+      )
+
+#----------------------------------------------------------------------------------------------------------
+# MongoDB Vector Search
+#
+# MongoDB Vector Search based on searching the plot_embedding_voyage_3_large field.
+#----------------------------------------------------------------------------------------------------------
+"""
+
+    GET /api/movies/vector-search
+
+    Search movies using MongoDB Vector Search to find movies with similar plots.
+    Uses embeddings generated by the Voyage AI model to perform semantic similarity search.
+
+    Query Parameters:
+        q (str, required): Search query text to find movies with similar plots.
+        limit (int, optional): Number of results to return (default: 10, max: 50).
+
+    Returns:
+        SuccessResponse[List[VectorSearchResult]]: A response object containing movies with similarity scores.
+        Each result includes:
+            - _id: Movie ObjectId
+            - title: Movie title  
+            - plot: Movie plot text
+            - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
+"""
+# Specify your Voyage API key and embedding model
+model = "voyage-3-large"
+outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
+
+# Vector Search Endpoint
+@router.get("/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
+async def vector_search_movies(
+    q: str = Query(..., description="Search query to find similar movies by plot"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of results to return")
+):
+    """
+    Vector search endpoint for finding movies with similar plots.
+    
+    Args:
+        q: The search query string
+        limit: Maximum number of results to return
+    
+    Returns:
+        SuccessResponse containing a list of movies with similarity scores
+    """
+    if not voyage_ai_available():
+        return create_error_response(
+            message="Vector search unavailable",
+            code="SERVICE_UNAVAILABLE",
+            details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
+        )
+    
+    try:
+        # Initialize the client here to avoid import-time errors
+        vo = voyageai.Client()
+        
+        # The vector search index was already created at startup time
+        # Generate embedding for the search query
+        query_embedding = get_embedding(q, input_type="query", client=vo)
+        
+        # Get the embedded movies collection
+        embedded_movies_collection = get_collection("embedded_movies")
+        
+        # Define vector search pipeline
+        pipeline = [
+            {
+                "$vectorSearch": {
+                    "index": "vector_index",
+                    "path": "plot_embedding_voyage_3_large",
+                    "queryVector": query_embedding, #2048
+                    "numCandidates": limit * 15,  # Search more candidates for better results
+                    "limit": limit
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "title": 1,
+                    "plot": 1,
+                    "score": {
+                        "$meta": "vectorSearchScore"
+                    }
+                }
+            }
+        ]
+
+        raw_results = await execute_aggregation_on_collection(embedded_movies_collection, pipeline)
+        
+        # Convert ObjectId to string and create VectorSearchResult objects
+        for result in raw_results:
+            if "_id" in result and result["_id"]:
+                try:
+                    result["_id"] = str(result["_id"])
+                except (InvalidId, TypeError):
+                    # Handle invalid ObjectId conversion
+                    result["_id"] = str(result["_id"]) if result["_id"] else None
+        
+        # This code converts the raw results into VectorSearchResult objects
+        results = [VectorSearchResult(**doc) for doc in raw_results]
+        
+        return create_success_response(
+            results, 
+            f"Found {len(results)} similar movies for query: '{q}'"
+        )
+        
+    except Exception as e:
+        return create_error_response(
+            message="Vector search failed",
+            code="INTERNAL_SERVER_ERROR",
+            details=str(e)
+        )
 
 #------------------------------------
 # Place get_movie_by_id endpoint here
@@ -1016,319 +1332,6 @@ async def aggregate_directors_most_movies(
         results, 
         f"Found {len(results)} directors with most movies"
     )
-
-#----------------------------------------------------------------------------------------------------------
-# MongoDB Search
-#
-# MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
-# This function was made with the assumption that the UI will have fields for plot,fullplot, 
-# directors, writers, and cast to search on. Or some sort of combined search field.
-# Also this fuzzy operator is being used to allow for some misspellings in the search terms
-# but that allows for very generous matching. This can be adjusted as needed.
-#----------------------------------------------------------------------------------------------------------
-"""
-
-    GET /api/movies/search
-
-    Search movies using MongoDB Search across the plot, fullplot, directors, writers, and cast fields.
-    You can combine multiple fields in a single query, and control how they are combined using the `search_operator` parameter.
-
-    Query Parameters:
-        plot (str, optional): Text to search against the plot field.
-        fullplot (str, optional): Text to search against the fullplot field.
-        directors (str, optional): Text to search against the directors field.
-        writers (str, optional): Text to search against the writers field.
-        cast (str, optional): Text to search against the cast field.
-        limit (int, optional): Number of results to return (default: 20)
-        skip (int, optional): Number of results to skip for pagination (default: 0)
-        search_operator (str, optional): How to combine multiple search fields. 
-            Must be one of "must", "should", "mustNot", or "filter". Default is "must".
-
-    Returns:
-        SuccessResponse[SearchMoviesResponse]: A response object containing the list of matching movies and total count.
-"""
-@router.get(
-    "/search/mongodb-search",
-    response_model=SuccessResponse[SearchMoviesResponse],
-    status_code=200,
-    summary="Search movies using MongoDB Search."
-)
-async def search_movies(
-    plot: str = Query(default=None),
-    fullplot: str = Query(default=None),
-    directors: str = Query(default=None),
-    writers: str = Query(default=None),
-    cast: str = Query(default=None),
-    limit:int = Query(default=20, ge=1, le=100),
-    skip:int = Query(default=0, ge=0),
-    search_operator: str = Query(default="must")
-) -> SuccessResponse[SearchMoviesResponse]:
-    
-    search_phrases = []
-
-    # Validate the search_operator parameter to ensure it's a valid compound operator
-    valid_operators = {"must", "should", "mustNot", "filter"}
-    if search_operator not in valid_operators:
-        return create_error_response(
-        message=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}.",
-        code="INVALID_SEARCH_OPERATOR",
-        details=None
-    )
-
-    # Build the search_phrases list based on which fields were provided by the user.
-    # Each phrase becomes a separate clause in the MongoDB Search compound query.
-
-    if plot:
-        search_phrases.append({
-            # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
-            # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
-            "phrase": {
-                "query": plot,
-                "path": "plot",
-            }
-        })
-    if fullplot:
-        search_phrases.append({
-            "phrase": {
-                "query": fullplot,
-                "path": "fullplot",
-            }
-        })
-    if directors:
-        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
-        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
-        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
-        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
-        #             (Higher values make the search stricter and faster.)
-        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
-
-        search_phrases.append({
-            "text": {
-                "query": directors,
-                "path": "directors",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-
-            }
-        })
-    if writers:
-        # See comments above regarding fuzzy search options.
-        search_phrases.append({
-            "text": {
-                "query": writers,
-                "path": "writers",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-            }
-        })
-    if cast:
-        # See comments above regarding fuzzy search options.
-        search_phrases.append({
-            "text": {
-                "query": cast,
-                "path": "cast",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-            }
-        })
-
-    if not search_phrases:
-        return create_error_response(
-            message="At least one search parameter must be provided.",
-            code="NO_SEARCH_PARAMETERS",
-            details=None
-        )
-
-    # Build the aggregation pipeline for MongoDB Search.
-    # The $search stage uses the specified compound operator (must, should, etc.)
-    aggregation_pipeline = [
-        {
-            "$search": {
-                "index": "movieSearchIndex",
-                "compound": {
-                    search_operator: search_phrases
-                }
-            }
-        },
-        {
-            "$facet": {
-                "totalCount": [
-                    {"$count": "count"}
-                ],
-                "results": [
-                    {"$skip": skip},
-                    {"$limit": limit},
-                    # Project only the fields needed in the response
-                    {
-                        "$project": {
-                            "_id": 1,
-                            "title": 1,
-                            "year": 1,
-                            "plot": 1,
-                            "fullplot": 1,
-                            "released":1,
-                            "runtime": 1,
-                            "poster": 1,
-                            "genres": 1,
-                            "directors": 1,
-                            "writers": 1,
-                            "cast": 1,
-                            "countries": 1,
-                            "languages": 1,
-                            "rated": 1,
-                            "awards": 1,
-                            "imdb": 1,
-                        }
-                    }
-                ]
-            }
-        }
-    ]
-
-    # Execute the aggregation pipeline using the helper function
-    try:
-        results = await execute_aggregation(aggregation_pipeline)
-    except Exception as e:
-        return create_error_response(
-            message="An error occurred while performing the search.",
-            code="DATABASE_ERROR",
-            details=str(e)
-        )    
-
-    # Extract total count and movies from facet results with proper bounds checking
-    if not results or len(results) == 0:
-        return create_success_response(
-            SearchMoviesResponse(movies=[], totalCount=0), 
-            "No movies found matching the search criteria."
-        )
-    
-    facet_result = results[0]
-    
-    # Safely extract total count
-    total_count_array = facet_result.get("totalCount", [])
-    total_count = total_count_array[0].get("count", 0) if total_count_array else 0
-    
-    # Safely extract movies data
-    movies_data = facet_result.get("results", [])
-    
-    # Convert ObjectId to string for each movie in the results
-    movies = []
-    for movie in movies_data:
-        movie["_id"] = str(movie["_id"])
-        movies.append(movie)
-
-    return create_success_response(
-        SearchMoviesResponse(movies=movies, totalCount=total_count), 
-        f"Found {total_count} movies matching the search criteria."
-      )
-
-#----------------------------------------------------------------------------------------------------------
-# MongoDB Vector Search
-#
-# MongoDB Vector Search based on searching the plot_embedding_voyage_3_large field.
-#----------------------------------------------------------------------------------------------------------
-"""
-
-    GET /api/movies/vector-search
-
-    Search movies using MongoDB Vector Search to find movies with similar plots.
-    Uses embeddings generated by the Voyage AI model to perform semantic similarity search.
-
-    Query Parameters:
-        q (str, required): Search query text to find movies with similar plots.
-        limit (int, optional): Number of results to return (default: 10, max: 50).
-
-    Returns:
-        SuccessResponse[List[VectorSearchResult]]: A response object containing movies with similarity scores.
-        Each result includes:
-            - _id: Movie ObjectId
-            - title: Movie title  
-            - plot: Movie plot text
-            - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
-"""
-# Specify your Voyage API key and embedding model
-model = "voyage-3-large"
-outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
-
-# Vector Search Endpoint
-@router.get("/search/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
-async def vector_search_movies(
-    q: str = Query(..., description="Search query to find similar movies by plot"),
-    limit: int = Query(default=10, ge=1, le=50, description="Number of results to return")
-):
-    """
-    Vector search endpoint for finding movies with similar plots.
-    
-    Args:
-        q: The search query string
-        limit: Maximum number of results to return
-    
-    Returns:
-        SuccessResponse containing a list of movies with similarity scores
-    """
-    if not voyage_ai_available():
-        return create_error_response(
-            message="Vector search unavailable",
-            code="SERVICE_UNAVAILABLE",
-            details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
-        )
-    
-    try:
-        # Initialize the client here to avoid import-time errors
-        vo = voyageai.Client()
-        
-        # The vector search index was already created at startup time
-        # Generate embedding for the search query
-        query_embedding = get_embedding(q, input_type="query", client=vo)
-        
-        # Get the embedded movies collection
-        embedded_movies_collection = get_collection("embedded_movies")
-        
-        # Define vector search pipeline
-        pipeline = [
-            {
-                "$vectorSearch": {
-                    "index": "vector_index",
-                    "path": "plot_embedding_voyage_3_large",
-                    "queryVector": query_embedding, #2048
-                    "numCandidates": limit * 15,  # Search more candidates for better results
-                    "limit": limit
-                }
-            },
-            {
-                "$project": {
-                    "_id": 1,
-                    "title": 1,
-                    "plot": 1,
-                    "score": {
-                        "$meta": "vectorSearchScore"
-                    }
-                }
-            }
-        ]
-
-        raw_results = await execute_aggregation_on_collection(embedded_movies_collection, pipeline)
-        
-        # Convert ObjectId to string and create VectorSearchResult objects
-        for result in raw_results:
-            if "_id" in result and result["_id"]:
-                try:
-                    result["_id"] = str(result["_id"])
-                except (InvalidId, TypeError):
-                    # Handle invalid ObjectId conversion
-                    result["_id"] = str(result["_id"]) if result["_id"] else None
-        
-        # This code converts the raw results into VectorSearchResult objects
-        results = [VectorSearchResult(**doc) for doc in raw_results]
-        
-        return create_success_response(
-            results, 
-            f"Found {len(results)} similar movies for query: '{q}'"
-        )
-        
-    except Exception as e:
-        return create_error_response(
-            message="Vector search failed",
-            code="INTERNAL_SERVER_ERROR",
-            details=str(e)
-        )
 
 #------------------------------------
 #Helper Functions
