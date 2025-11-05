@@ -183,7 +183,7 @@ export async function deleteMovie(id: string): Promise<{ success: boolean; error
  */
 export async function createMovie(movieData: Omit<Movie, '_id'>): Promise<{ success: boolean; error?: string; movieId?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -326,7 +326,7 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -434,6 +434,85 @@ export async function searchMovies(searchParams: {
     return { 
       success: false, 
       error: 'Network error occurred while searching movies' 
+    };
+  }
+}
+
+/**
+ * Search movies using MongoDB Vector Search to find movies with similar plots
+ */
+export async function vectorSearchMovies(searchParams: {
+  q: string;
+  limit?: number;
+}): Promise<{ success: boolean; error?: string; movies?: Movie[]; results?: any[] }> {
+  try {
+    const limit = searchParams.limit || 10;
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', searchParams.q);
+    queryParams.append('limit', limit.toString());
+
+    const response = await fetch(`${API_BASE_URL}/api/movies/vector-search?${queryParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to perform vector search: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    // Transform VectorSearchResult objects to Movie objects for backend compatibility
+    const movies: Movie[] = (result.data || []).map((item: any) => {
+      // Convert VectorSearchResult to Movie format
+      return {
+        _id: item._id || item.id, // Handle both _id (Python) and id (Java) field names
+        title: item.title || '',
+        plot: item.plot || '',
+        poster: item.poster,
+        year: item.year,
+        genres: item.genres || [],
+        directors: item.directors || [],
+        cast: item.cast || [],
+        // Add default values for fields not included in VectorSearchResult
+        fullplot: undefined,
+        released: undefined,
+        runtime: undefined,
+        writers: [],
+        countries: [],
+        languages: [],
+        rated: undefined,
+        awards: undefined,
+        imdb: undefined,
+        tomatoes: undefined,
+        metacritic: undefined,
+        type: undefined
+      } as Movie;
+    });
+
+    return { 
+      success: true, 
+      movies,
+      results: result.data || []
+    };
+  } catch (error) {
+    console.error('Error performing vector search:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while performing vector search' 
     };
   }
 }

@@ -1,2 +1,2 @@
 export { default } from './SearchMovieModal';
-export type { SearchParams } from './SearchMovieModal';
+export type { SearchParams, SearchType } from './SearchMovieModal';

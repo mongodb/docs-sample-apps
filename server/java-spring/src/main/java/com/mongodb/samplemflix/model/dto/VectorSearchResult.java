@@ -33,6 +33,31 @@ public class VectorSearchResult {
     private String plot;
     
     /**
+     * Movie poster URL.
+     */
+    private String poster;
+    
+    /**
+     * Movie release year.
+     */
+    private Integer year;
+    
+    /**
+     * Movie genres.
+     */
+    private java.util.List<String> genres;
+    
+    /**
+     * Movie directors.
+     */
+    private java.util.List<String> directors;
+    
+    /**
+     * Movie cast members.
+     */
+    private java.util.List<String> cast;
+    
+    /**
      * Vector search similarity score (0.0 to 1.0, higher = more similar).
      */
     private Double score;

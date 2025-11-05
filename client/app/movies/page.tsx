@@ -6,7 +6,7 @@ import pageStyles from "./page.module.css";
 import movieStyles from "./movies.module.css";
 import { MovieCard, Pagination, PageSizeSelector, AddMovieForm, BatchEditMovieForm, SearchMovieModal } from "../components";
 import { ErrorDisplay, LoadingSpinner } from "../components/ui";
-import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch, searchMovies } from "../lib/api";
+import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch, searchMovies, vectorSearchMovies } from "../lib/api";
 import { Movie } from "../types/movie";
 import { APP_CONFIG, ROUTES } from "../lib/constants";
 import type { SearchParams } from "../components/SearchMovieModal";
@@ -221,38 +221,67 @@ export default function Movies() {
     setError(null);
     setSuccessMessage(null);
 
-    // For new searches, start from page 1
-    const searchSkip = 0;
-    const searchLimitToUse = searchParams.limit || 20;
-    
-    const searchParamsWithPagination = {
-      ...searchParams,
-      limit: searchLimitToUse,
-      skip: searchSkip,
-    };
+    try {
+      let result;
 
-    const result = await searchMovies(searchParamsWithPagination);
-
-    if (result.success) {
-      setSearchResults(result.movies || []);
-      setSearchHasNextPage(result.hasNextPage || false);
-      setSearchHasPrevPage(result.hasPrevPage || false);
-      setSearchTotalCount(result.totalCount || 0);
-      setIsSearchMode(true);
-      setSearchPage(1);
-      setSearchLimit(searchLimitToUse);
-      setCurrentSearchParams(searchParams);
-      setShowSearchModal(false);
-      setSelectedMovies(new Set()); // Clear selection when switching to search mode
-      
-      const totalCount = result.totalCount || 0;
-      if (totalCount === 0) {
-        setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
+      if (searchParams.searchType === 'vector-search') {
+        // Handle Vector Search
+        const vectorSearchParams = {
+          q: searchParams.q!,
+          limit: searchParams.limit || 10,
+        };
+        result = await vectorSearchMovies(vectorSearchParams);
+        
+        if (result.success) {
+          setSearchResults(result.movies || []);
+          setSearchHasNextPage(false); // Vector search doesn't support pagination
+          setSearchHasPrevPage(false);
+          setSearchTotalCount(result.movies?.length || 0);
+        }
       } else {
-        setSuccessMessage(`Found ${totalCount} total movies matching your search criteria.`);
+        // Handle MongoDB Search
+        const searchSkip = 0; // For new searches, start from page 1
+        const searchLimitToUse = searchParams.limit || 20;
+        
+        const searchParamsWithPagination = {
+          ...searchParams,
+          limit: searchLimitToUse,
+          skip: searchSkip,
+        };
+
+        result = await searchMovies(searchParamsWithPagination);
+        
+        if (result.success) {
+          setSearchResults(result.movies || []);
+          setSearchHasNextPage(result.hasNextPage || false);
+          setSearchHasPrevPage(result.hasPrevPage || false);
+          setSearchTotalCount(result.totalCount || 0);
+        }
       }
-    } else {
-      setError(result.error || 'Failed to search movies');
+
+      if (result.success) {
+        setIsSearchMode(true);
+        setSearchPage(1);
+        setSearchLimit(searchParams.limit || 20);
+        setCurrentSearchParams(searchParams);
+        setShowSearchModal(false);
+        setSelectedMovies(new Set()); // Clear selection when switching to search mode
+        
+        const totalCount = searchParams.searchType === 'vector-search' 
+          ? result.movies?.length || 0 
+          : (result as any).totalCount || 0;
+          
+        if (totalCount === 0) {
+          setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
+        } else {
+          const searchTypeLabel = searchParams.searchType === 'vector-search' ? 'vector search' : 'text search';
+          setSuccessMessage(`Found ${totalCount} movies using ${searchTypeLabel}.`);
+        }
+      } else {
+        setError(result.error || 'Failed to search movies');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred while searching');
     }
 
     setIsSearching(false);
@@ -277,6 +306,11 @@ export default function Movies() {
 
   const handleSearchPageChange = async (newPage: number) => {
     if (!currentSearchParams) return;
+    
+    // Vector search doesn't support pagination
+    if (currentSearchParams.searchType === 'vector-search') {
+      return;
+    }
     
     setIsSearching(true);
     setError(null);
@@ -468,7 +502,7 @@ export default function Movies() {
                 </div>
                 
                 {/* Show pagination based on current mode */}
-                {isSearchMode ? (
+                {isSearchMode && currentSearchParams?.searchType === 'mongodb-search' ? (
                   <nav className={movieStyles.pagination} aria-label="Search results pagination">
                     <div className={movieStyles.paginationContainer}>
                       {/* Previous Button */}

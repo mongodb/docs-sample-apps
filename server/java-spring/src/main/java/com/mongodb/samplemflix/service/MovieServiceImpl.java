@@ -17,6 +17,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -807,6 +808,18 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
+    /**
+     * Performs vector search on movie plots using MongoDB Vector Search.
+     * 
+     * This method uses a two-step process:
+     * 1. Query the embedded_movies collection (which has vector embeddings) to get movie IDs and similarity scores
+     * 2. Fetch complete movie data from the movies collection using those IDs
+     * 
+     * This approach ensures that:
+     * - Vector search works correctly with the embedded data
+     * - Returned movie objects are compatible with CRUD operations on the movies collection
+     * - Complete movie metadata is available in the response
+     */
     @Override
     public List<VectorSearchResult> vectorSearchMovies(String query, Integer limit) {
         // Validate query parameter
@@ -838,29 +851,61 @@ public class MovieServiceImpl implements MovieService {
                     .append("limit", resultLimit)
             );
 
-            // Project the fields we need in the response
+            // Project only the fields we need from embedded_movies: _id and score
             Document projectStage = new Document("$project", new Document()
                     .append("_id", 1)
-                    .append("title", 1)
-                    .append("plot", 1)
                     .append("score", new Document("$meta", "vectorSearchScore"))
             );
 
             // Execute the aggregation pipeline on the embedded_movies collection
             List<Document> aggregationPipeline = List.of(vectorSearchStage, projectStage);
 
-            List<VectorSearchResult> results = new ArrayList<>();
+            // Step 1: Get movie IDs and scores from embedded_movies (which has the vector embeddings)
+            List<ObjectId> movieIds = new ArrayList<>();
+            Map<String, Double> scoreMap = new HashMap<>();
+            
             mongoTemplate.getCollection("embedded_movies")
                     .aggregate(aggregationPipeline)
                     .forEach(doc -> {
-                        VectorSearchResult result = VectorSearchResult.builder()
-                                .id(doc.getObjectId("_id").toString())
-                                .title(doc.getString("title"))
-                                .plot(doc.getString("plot"))
-                                .score(doc.getDouble("score"))
-                                .build();
-                        results.add(result);
+                        ObjectId movieId = doc.getObjectId("_id");
+                        movieIds.add(movieId);
+                        scoreMap.put(movieId.toString(), doc.getDouble("score"));
                     });
+
+            // Step 2: Fetch complete movie data from the movies collection (for CRUD compatibility)
+            List<VectorSearchResult> results = new ArrayList<>();
+            if (!movieIds.isEmpty()) {
+                Query movieQuery = new Query(Criteria.where("_id").in(movieIds));
+                List<Movie> movies = mongoTemplate.find(movieQuery, Movie.class);
+                
+                // Log if there's a mismatch between collections
+                if (movies.size() != movieIds.size()) {
+                    System.out.println("Warning: Found " + movieIds.size() + 
+                        " movies in embedded_movies but only " + movies.size() + 
+                        " in movies collection for vector search");
+                }
+                
+                // Convert to VectorSearchResult with scores preserved
+                for (Movie movie : movies) {
+                    String movieIdStr = movie.getId().toString();
+                    Double score = scoreMap.get(movieIdStr);
+                    
+                    if (score != null) {  // Only include movies that have vector scores
+                        VectorSearchResult result = VectorSearchResult.builder()
+                                .id(movieIdStr)
+                            .title(movie.getTitle())
+                            .plot(movie.getPlot())
+                            .poster(movie.getPoster())
+                            .year(movie.getYear())
+                            .genres(movie.getGenres())
+                            .directors(movie.getDirectors())
+                            .cast(movie.getCast())
+                            .score(score)
+                            .build();
+                        results.add(result);
+                    }
+                }
+            }
 
             return results;
 

@@ -340,6 +340,11 @@ async def vector_search_movies(
                     "_id": 1,
                     "title": 1,
                     "plot": 1,
+                    "poster": 1,
+                    "year": 1,
+                    "genres": 1,
+                    "directors": 1,
+                    "cast": 1,
                     "score": {
                         "$meta": "vectorSearchScore"
                     }
