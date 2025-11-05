@@ -164,7 +164,7 @@ copy_rules:
   - name: "mflix-express-server"
     source_pattern:
       type: "regex"
-      pattern: "mflix/server/express/(?P<file>.+)$"
+      pattern: "^mflix/server/js-express/(?P<file>.+)$"
       exclude_patterns:
         - "\\.gitignore$"       # Exclude .gitignore files
         - "README.md$"          # Exclude README files
@@ -263,7 +263,7 @@ copy_rules:
   - name: "mflix-python-server"
     source_pattern:
       type: "regex"
-      pattern: "mflix/server/python/(?P<file>.+)$"  
+      pattern: "^mflix/server/python-fastapi/(?P<file>.+)$" 
       exclude_patterns:
         - "\\.gitignore$"       # Exclude .gitignore files
         - "README.md$"          # Exclude README files
