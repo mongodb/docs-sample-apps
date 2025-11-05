@@ -138,11 +138,6 @@
                         -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar
                         -Xshare:off
                     </argLine>
-                    <!-- Pass environment variables to test JVM -->
-                    <environmentVariables>
-                        <MONGODB_URI>${env.MONGODB_URI}</MONGODB_URI>
-                        <ENABLE_SEARCH_TESTS>${env.ENABLE_SEARCH_TESTS}</ENABLE_SEARCH_TESTS>
-                    </environmentVariables>
                 </configuration>
             </plugin>
 
