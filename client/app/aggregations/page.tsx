@@ -1,45 +1,17 @@
 import React from 'react';
 import { fetchMoviesWithComments, fetchMoviesByYear, fetchDirectorStats } from '../lib/api';
+import { MovieWithComments, YearlyStats, DirectorStats } from '../types/aggregations';
 import styles from './aggregations.module.css';
 
-// Type definitions for better type safety
-interface MovieWithComments {
-  _id: string;
-  title: string;
-  year: number;
-  genres: string[];
-  imdbRating: number;
-  totalComments: number;
-  recentComments: Array<{
-    userName: string;
-    userEmail: string;
-    text: string;
-    date: string;
-  }>;
-}
-
-interface YearlyStats {
-  year: number;
-  movieCount: number;
-  averageRating: number;
-  highestRating: number;
-  lowestRating: number;
-  totalVotes: number;
-}
-
-interface DirectorStats {
-  director: string;
-  movieCount: number;
-  averageRating: number;
-}
-
 export default async function AggregationsPage() {
+  const MOVIES_WITH_COMMENTS_LIMIT = 5;
+  const DIRECTOR_STATS_LIMIT = 15;
 
   // Fetch all aggregation data with error handling
   const [commentsResult, yearResult, directorsResult] = await Promise.allSettled([
-    fetchMoviesWithComments(5),
+    fetchMoviesWithComments(MOVIES_WITH_COMMENTS_LIMIT),
     fetchMoviesByYear(),
-    fetchDirectorStats(15)
+    fetchDirectorStats(DIRECTOR_STATS_LIMIT)
   ]);
 
   // Process results with fallbacks
@@ -47,11 +19,13 @@ export default async function AggregationsPage() {
   const yearData = yearResult.status === 'fulfilled' ? yearResult.value : { success: false, error: 'Failed to fetch year data' };
   const directorsData = directorsResult.status === 'fulfilled' ? directorsResult.value : { success: false, error: 'Failed to fetch directors data' };
 
-  console.log('Aggregations SSR: Data fetch completed', {
-    comments: commentsData.success,
-    year: yearData.success,
-    directors: directorsData.success
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Aggregations SSR: Data fetch completed', {
+      comments: commentsData.success,
+      year: yearData.success,
+      directors: directorsData.success
+    });
+  }
 
   return (
     <div className={styles.container}>
@@ -85,7 +59,7 @@ export default async function AggregationsPage() {
                     <td>
                       <div className={styles.commentsContainer}>
                         {movie.recentComments?.slice(0, 2).map((comment, index) => (
-                          <div key={index} className={styles.comment}>
+                          <div key={`${movie._id}-${comment.date}-${index}`} className={styles.comment}>
                             <div className={styles.commentText}>
                               &ldquo;{(comment.text || 'No text').slice(0, 80)}{comment.text?.length > 80 ? '...' : ''}&rdquo;
                             </div>
