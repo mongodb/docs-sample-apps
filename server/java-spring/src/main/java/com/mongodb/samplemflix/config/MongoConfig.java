@@ -66,7 +66,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
                 // Configure connection pool for optimal performance
                 .applyToConnectionPoolSettings(poolBuilder ->
                     poolBuilder.maxSize(100)                                    // Maximum connections in pool
-                           .minSize(5)                                          // Minimum connections to maintain (reduced from 10)
+                           .minSize(5)                                          // Minimum connections to maintain
                            .maxConnectionIdleTime(60000, TimeUnit.MILLISECONDS) // Release idle connections after 60s
                            .maxWaitTime(10000, TimeUnit.MILLISECONDS)           // Wait up to 10s for available connection
                            .maintenanceInitialDelay(0, TimeUnit.MILLISECONDS)   // Start maintenance immediately
