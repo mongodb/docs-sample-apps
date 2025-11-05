@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Date;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -75,6 +76,7 @@ public class Movie {
      * Maps to the _id field in MongoDB.
      * Can be null for new documents (MongoDB will generate it).
      */
+    @JsonProperty("_id")
     private ObjectId id;
 
     /**

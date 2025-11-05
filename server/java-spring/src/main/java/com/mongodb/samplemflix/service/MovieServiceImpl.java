@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -9,6 +10,12 @@ import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.*;
 import com.mongodb.samplemflix.repository.MovieRepository;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +24,7 @@ import java.util.stream.Collectors;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -51,6 +59,9 @@ public class MovieServiceImpl implements MovieService {
     private final MovieRepository movieRepository;
     private final MongoTemplate mongoTemplate;
     private final ObjectMapper objectMapper;
+
+    @Value("${voyage.api.key:#{null}}")
+    private String voyageApiKey;
 
     public MovieServiceImpl(MovieRepository movieRepository, MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
         this.movieRepository = movieRepository;
@@ -788,5 +799,120 @@ public class MovieServiceImpl implements MovieService {
         } catch (Exception e) {
             throw new DatabaseOperationException("Error performing vector search: " + e.getMessage());
         }
+    }
+
+    @Override
+    public List<VectorSearchResult> vectorSearchMovies(String query, Integer limit) {
+        // Validate query parameter
+        if (query == null || query.trim().isEmpty()) {
+            throw new ValidationException("Search query is required");
+        }
+
+        // Check if Voyage API key is configured
+        if (voyageApiKey == null || voyageApiKey.trim().isEmpty()) {
+            throw new ValidationException(
+                "Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the application.properties file"
+            );
+        }
+
+        // Validate and set default limit
+        int resultLimit = Math.clamp(limit != null ? limit : 10, 1, 50);
+
+        try {
+            // Generate embedding using Voyage AI REST API
+            // We call the API directly to specify output_dimension=2048
+            List<Double> queryVector = generateVoyageEmbedding(query, voyageApiKey);
+
+            // Build the $vectorSearch aggregation stage
+            Document vectorSearchStage = new Document("$vectorSearch", new Document()
+                    .append("index", "vector_index")
+                    .append("path", "plot_embedding_voyage_3_large")
+                    .append("queryVector", queryVector)
+                    .append("numCandidates", resultLimit * 15)  // Search more candidates for better results
+                    .append("limit", resultLimit)
+            );
+
+            // Project the fields we need in the response
+            Document projectStage = new Document("$project", new Document()
+                    .append("_id", 1)
+                    .append("title", 1)
+                    .append("plot", 1)
+                    .append("score", new Document("$meta", "vectorSearchScore"))
+            );
+
+            // Execute the aggregation pipeline on the embedded_movies collection
+            List<Document> aggregationPipeline = List.of(vectorSearchStage, projectStage);
+
+            List<VectorSearchResult> results = new ArrayList<>();
+            mongoTemplate.getCollection("embedded_movies")
+                    .aggregate(aggregationPipeline)
+                    .forEach(doc -> {
+                        VectorSearchResult result = VectorSearchResult.builder()
+                                .id(doc.getObjectId("_id").toString())
+                                .title(doc.getString("title"))
+                                .plot(doc.getString("plot"))
+                                .score(doc.getDouble("score"))
+                                .build();
+                        results.add(result);
+                    });
+
+            return results;
+
+        } catch (Exception e) {
+            throw new DatabaseOperationException("Error performing vector search: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generates a vector embedding using the Voyage AI REST API.
+     *
+     * <p>This method calls the Voyage AI API directly to generate embeddings with 2048 dimensions.
+     * The voyage-3-large model supports multiple dimensions (256, 512, 1024, 2048), and we explicitly
+     * request 2048 to match the vector search index configuration.
+     *
+     * @param text The text to generate an embedding for
+     * @param apiKey The Voyage AI API key
+     * @return List of doubles representing the embedding vector
+     * @throws IOException if the HTTP request fails
+     * @throws InterruptedException if the HTTP request is interrupted
+     */
+    private List<Double> generateVoyageEmbedding(String text, String apiKey) throws IOException, InterruptedException {
+        // Create HTTP client
+        HttpClient client = HttpClient.newHttpClient();
+
+        // Build the request body with output_dimension set to 2048
+        String requestBody = String.format(
+                "{\"input\": [\"%s\"], \"model\": \"voyage-3-large\", \"output_dimension\": 2048, \"input_type\": \"query\"}",
+                text.replace("\"", "\\\"").replace("\n", "\\n")
+        );
+
+        // Create the HTTP request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.voyageai.com/v1/embeddings"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        // Send the request and get the response
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Check for successful response
+        if (response.statusCode() != 200) {
+            throw new IOException("Voyage AI API returned status code " + response.statusCode() + ": " + response.body());
+        }
+
+        // Parse the JSON response to extract the embedding
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(response.body());
+        JsonNode embeddingNode = root.path("data").get(0).path("embedding");
+
+        // Convert the embedding to a List<Double>
+        List<Double> embedding = new ArrayList<>();
+        for (JsonNode value : embeddingNode) {
+            embedding.add(value.asDouble());
+        }
+
+        return embedding;
     }
 }
