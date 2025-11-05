@@ -26,6 +26,10 @@
         <impsort.plugin.version>1.12.0</impsort.plugin.version>
         <byte-buddy.version>1.17.8</byte-buddy.version>
         <langchain4j.version>1.0.0-beta3</langchain4j.version>
+        <!--suppress UnresolvedMavenProperty -->
+        <mongodb.uri>${env.MONGODB_URI}</mongodb.uri>
+        <!--suppress UnresolvedMavenProperty -->
+        <enable.search.tests>${env.ENABLE_SEARCH_TESTS}</enable.search.tests>
     </properties>
 
     <dependencies>
@@ -138,10 +142,10 @@
                         -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar
                         -Xshare:off
                     </argLine>
-                    <!-- Pass system properties as environment variables to test JVM -->
+                    <!-- Pass Maven properties as environment variables to test JVM -->
                     <environmentVariables>
-                        <MONGODB_URI>${MONGODB_URI}</MONGODB_URI>
-                        <ENABLE_SEARCH_TESTS>${ENABLE_SEARCH_TESTS}</ENABLE_SEARCH_TESTS>
+                        <MONGODB_URI>${mongodb.uri}</MONGODB_URI>
+                        <ENABLE_SEARCH_TESTS>${enable.search.tests}</ENABLE_SEARCH_TESTS>
                     </environmentVariables>
                 </configuration>
             </plugin>
