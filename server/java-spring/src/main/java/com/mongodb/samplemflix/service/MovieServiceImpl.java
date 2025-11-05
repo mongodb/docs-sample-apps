@@ -863,7 +863,7 @@ public class MovieServiceImpl implements MovieService {
             // Step 1: Get movie IDs and scores from embedded_movies (which has the vector embeddings)
             List<ObjectId> movieIds = new ArrayList<>();
             Map<String, Double> scoreMap = new HashMap<>();
-            
+
             mongoTemplate.getCollection("embedded_movies")
                     .aggregate(aggregationPipeline)
                     .forEach(doc -> {
@@ -873,44 +873,81 @@ public class MovieServiceImpl implements MovieService {
                     });
 
             // Step 2: Fetch complete movie data from the movies collection (for CRUD compatibility)
+            // Use aggregation to safely handle dirty data in the year field
             List<VectorSearchResult> results = new ArrayList<>();
+
             if (!movieIds.isEmpty()) {
-                Query movieQuery = new Query(Criteria.where("_id").in(movieIds));
-                List<Movie> movies = mongoTemplate.find(movieQuery, Movie.class);
-                
-                // Log if there's a mismatch between collections
-                if (movies.size() != movieIds.size()) {
-                    System.out.println("Warning: Found " + movieIds.size() + 
-                        " movies in embedded_movies but only " + movies.size() + 
-                        " in movies collection for vector search");
-                }
-                
-                // Convert to VectorSearchResult with scores preserved
-                for (Movie movie : movies) {
-                    String movieIdStr = movie.getId().toString();
-                    Double score = scoreMap.get(movieIdStr);
-                    
-                    if (score != null) {  // Only include movies that have vector scores
-                        VectorSearchResult result = VectorSearchResult.builder()
-                                .id(movieIdStr)
-                            .title(movie.getTitle())
-                            .plot(movie.getPlot())
-                            .poster(movie.getPoster())
-                            .year(movie.getYear())
-                            .genres(movie.getGenres())
-                            .directors(movie.getDirectors())
-                            .cast(movie.getCast())
-                            .score(score)
-                            .build();
-                        results.add(result);
-                    }
-                }
+                // Build aggregation pipeline to safely convert year field
+                Document matchStage = new Document("$match", new Document("_id", new Document("$in", movieIds)));
+
+                // Project stage to safely convert year to integer, handling dirty data
+                Document projectStage2 = new Document("$project", new Document()
+                        .append("_id", 1)
+                        .append("title", 1)
+                        .append("plot", 1)
+                        .append("poster", 1)
+                        .append("genres", 1)
+                        .append("directors", 1)
+                        .append("cast", 1)
+                        // Safely convert year to integer, handling strings and dirty data
+                        .append("year", new Document("$cond", new Document()
+                                .append("if", new Document("$and", java.util.Arrays.asList(
+                                        new Document("$ne", java.util.Arrays.asList("$year", null)),
+                                        new Document("$eq", java.util.Arrays.asList(new Document("$type", "$year"), "int"))
+                                )))
+                                .append("then", "$year")
+                                .append("else", null)
+                        ))
+                );
+
+                List<Document> moviePipeline = List.of(matchStage, projectStage2);
+
+                // Execute aggregation and manually build VectorSearchResult objects
+                mongoTemplate.getCollection("movies").aggregate(moviePipeline)
+                        .forEach(doc -> {
+                            ObjectId movieIdObj = doc.getObjectId("_id");
+                            if (movieIdObj == null) {
+                                return;
+                            }
+
+                            String movieIdStr = movieIdObj.toString();
+                            Double score = scoreMap.get(movieIdStr);
+
+                            if (score != null) {  // Only include movies that have vector scores
+                                // Safely get list fields, defaulting to null if not present
+                                List<String> genres = doc.getList("genres", String.class);
+                                List<String> directors = doc.getList("directors", String.class);
+                                List<String> cast = doc.getList("cast", String.class);
+
+                                VectorSearchResult result = VectorSearchResult.builder()
+                                        .id(movieIdStr)
+                                        .title(doc.getString("title"))
+                                        .plot(doc.getString("plot"))
+                                        .poster(doc.getString("poster"))
+                                        .year(doc.getInteger("year"))  // Will be null for dirty data
+                                        .genres(genres)
+                                        .directors(directors)
+                                        .cast(cast)
+                                        .score(score)
+                                        .build();
+                                results.add(result);
+                            }
+                        });
             }
 
             return results;
 
+        } catch (IOException e) {
+            // Handle Voyage AI API errors
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Network error calling Voyage AI API";
+            throw new DatabaseOperationException("Error performing vector search: " + errorMsg);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new DatabaseOperationException("Vector search was interrupted");
         } catch (Exception e) {
-            throw new DatabaseOperationException("Error performing vector search: " + e.getMessage());
+            // Handle other errors (e.g., MongoDB errors, parsing errors)
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new DatabaseOperationException("Error performing vector search: " + errorMsg);
         }
     }
 
@@ -956,7 +993,26 @@ public class MovieServiceImpl implements MovieService {
         // Parse the JSON response to extract the embedding
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(response.body());
-        JsonNode embeddingNode = root.path("data").get(0).path("embedding");
+
+        // Validate response structure
+        if (!root.has("data")) {
+            throw new IOException("Invalid Voyage AI API response: missing 'data' field. Response: " + response.body());
+        }
+
+        JsonNode dataNode = root.get("data");
+        if (dataNode == null || !dataNode.isArray() || dataNode.size() == 0) {
+            throw new IOException("Invalid Voyage AI API response: 'data' field is empty or not an array. Response: " + response.body());
+        }
+
+        JsonNode firstElement = dataNode.get(0);
+        if (firstElement == null || !firstElement.has("embedding")) {
+            throw new IOException("Invalid Voyage AI API response: missing 'embedding' field. Response: " + response.body());
+        }
+
+        JsonNode embeddingNode = firstElement.get("embedding");
+        if (embeddingNode == null || !embeddingNode.isArray()) {
+            throw new IOException("Invalid Voyage AI API response: 'embedding' is not an array. Response: " + response.body());
+        }
 
         // Convert the embedding to a List<Double>
         List<Double> embedding = new ArrayList<>();
