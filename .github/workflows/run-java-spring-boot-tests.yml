@@ -35,6 +35,13 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
 
+      - name: Debug environment variables
+        run: |
+          echo "Checking environment variables..."
+          echo "MONGODB_URI is set: $(if [ -n "$MONGODB_URI" ]; then echo 'YES'; else echo 'NO'; fi)"
+          echo "ENABLE_SEARCH_TESTS is set: $(if [ -n "$ENABLE_SEARCH_TESTS" ]; then echo 'YES'; else echo 'NO'; fi)"
+          echo "MONGODB_URI length: ${#MONGODB_URI}"
+
       - name: Run unit tests
         run: ./mvnw test
 
