@@ -53,6 +53,7 @@ jobs:
 
       - name: Generate Test Summary
         if: always()
+        working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-surefire.sh
           .github/scripts/generate-test-summary-surefire.sh server/java-spring/target/surefire-reports
