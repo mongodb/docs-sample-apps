@@ -166,6 +166,12 @@ public class MovieControllerImpl {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+    
+    /**
+     * PATCH /api/movies/{id}
+     *
+     * <p>Updates a single movie document.
+     */
 
     @Operation(
         summary = "Update a movie by ID",

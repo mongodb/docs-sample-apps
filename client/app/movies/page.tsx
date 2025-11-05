@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import pageStyles from "./page.module.css";
 import movieStyles from "./movies.module.css";
-import { MovieCard, Pagination, PageSizeSelector, AddMovieForm, BatchEditMovieForm } from "../components";
+import { MovieCard, Pagination, PageSizeSelector, AddMovieForm, BatchEditMovieForm, SearchMovieModal } from "../components";
 import { ErrorDisplay, LoadingSpinner } from "../components/ui";
-import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch } from "../lib/api";
+import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch, searchMovies } from "../lib/api";
 import { Movie } from "../types/movie";
 import { APP_CONFIG, ROUTES } from "../lib/constants";
+import type { SearchParams } from "../components/SearchMovieModal";
 
 export default function Movies() {
   const searchParams = useSearchParams();
@@ -21,12 +22,22 @@ export default function Movies() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBatchEditForm, setShowBatchEditForm] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedMovies, setSelectedMovies] = useState<Set<string>>(new Set());
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<Movie[]>([]);
+  const [searchHasNextPage, setSearchHasNextPage] = useState(false);
+  const [searchHasPrevPage, setSearchHasPrevPage] = useState(false);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchLimit, setSearchLimit] = useState(20);
+  const [currentSearchParams, setCurrentSearchParams] = useState<SearchParams | null>(null);
   
   const page = parseInt(searchParams.get('page') || '1');
   const limit = Math.min(
@@ -193,6 +204,109 @@ export default function Movies() {
     setShowDeleteConfirmation(false);
   };
 
+  const handleSearch = () => {
+    setShowSearchModal(true);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleCancelSearch = () => {
+    setShowSearchModal(false);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleSearchSubmit = async (searchParams: SearchParams) => {
+    setIsSearching(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    // For new searches, start from page 1
+    const searchSkip = 0;
+    const searchLimitToUse = searchParams.limit || 20;
+    
+    const searchParamsWithPagination = {
+      ...searchParams,
+      limit: searchLimitToUse,
+      skip: searchSkip,
+    };
+
+    const result = await searchMovies(searchParamsWithPagination);
+
+    if (result.success) {
+      setSearchResults(result.movies || []);
+      setSearchHasNextPage(result.hasNextPage || false);
+      setSearchHasPrevPage(result.hasPrevPage || false);
+      setSearchTotalCount(result.totalCount || 0);
+      setIsSearchMode(true);
+      setSearchPage(1);
+      setSearchLimit(searchLimitToUse);
+      setCurrentSearchParams(searchParams);
+      setShowSearchModal(false);
+      setSelectedMovies(new Set()); // Clear selection when switching to search mode
+      
+      const totalCount = result.totalCount || 0;
+      if (totalCount === 0) {
+        setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
+      } else {
+        setSuccessMessage(`Found ${totalCount} total movies matching your search criteria.`);
+      }
+    } else {
+      setError(result.error || 'Failed to search movies');
+    }
+
+    setIsSearching(false);
+  };
+
+  const handleClearSearch = () => {
+    setIsSearchMode(false);
+    setSearchResults([]);
+    setSearchHasNextPage(false);
+    setSearchHasPrevPage(false);
+    setSearchTotalCount(0);
+    setSearchPage(1);
+    setCurrentSearchParams(null);
+    setSelectedMovies(new Set());
+    setError(null);
+    setSuccessMessage(null);
+    // The current movies will show the regular paginated results
+  };
+
+  // Get the movies to display based on current mode
+  const displayMovies = isSearchMode ? searchResults : movies;
+
+  const handleSearchPageChange = async (newPage: number) => {
+    if (!currentSearchParams) return;
+    
+    setIsSearching(true);
+    setError(null);
+    
+    const searchSkip = (newPage - 1) * searchLimit;
+    const searchParamsWithPagination = {
+      ...currentSearchParams,
+      limit: searchLimit,
+      skip: searchSkip,
+    };
+
+    try {
+      const result = await searchMovies(searchParamsWithPagination);
+      
+      if (result.success) {
+        setSearchResults(result.movies || []);
+        setSearchHasNextPage(result.hasNextPage || false);
+        setSearchHasPrevPage(result.hasPrevPage || false);
+        setSearchTotalCount(result.totalCount || 0);
+        setSearchPage(newPage);
+      } else {
+        setError(result.error || 'Failed to load search results');
+      }
+    } catch (error) {
+      setError('Failed to load search results');
+    }
+    
+    setIsSearching(false);
+  };
+
   if (isLoading && !showAddForm) {
     return (
       <div className={pageStyles.page}>
@@ -210,11 +324,36 @@ export default function Movies() {
     <div className={pageStyles.page}>
       <main className={pageStyles.main}>
         <div className={movieStyles.pageHeader}>
-          <h1 className={movieStyles.pageTitle}>Movies</h1>
+          <h1 className={movieStyles.pageTitle}>
+            {isSearchMode ? `Search Results` : 'Movies'}
+          </h1>
           
           <div className={movieStyles.headerActions}>
+            {/* Search and Clear Search Controls */}
+            {!showAddForm && !showBatchEditForm && !showSearchModal && (
+              <div className={movieStyles.searchControls}>
+                {isSearchMode && (
+                  <button
+                    onClick={handleClearSearch}
+                    className={movieStyles.clearSearchButton}
+                    type="button"
+                  >
+                    ← Back to All Movies
+                  </button>
+                )}
+                <button
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  className={movieStyles.searchButton}
+                  type="button"
+                >
+                  {isSearching ? 'Searching...' : 'Search Movies'}
+                </button>
+              </div>
+            )}
+
             {/* Batch Selection Controls */}
-            {!showAddForm && !showBatchEditForm && movies.length > 0 && (
+            {!showAddForm && !showBatchEditForm && !showSearchModal && displayMovies.length > 0 && (
               <div className={movieStyles.selectionControls}>
                 {selectedMovies.size > 0 && (
                   <>
@@ -240,14 +379,16 @@ export default function Movies() {
               </div>
             )}
 
-            <button
-              onClick={handleAddMovie}
-              disabled={showAddForm || showBatchEditForm || isCreating}
-              className={movieStyles.addButton}
-              type="button"
-            >
-              {isCreating ? 'Creating...' : '+ Add Movie'}
-            </button>
+            {!isSearchMode && (
+              <button
+                onClick={handleAddMovie}
+                disabled={showAddForm || showBatchEditForm || showSearchModal || isCreating}
+                className={movieStyles.addButton}
+                type="button"
+              >
+                {isCreating ? 'Creating...' : '+ Add Movie'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -273,6 +414,15 @@ export default function Movies() {
           />
         )}
 
+        {/* Search Movie Modal */}
+        {showSearchModal && (
+          <SearchMovieModal
+            onSearch={handleSearchSubmit}
+            onCancel={handleCancelSearch}
+            isLoading={isSearching}
+          />
+        )}
+
         {/* Batch Edit Movie Form */}
         {showBatchEditForm && (
           <BatchEditMovieForm
@@ -283,41 +433,95 @@ export default function Movies() {
           />
         )}
 
-        {/* Page Size Selector */}
-        {!showAddForm && !showBatchEditForm && <PageSizeSelector currentLimit={limit} />}
+        {/* Page Size Selector - only show for regular mode */}
+        {!showAddForm && !showBatchEditForm && !showSearchModal && !isSearchMode && <PageSizeSelector currentLimit={limit} />}
         
         {/* Movies Content */}
-        {!showAddForm && !showBatchEditForm && (
+        {!showAddForm && !showBatchEditForm && !showSearchModal && (
           <>
-            {error && movies.length === 0 ? (
+            {error && displayMovies.length === 0 ? (
               <ErrorDisplay 
                 message={error} 
-                onRetry={loadMovies}
+                onRetry={isSearchMode ? () => handleSearchSubmit(currentSearchParams!) : loadMovies}
               />
-            ) : movies.length === 0 ? (
+            ) : displayMovies.length === 0 ? (
               <div className={movieStyles.noMovies}>
-                <p>No movies found. Make sure the Express server is running on port 3001.</p>
+                <p>
+                  {isSearchMode 
+                    ? 'No movies found matching your search criteria. Try different search terms.'
+                    : 'No movies found. Make sure the Express server is running on port 3001.'
+                  }
+                </p>
               </div>
             ) : (
               <>
                 <div className={movieStyles.moviesGrid}>
-                  {movies.map((movie) => (
+                  {displayMovies.map((movie) => (
                     <MovieCard 
                       key={movie._id} 
                       movie={movie} 
                       isSelected={selectedMovies.has(movie._id)}
                       onSelectionChange={handleMovieSelection}
-                      showCheckbox={!showAddForm && !showBatchEditForm}
+                      showCheckbox={!showAddForm && !showBatchEditForm && !showSearchModal}
                     />
                   ))}
                 </div>
                 
-                <Pagination
-                  currentPage={page}
-                  hasNextPage={hasNextPage}
-                  hasPrevPage={hasPrevPage}
-                  limit={limit}
-                />
+                {/* Show pagination based on current mode */}
+                {isSearchMode ? (
+                  <nav className={movieStyles.pagination} aria-label="Search results pagination">
+                    <div className={movieStyles.paginationContainer}>
+                      {/* Previous Button */}
+                      {searchHasPrevPage ? (
+                        <button
+                          onClick={() => handleSearchPageChange(searchPage - 1)}
+                          className={movieStyles.pageButton}
+                          disabled={isSearching}
+                          aria-label="Go to previous page"
+                        >
+                          ← Previous
+                        </button>
+                      ) : (
+                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                          ← Previous
+                        </span>
+                      )}
+
+                      {/* Current Page Info */}
+                      <div className={movieStyles.pageInfo}>
+                        Page {searchPage}
+                      </div>
+
+                      {/* Next Button */}
+                      {searchHasNextPage ? (
+                        <button
+                          onClick={() => handleSearchPageChange(searchPage + 1)}
+                          className={movieStyles.pageButton}
+                          disabled={isSearching}
+                          aria-label="Go to next page"
+                        >
+                          Next →
+                        </button>
+                      ) : (
+                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                          Next →
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className={movieStyles.additionalInfo}>
+                      {searchLimit} movies per page
+                    </div>
+                  </nav>
+                ) : (
+                  <Pagination
+                    currentPage={page}
+                    hasNextPage={hasNextPage}
+                    hasPrevPage={hasPrevPage}
+                    limit={limit}
+                  />
+                )}
               </>
             )}
           </>

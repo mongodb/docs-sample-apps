@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query, Path
-from src.database.mongo_client import db, get_collection, voyage_ai_available
-from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, VectorSearchResult
+from fastapi import APIRouter, Query, Path, Body
+from src.database.mongo_client import db, get_collection
+from src.models.models import CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
+
 from typing import List
 from datetime import datetime
 from src.utils.errorHandler import create_success_response, create_error_response
@@ -97,11 +98,11 @@ router = APIRouter()
             Must be one of "must", "should", "mustNot", or "filter". Default is "must".
 
     Returns:
-        SuccessResponse[List[Movie]]: A response object containing the list of matching movies.
+        SuccessResponse[SearchMoviesResponse]: A response object containing the list of matching movies and total count.
 """
 @router.get(
     "/search",
-    response_model=SuccessResponse[List[Movie]],
+    response_model=SuccessResponse[SearchMoviesResponse],
     status_code=200,
     summary="Search movies using MongoDB Search."
 )
@@ -114,7 +115,7 @@ async def search_movies(
     limit:int = Query(default=20, ge=1, le=100),
     skip:int = Query(default=0, ge=0),
     search_operator: str = Query(default="must")
-) -> SuccessResponse[List[Movie]]:
+) -> SuccessResponse[SearchMoviesResponse]:
     
     search_phrases = []
 
@@ -199,29 +200,37 @@ async def search_movies(
                 }
             }
         },
-        {"$skip": skip},
-        {"$limit": limit},
-
-        # Project only the fields needed in the response
         {
-            "$project": {
-                "_id": 1,
-                "title": 1,
-                "year": 1,
-                "plot": 1,
-                "fullplot": 1,
-                "released":1,
-                "runtime": 1,
-                "poster": 1,
-                "genres": 1,
-                "directors": 1,
-                "writers": 1,
-                "cast": 1,
-                "countries": 1,
-                "languages": 1,
-                "rated": 1,
-                "awards": 1,
-                "imdb": 1,
+            "$facet": {
+                "totalCount": [
+                    {"$count": "count"}
+                ],
+                "results": [
+                    {"$skip": skip},
+                    {"$limit": limit},
+                    # Project only the fields needed in the response
+                    {
+                        "$project": {
+                            "_id": 1,
+                            "title": 1,
+                            "year": 1,
+                            "plot": 1,
+                            "fullplot": 1,
+                            "released":1,
+                            "runtime": 1,
+                            "poster": 1,
+                            "genres": 1,
+                            "directors": 1,
+                            "writers": 1,
+                            "cast": 1,
+                            "countries": 1,
+                            "languages": 1,
+                            "rated": 1,
+                            "awards": 1,
+                            "imdb": 1,
+                        }
+                    }
+                ]
             }
         }
     ]
@@ -236,14 +245,21 @@ async def search_movies(
             details=str(e)
         )    
 
+    # Extract total count and movies from facet results
+    facet_result = results[0] if results else {}
+    total_count = facet_result.get("totalCount", [{}])[0].get("count", 0)
+    movies_data = facet_result.get("results", [])
     
     # Convert ObjectId to string for each movie in the results
     movies = []
-    for movie in results:
+    for movie in movies_data:
         movie["_id"] = str(movie["_id"])
         movies.append(movie)
 
-    return create_success_response(movies, f"Found {len(movies)} movies matching the search criteria.")
+    return create_success_response(
+        SearchMoviesResponse(movies=movies, totalCount=total_count), 
+        f"Found {total_count} movies matching the search criteria."
+      )
 
 #----------------------------------------------------------------------------------------------------------
 # MongoDB Vector Search
@@ -1107,24 +1123,36 @@ async def update_movie(
         summary="Batch update movies matching the given filter."
         )
 async def update_movies_batch(
-    filter: MovieFilter,
-    update: UpdateMovieRequest   
+    request_body: dict = Body(...)
 ) -> SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
-    filter_dict = filter.model_dump(exclude_unset=True, exclude_none=True)
-    update_dict = update.model_dump(exclude_unset=True, exclude_none=True)
+    # Extract filter and update from the request body
+    filter_data = request_body.get("filter", {})
+    update_data = request_body.get("update", {})
 
-    #Verify the filter and the update dicts are not empty
-    if not filter_dict or not update_dict:
+    if not filter_data or not update_data:
         return create_error_response(
             message="Both filter and update objects are required",
             code="MISSING_REQUIRED_FIELDS",
             details=None
         )
 
+    # Convert string IDs to ObjectIds if _id filter is present
+    if "_id" in filter_data and isinstance(filter_data["_id"], dict):
+        if "$in" in filter_data["_id"]:
+            # Convert list of string IDs to ObjectIds
+            try:
+                filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
+            except Exception:
+                return create_error_response(
+                    message="Invalid ObjectId format in filter",
+                    code="INVALID_OBJECT_ID",
+                    details=None
+                )
+
     try:
-        result = await movies_collection.update_many(filter_dict,{"$set": update_dict})
+        result = await movies_collection.update_many(filter_data, {"$set": update_data})
     except Exception as e:
         return create_error_response(
             message="An error occurred while updating movies.",
@@ -1210,20 +1238,35 @@ async def delete_movie_by_id(id: str):
         status_code=200,
         summary="Delete multiple movies matching the given filter."
 )
-async def delete_movies_batch(movie_filter:MovieFilter) -> SuccessResponse[dict]:
+async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse[dict]:
 
     movies_collection = get_collection("movies")
-    movie_filter_dict = movie_filter.model_dump(exclude_unset=True,exclude_none=True)
+    
+    # Extract filter from the request body
+    filter_data = request_body.get("filter", {})
 
-    if not movie_filter_dict:
+    if not filter_data:
         return create_error_response(
             message="Filter object is required and cannot be empty.",
             code="MISSING_FILTER",
             details=None
         )
 
+    # Convert string IDs to ObjectIds if _id filter is present
+    if "_id" in filter_data and isinstance(filter_data["_id"], dict):
+        if "$in" in filter_data["_id"]:
+            # Convert list of string IDs to ObjectIds
+            try:
+                filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
+            except Exception:
+                return create_error_response(
+                    message="Invalid ObjectId format in filter",
+                    code="INVALID_OBJECT_ID",
+                    details=None
+                )
+
     try:
-        result = await movies_collection.delete_many(movie_filter_dict)
+        result = await movies_collection.delete_many(filter_data)
     except Exception as e:
         return create_error_response(
             message="An error occurred while deleting movies.",

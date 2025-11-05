@@ -97,6 +97,7 @@ class UpdateMovieRequest(BaseModel):
     poster: Optional[str]  = None  
 
 class MovieFilter(BaseModel):
+    _id: Optional[Any] = None  # Support for MongoDB ID queries like { $in: [...] }
     title: Optional[str] = None
     year: Optional[int] = None
     plot: Optional[str]  = None
@@ -111,6 +112,10 @@ class MovieFilter(BaseModel):
     runtime: Optional[int]  = None
     poster: Optional[str]  = None   
 
+class SearchMoviesResponse(BaseModel):
+    movies: list[Movie]
+    totalCount: int
+      
 class VectorSearchResult(BaseModel):
     id: Optional[str] = Field(alias="_id")
     title: str
@@ -133,6 +138,13 @@ class ErrorDetails(BaseModel):
     message: str
     code: Optional[str]
     details: Optional[Any] = None
+
+class BatchUpdateRequest(BaseModel):
+    filter: MovieFilter
+    update: UpdateMovieRequest
+
+class BatchDeleteRequest(BaseModel):
+    filter: MovieFilter
 
 class ErrorResponse(BaseModel):
     success: bool = False

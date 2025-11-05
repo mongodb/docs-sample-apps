@@ -261,7 +261,7 @@ export async function createMoviesBatch(
 }
 
 /**
- * PUT /api/movies/:id
+ * PATCH /api/movies/:id
  *
  * Updates a single movie document.
  * Demonstrates the updateOne() operation.
