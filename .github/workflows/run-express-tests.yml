@@ -1,7 +1,7 @@
 name: Run Express Tests
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - development
   push:
@@ -12,6 +12,8 @@ jobs:
   test:
     name: Run Express Tests
     runs-on: ubuntu-latest
+    # Require manual approval for fork PRs
+    environment: testing
 
     defaults:
       run:
@@ -20,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

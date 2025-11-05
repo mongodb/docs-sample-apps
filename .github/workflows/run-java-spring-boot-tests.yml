@@ -1,7 +1,7 @@
 name: Run Java Spring Boot Tests
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - development
   push:
@@ -12,6 +12,8 @@ jobs:
   test:
     name: Run Java Spring Boot Tests
     runs-on: ubuntu-latest
+    # Require manual approval for fork PRs
+    environment: testing
 
     defaults:
       run:
@@ -24,6 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
