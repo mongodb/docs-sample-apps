@@ -32,15 +32,17 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run unit tests
-        run: ./mvnw test
-        env:
-          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+        run: |
+          export MONGODB_URI="${{ secrets.MFLIX_URI }}"
+          ./mvnw test
+        shell: bash
 
       - name: Run integration tests
-        run: ./mvnw test -Dtest=MongoDBSearchIntegrationTest
-        env:
-          MONGODB_URI: ${{ secrets.MFLIX_URI }}
-          ENABLE_SEARCH_TESTS: true
+        run: |
+          export MONGODB_URI="${{ secrets.MFLIX_URI }}"
+          export ENABLE_SEARCH_TESTS=true
+          ./mvnw test -Dtest=MongoDBSearchIntegrationTest
+        shell: bash
         continue-on-error: true
 
       - name: Upload test results
