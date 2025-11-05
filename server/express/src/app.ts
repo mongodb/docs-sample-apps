@@ -9,6 +9,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-express";
 import {
   closeDatabaseConnection,
   connectToDatabase,
@@ -16,6 +17,7 @@ import {
 } from "./config/database";
 import { errorHandler } from "./utils/errorHandler";
 import moviesRouter from "./routes/movies";
+import { swaggerSpec } from "./config/swagger";
 
 // Load environment variables from .env file
 // This must be called before any other imports that use environment variables
@@ -45,6 +47,12 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 /**
+ * Swagger API Documentation
+ * Provides interactive API documentation at /api-docs
+ */
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+/**
  * API Routes
  * All movie-related CRUD operations are handled by the movies router
  */
@@ -53,6 +61,37 @@ app.use("/api/movies", moviesRouter);
 /**
  * Root Endpoint
  * Provides basic information about the API
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Get API information
+ *     description: Returns basic information about the API and available endpoints
+ *     tags: [Info]
+ *     responses:
+ *       200:
+ *         description: API information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 name:
+ *                   type: string
+ *                   example: MongoDB Sample MFlix API
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ *                 description:
+ *                   type: string
+ *                 endpoints:
+ *                   type: object
+ *                   properties:
+ *                     movies:
+ *                       type: string
+ *                       example: /api/movies
+ *                     documentation:
+ *                       type: string
+ *                       example: /api-docs
  */
 app.get("/", (req, res) => {
   res.json({
@@ -62,6 +101,7 @@ app.get("/", (req, res) => {
       "Express.js backend demonstrating MongoDB operations with the sample_mflix dataset",
     endpoints: {
       movies: "/api/movies",
+      documentation: "/api-docs",
     },
   });
 });
@@ -94,7 +134,7 @@ async function startServer() {
     // Start the Express server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log(`API documentation available at http://localhost:${PORT}`);
+      console.log(`API documentation available at http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
