@@ -202,7 +202,10 @@ public class MovieServiceImpl implements MovieService {
 
         // Convert Document filter to Spring Data Query
         Query query = new Query();
-        filter.forEach((key, value) -> query.addCriteria(Criteria.where(key).is(value)));
+        filter.forEach((key, value) -> {
+            Criteria criteria = buildCriteriaFromValue(key, value);
+            query.addCriteria(criteria);
+        });
 
         // Convert Document update to Spring Data Update
         Update mongoUpdate = new Update();
@@ -242,7 +245,10 @@ public class MovieServiceImpl implements MovieService {
 
         // Convert Document filter to Spring Data Query
         Query query = new Query();
-        filter.forEach((key, value) -> query.addCriteria(Criteria.where(key).is(value)));
+        filter.forEach((key, value) -> {
+            Criteria criteria = buildCriteriaFromValue(key, value);
+            query.addCriteria(criteria);
+        });
 
         DeleteResult result = mongoTemplate.remove(query, Movie.class);
 
@@ -914,5 +920,82 @@ public class MovieServiceImpl implements MovieService {
         }
 
         return embedding;
+    }
+
+    /**
+     * Builds a Spring Data Criteria from a filter key-value pair.
+     * Handles MongoDB query operators like $in, $gt, $lt, etc.
+     *
+     * @param key The field name (e.g., "_id")
+     * @param value The filter value (can be a simple value or a Document with operators)
+     * @return Criteria object for the query
+     */
+    @SuppressWarnings("unchecked")
+    private Criteria buildCriteriaFromValue(String key, Object value) {
+        Criteria criteria = Criteria.where(key);
+
+        // If value is a Document (Map), it might contain MongoDB operators
+        if (value instanceof Map) {
+            Map<String, Object> operatorMap = (Map<String, Object>) value;
+
+            // Handle each MongoDB operator
+            for (Map.Entry<String, Object> entry : operatorMap.entrySet()) {
+                String operator = entry.getKey();
+                Object operatorValue = entry.getValue();
+
+                switch (operator) {
+                    case "$in":
+                        // Convert string IDs to ObjectIds if the field is _id
+                        if ("_id".equals(key) && operatorValue instanceof List) {
+                            List<?> values = (List<?>) operatorValue;
+                            List<ObjectId> objectIds = values.stream()
+                                    .map(id -> new ObjectId(id.toString()))
+                                    .collect(Collectors.toList());
+                            criteria = criteria.in(objectIds);
+                        } else {
+                            criteria = criteria.in((List<?>) operatorValue);
+                        }
+                        break;
+                    case "$nin":
+                        criteria = criteria.nin((List<?>) operatorValue);
+                        break;
+                    case "$gt":
+                        criteria = criteria.gt(operatorValue);
+                        break;
+                    case "$gte":
+                        criteria = criteria.gte(operatorValue);
+                        break;
+                    case "$lt":
+                        criteria = criteria.lt(operatorValue);
+                        break;
+                    case "$lte":
+                        criteria = criteria.lte(operatorValue);
+                        break;
+                    case "$ne":
+                        criteria = criteria.ne(operatorValue);
+                        break;
+                    case "$regex":
+                        criteria = criteria.regex(operatorValue.toString());
+                        break;
+                    case "$exists":
+                        criteria = criteria.exists((Boolean) operatorValue);
+                        break;
+                    default:
+                        // For unknown operators, use the value as-is
+                        criteria = criteria.is(value);
+                        break;
+                }
+            }
+        } else {
+            // Simple equality check
+            // Convert string ID to ObjectId if the field is _id
+            if ("_id".equals(key) && value instanceof String) {
+                criteria = criteria.is(new ObjectId(value.toString()));
+            } else {
+                criteria = criteria.is(value);
+            }
+        }
+
+        return criteria;
     }
 }

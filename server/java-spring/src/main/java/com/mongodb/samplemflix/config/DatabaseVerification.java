@@ -41,6 +41,7 @@ public class DatabaseVerification {
     private static final String YEAR_INDEX_NAME = "year_index";
     private static final String MOVIE_ID_INDEX_NAME = "movie_id_index";
     private static final String VECTOR_INDEX_NAME = "vector_index";
+    private static final String ATLAS_SEARCH_INDEX_NAME = "movieSearchIndex";
 
     private final MongoDatabase database;
 
@@ -111,6 +112,9 @@ public class DatabaseVerification {
         // Create text search index for full-text search functionality
         createTextSearchIndex(moviesCollection);
 
+        // Create Atlas Search index for advanced search functionality
+        createAtlasSearchIndex(moviesCollection);
+
         // Create year index for aggregation performance
         createYearIndex(moviesCollection);
     }
@@ -160,6 +164,84 @@ public class DatabaseVerification {
             // (though text search queries will fail)
             logger.error("Could not create text search index: {}", e.getMessage());
             logger.warn("Text search functionality may not work without the index");
+        }
+    }
+
+    /**
+     * Creates an Atlas Search index on the movies collection if it doesn't already exist.
+     *
+     * <p>This index enables MongoDB Atlas Search functionality across multiple fields:
+     * <ul>
+     *   <li>plot: Short movie description (phrase matching)</li>
+     *   <li>fullplot: Full movie description (phrase matching)</li>
+     *   <li>directors: Director names (fuzzy text matching)</li>
+     *   <li>writers: Writer names (fuzzy text matching)</li>
+     *   <li>cast: Actor names (fuzzy text matching)</li>
+     * </ul>
+     *
+     * <p>This is different from the text search index - Atlas Search provides more advanced
+     * search capabilities including fuzzy matching, phrase search, and compound queries.
+     *
+     * <p>Note: This index can only be created on MongoDB Atlas clusters. If running on a
+     * local MongoDB instance, this will fail gracefully with a warning.
+     *
+     * @param moviesCollection the movies collection to create the index on
+     */
+    private void createAtlasSearchIndex(MongoCollection<Document> moviesCollection) {
+        try {
+            // Check if the Atlas Search index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listSearchIndexes()) {
+                if (ATLAS_SEARCH_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Atlas Search index '{}' already exists", ATLAS_SEARCH_INDEX_NAME);
+                    break;
+                }
+            }
+
+            if (!indexExists) {
+                // Define the Atlas Search index specification
+                // This matches the Python backend's index definition
+                Document indexDefinition = new Document("mappings", new Document()
+                        .append("dynamic", false)
+                        .append("fields", new Document()
+                                .append("plot", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("fullplot", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("directors", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("writers", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("cast", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                        )
+                );
+
+                // Create the index using the createSearchIndexes command
+                Document createIndexCommand = new Document("createSearchIndexes", MOVIES_COLLECTION)
+                        .append("indexes", java.util.Collections.singletonList(
+                                new Document("name", ATLAS_SEARCH_INDEX_NAME)
+                                        .append("definition", indexDefinition)
+                        ));
+
+                database.runCommand(createIndexCommand);
+
+                logger.info("Atlas Search index '{}' created successfully. Index may take a few moments to build.", ATLAS_SEARCH_INDEX_NAME);
+                logger.info("MongoDB Atlas Search is now ready to use on the '{}' collection", MOVIES_COLLECTION);
+            }
+
+        } catch (Exception e) {
+            // This is expected to fail on non-Atlas deployments (local MongoDB, etc.)
+            logger.warn("Could not create Atlas Search index: {}", e.getMessage());
+            logger.warn("Atlas Search functionality requires a MongoDB Atlas cluster.");
+            logger.warn("If you're using Atlas, the index may already exist or there may be a permissions issue.");
+            logger.warn("Search endpoint (/api/movies/search) will not work without this index.");
         }
     }
 

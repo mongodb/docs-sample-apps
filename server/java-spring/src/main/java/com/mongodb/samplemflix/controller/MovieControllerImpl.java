@@ -9,6 +9,7 @@ import com.mongodb.samplemflix.model.dto.DirectorStatisticsResult;
 import com.mongodb.samplemflix.model.dto.MovieSearchQuery;
 import com.mongodb.samplemflix.model.dto.MovieWithCommentsResult;
 import com.mongodb.samplemflix.model.dto.MoviesByYearResult;
+import com.mongodb.samplemflix.model.dto.SearchMoviesResponse;
 import com.mongodb.samplemflix.model.dto.UpdateMovieRequest;
 import com.mongodb.samplemflix.model.dto.VectorSearchResult;
 import com.mongodb.samplemflix.model.response.SuccessResponse;
@@ -379,7 +380,7 @@ public class MovieControllerImpl {
                      "Plot and fullplot use phrase operator for exact matching, while directors, writers, and cast use text operator with fuzzy matching."
     )
     @GetMapping("/search")
-    public ResponseEntity<SuccessResponse<List<Movie>>> searchMovies(
+    public ResponseEntity<SuccessResponse<SearchMoviesResponse>> searchMovies(
             @Parameter(description = "Text to search in the plot field (phrase matching)")
             @RequestParam(required = false) String plot,
             @Parameter(description = "Text to search in the fullplot field (phrase matching)")
@@ -411,10 +412,16 @@ public class MovieControllerImpl {
 
         List<Movie> movies = movieService.searchMovies(searchRequest);
 
-        SuccessResponse<List<Movie>> response = SuccessResponse.<List<Movie>>builder()
+        // Wrap results in SearchMoviesResponse to match Python backend structure
+        SearchMoviesResponse searchResponse = SearchMoviesResponse.builder()
+                .movies(movies)
+                .totalCount(movies.size())
+                .build();
+
+        SuccessResponse<SearchMoviesResponse> response = SuccessResponse.<SearchMoviesResponse>builder()
                 .success(true)
                 .message(String.format("Found %d movies matching the search criteria", movies.size()))
-                .data(movies)
+                .data(searchResponse)
                 .timestamp(Instant.now().toString())
                 .build();
 
