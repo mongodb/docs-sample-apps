@@ -38,6 +38,12 @@ export default function RootLayout({
               >
                 Movies
               </Link>
+              <Link 
+                href={ROUTES.aggregations}
+                className={styles.navLink}
+              >
+                Aggregations
+              </Link>
             </div>
           </div>
         </nav>

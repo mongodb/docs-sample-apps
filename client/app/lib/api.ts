@@ -183,7 +183,7 @@ export async function deleteMovie(id: string): Promise<{ success: boolean; error
  */
 export async function createMovie(movieData: Omit<Movie, '_id'>): Promise<{ success: boolean; error?: string; movieId?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -326,7 +326,7 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/movies/`, {
+    const response = await fetch(`${API_BASE_URL}/api/movies`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -360,6 +360,224 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
     return { 
       success: false, 
       error: 'Network error occurred while updating movies' 
+    };
+  }
+}
+
+/**
+ * Aggregation API Functions for Aggregations
+ */
+
+// Type definitions for aggregation responses
+export interface MovieWithComments {
+  _id: string;
+  title: string;
+  year: number;
+  genres: string[];
+  imdbRating: number;
+  totalComments: number;
+  recentComments: Array<{
+    userName: string;
+    userEmail: string;
+    text: string;
+    date: string;
+  }>;
+}
+
+export interface YearlyStats {
+  year: number;
+  movieCount: number;
+  averageRating: number;
+  highestRating: number;
+  lowestRating: number;
+  totalVotes: number;
+}
+
+export interface DirectorStats {
+  director: string;
+  movieCount: number;
+  averageRating: number;
+}
+
+/**
+ * Fetch movies with their most recent comments
+ */
+export async function fetchMoviesWithComments(
+  limit: number = 5,
+  movieId?: string
+): Promise<{ success: boolean; error?: string; data?: MovieWithComments[] }> {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    if (movieId) {
+      queryParams.append('movie_id', movieId);
+    }
+
+    console.log(`Fetching comments from: ${API_BASE_URL}/api/movies/aggregations/reportingByComments?${queryParams}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(`${API_BASE_URL}/api/movies/aggregations/reportingByComments?${queryParams}`, {
+      signal: controller.signal,
+      next: { revalidate: 300 },
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    clearTimeout(timeoutId);
+    console.log(`Comments response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error(`Comments API error: ${response.status} - ${errorText}`);
+      throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+    }
+
+    const result = await response.json();
+    console.log('Comments result:', result.success ? `${result.data?.length || 0} items` : 'failed');
+    
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data
+    };
+  } catch (error) {
+    console.error('Error fetching movies with comments:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'Request timed out after 15 seconds'
+      };
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Network error occurred while fetching movies with comments'
+    };
+  }
+}
+
+/**
+ * Fetch movies aggregated by year with statistics
+ */
+export async function fetchMoviesByYear(): Promise<{ success: boolean; error?: string; data?: YearlyStats[] }> {
+  try {
+    console.log(`Fetching year stats from: ${API_BASE_URL}/api/movies/aggregations/reportingByYear`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(`${API_BASE_URL}/api/movies/aggregations/reportingByYear`, {
+      signal: controller.signal,
+      next: { revalidate: 300 },
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    clearTimeout(timeoutId);
+    console.log(`Year stats response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error(`Year stats API error: ${response.status} - ${errorText}`);
+      throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+    }
+
+    const result = await response.json();
+    console.log('Year stats result:', result.success ? `${result.data?.length || 0} years` : 'failed');
+    
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data
+    };
+  } catch (error) {
+    console.error('Error fetching movies by year:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'Request timed out after 15 seconds'
+      };
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Network error occurred while fetching movies by year'
+    };
+  }
+}
+
+/**
+ * Fetch directors with most movies and their statistics
+ */
+export async function fetchDirectorStats(limit: number = 20): Promise<{ success: boolean; error?: string; data?: DirectorStats[] }> {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+
+    console.log(`Fetching director stats from: ${API_BASE_URL}/api/movies/aggregations/reportingByDirectors?${queryParams}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(`${API_BASE_URL}/api/movies/aggregations/reportingByDirectors?${queryParams}`, {
+      signal: controller.signal,
+      next: { revalidate: 300 },
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    clearTimeout(timeoutId);
+    console.log(`Director stats response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error(`Director stats API error: ${response.status} - ${errorText}`);
+      throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+    }
+
+    const result = await response.json();
+    console.log('Director stats result:', result.success ? `${result.data?.length || 0} directors` : 'failed');
+    
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data
+    };
+  } catch (error) {
+    console.error('Error fetching director stats:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'Request timed out after 15 seconds'
+      };
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Network error occurred while fetching director stats'
     };
   }
 }
@@ -434,6 +652,85 @@ export async function searchMovies(searchParams: {
     return { 
       success: false, 
       error: 'Network error occurred while searching movies' 
+    };
+  }
+}
+
+/**
+ * Search movies using MongoDB Vector Search to find movies with similar plots
+ */
+export async function vectorSearchMovies(searchParams: {
+  q: string;
+  limit?: number;
+}): Promise<{ success: boolean; error?: string; movies?: Movie[]; results?: any[] }> {
+  try {
+    const limit = searchParams.limit || 10;
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', searchParams.q);
+    queryParams.append('limit', limit.toString());
+
+    const response = await fetch(`${API_BASE_URL}/api/movies/vector-search?${queryParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || `Failed to perform vector search: ${response.status}` 
+      };
+    }
+
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'API returned error response' 
+      };
+    }
+
+    // Transform VectorSearchResult objects to Movie objects for backend compatibility
+    const movies: Movie[] = (result.data || []).map((item: any) => {
+      // Convert VectorSearchResult to Movie format
+      return {
+        _id: item._id || item.id, // Handle both _id (Python) and id (Java) field names
+        title: item.title || '',
+        plot: item.plot || '',
+        poster: item.poster,
+        year: item.year,
+        genres: item.genres || [],
+        directors: item.directors || [],
+        cast: item.cast || [],
+        // Add default values for fields not included in VectorSearchResult
+        fullplot: undefined,
+        released: undefined,
+        runtime: undefined,
+        writers: [],
+        countries: [],
+        languages: [],
+        rated: undefined,
+        awards: undefined,
+        imdb: undefined,
+        tomatoes: undefined,
+        metacritic: undefined,
+        type: undefined
+      } as Movie;
+    });
+
+    return { 
+      success: true, 
+      movies,
+      results: result.data || []
+    };
+  } catch (error) {
+    console.error('Error performing vector search:', error);
+    return { 
+      success: false, 
+      error: 'Network error occurred while performing vector search' 
     };
   }
 }

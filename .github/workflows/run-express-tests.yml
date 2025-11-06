@@ -1,0 +1,56 @@
+name: Run Express Tests
+
+on:
+  pull_request_target:
+    branches:
+      - development
+  push:
+    branches:
+      - development
+
+jobs:
+  test:
+    name: Run Express Tests
+    runs-on: ubuntu-latest
+    # Require manual approval for fork PRs
+    environment: testing
+
+    defaults:
+      run:
+        working-directory: server/express
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test -- --json --outputFile=test-results.json || true
+        env:
+          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            server/express/coverage/
+            server/express/test-results.json
+          retention-days: 30
+
+      - name: Generate Test Summary
+        if: always()
+        working-directory: .
+        run: |
+          chmod +x .github/scripts/generate-test-summary-jest.sh
+          .github/scripts/generate-test-summary-jest.sh server/express/test-results.json

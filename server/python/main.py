@@ -25,6 +25,9 @@ async def lifespan(app: FastAPI):
 async def ensure_search_index():
     try:
         movies_collection = db.get_collection("movies")
+        comments_collection = db.get_collection("comments")
+        
+        # Check and create search index for movies collection
         result = await movies_collection.list_search_indexes()
         indexes = [idx async for idx in result]
         index_names = [index["name"] for index in indexes]

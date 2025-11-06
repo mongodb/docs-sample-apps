@@ -132,32 +132,43 @@ public class DatabaseVerification {
      * these fields, which is used by the search endpoint in the API.
      *
      * <p>The index is created in the background to avoid blocking other operations.
-     * If the index already exists, MongoDB will ignore the duplicate creation request.
+     * If the index already exists, this method will detect it and skip creation.
      *
      * @param moviesCollection the movies collection to create the index on
      */
     private void createTextSearchIndex(MongoCollection<Document> moviesCollection) {
         try {
-            // Create compound text index on plot, title, and fullplot fields
-            // The background option allows the index to be built without blocking other operations
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(TEXT_INDEX_NAME)
-                    .background(true);
+            // Check if the text search index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listIndexes()) {
+                if (TEXT_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Text search index '{}' already exists", TEXT_INDEX_NAME);
+                    break;
+                }
+            }
 
-            // Create the text index using field name constants from Movie.Fields
-            // This makes the coupling between Movie class and index creation explicit
-            // and allows IDE "Find Usages" to track dependencies
-            // MongoDB will automatically ignore this if the index already exists
-            moviesCollection.createIndex(
-                Indexes.compoundIndex(
-                    Indexes.text(Movie.Fields.PLOT),
-                    Indexes.text(Movie.Fields.TITLE),
-                    Indexes.text(Movie.Fields.FULLPLOT)
-                ),
-                indexOptions
-            );
+            if (!indexExists) {
+                // Create compound text index on plot, title, and fullplot fields
+                // The background option allows the index to be built without blocking other operations
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(TEXT_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Text search index '{}' created/verified for movies collection", TEXT_INDEX_NAME);
+                // Create the text index using field name constants from Movie.Fields
+                // This makes the coupling between Movie class and index creation explicit
+                // and allows IDE "Find Usages" to track dependencies
+                moviesCollection.createIndex(
+                    Indexes.compoundIndex(
+                        Indexes.text(Movie.Fields.PLOT),
+                        Indexes.text(Movie.Fields.TITLE),
+                        Indexes.text(Movie.Fields.FULLPLOT)
+                    ),
+                    indexOptions
+                );
+
+                logger.info("Text search index '{}' created successfully for movies collection", TEXT_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             // Log error but don't fail - the application can still function without the index
@@ -240,7 +251,7 @@ public class DatabaseVerification {
     }
 
     /**
-     * Creates an index on the year field for the movies collection.
+     * Creates an index on the year field for the movies collection if it doesn't already exist.
      *
      * <p>This index improves performance for aggregation queries that filter by year,
      * such as the movies with comments aggregation.
@@ -249,16 +260,28 @@ public class DatabaseVerification {
      */
     private void createYearIndex(MongoCollection<Document> moviesCollection) {
         try {
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(YEAR_INDEX_NAME)
-                    .background(true);
+            // Check if the year index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listIndexes()) {
+                if (YEAR_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Year index '{}' already exists", YEAR_INDEX_NAME);
+                    break;
+                }
+            }
 
-            moviesCollection.createIndex(
-                Indexes.ascending(Movie.Fields.YEAR),
-                indexOptions
-            );
+            if (!indexExists) {
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(YEAR_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Year index '{}' created/verified for movies collection", YEAR_INDEX_NAME);
+                moviesCollection.createIndex(
+                    Indexes.ascending(Movie.Fields.YEAR),
+                    indexOptions
+                );
+
+                logger.info("Year index '{}' created successfully for movies collection", YEAR_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             logger.error("Could not create year index: {}", e.getMessage());
@@ -291,7 +314,7 @@ public class DatabaseVerification {
     }
 
     /**
-     * Creates an index on the movie_id field for the comments collection.
+     * Creates an index on the movie_id field for the comments collection if it doesn't already exist.
      *
      * <p>This index is critical for $lookup performance when joining movies with comments.
      * Without this index, the $lookup operation will perform a collection scan for each movie,
@@ -301,16 +324,28 @@ public class DatabaseVerification {
      */
     private void createMovieIdIndex(MongoCollection<Document> commentsCollection) {
         try {
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(MOVIE_ID_INDEX_NAME)
-                    .background(true);
+            // Check if the movie_id index already exists
+            boolean indexExists = false;
+            for (Document index : commentsCollection.listIndexes()) {
+                if (MOVIE_ID_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Movie ID index '{}' already exists", MOVIE_ID_INDEX_NAME);
+                    break;
+                }
+            }
 
-            commentsCollection.createIndex(
-                Indexes.ascending("movie_id"),
-                indexOptions
-            );
+            if (!indexExists) {
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(MOVIE_ID_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Movie ID index '{}' created/verified for comments collection", MOVIE_ID_INDEX_NAME);
+                commentsCollection.createIndex(
+                    Indexes.ascending("movie_id"),
+                    indexOptions
+                );
+
+                logger.info("Movie ID index '{}' created successfully for comments collection", MOVIE_ID_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             logger.error("Could not create movie_id index: {}", e.getMessage());

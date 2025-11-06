@@ -6,11 +6,22 @@ import pageStyles from "./page.module.css";
 import movieStyles from "./movies.module.css";
 import { MovieCard, Pagination, PageSizeSelector, AddMovieForm, BatchEditMovieForm, SearchMovieModal } from "../components";
 import { ErrorDisplay, LoadingSpinner } from "../components/ui";
-import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch, searchMovies } from "../lib/api";
+import { fetchMovies, createMovie, createMoviesBatch, deleteMoviesBatch, updateMoviesBatch, searchMovies, vectorSearchMovies } from "../lib/api";
 import { Movie } from "../types/movie";
 import { APP_CONFIG, ROUTES } from "../lib/constants";
 import type { SearchParams } from "../components/SearchMovieModal";
 
+/**
+ * Movies Page Component
+ * 
+ * Main page for browsing movies with the following features:
+ * - Regular movie browsing with URL-based pagination
+ * - MongoDB text search with server-side pagination
+ * - Vector search with client-side pagination
+ * - CRUD operations (create, update, delete movies)
+ * - Batch operations on selected movies
+ * 
+ */
 export default function Movies() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -31,6 +42,9 @@ export default function Movies() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
+  const [allVectorSearchResults, setAllVectorSearchResults] = useState<Movie[]>([]);
+  const [vectorSearchPage, setVectorSearchPage] = useState(1);
+  const [vectorSearchPageSize, setVectorSearchPageSize] = useState(20);
   const [searchHasNextPage, setSearchHasNextPage] = useState(false);
   const [searchHasPrevPage, setSearchHasPrevPage] = useState(false);
   const [searchTotalCount, setSearchTotalCount] = useState(0);
@@ -56,7 +70,7 @@ export default function Movies() {
       setHasNextPage(result.hasNextPage);
       setHasPrevPage(result.hasPrevPage);
     } catch (err) {
-      setError('Failed to load movies. Make sure the Express server is running on port 3001.');
+      setError('Failed to load movies. Make sure the server is running on port 3001.');
       setMovies([]);
     }
     
@@ -221,46 +235,100 @@ export default function Movies() {
     setError(null);
     setSuccessMessage(null);
 
-    // For new searches, start from page 1
-    const searchSkip = 0;
-    const searchLimitToUse = searchParams.limit || 20;
-    
-    const searchParamsWithPagination = {
-      ...searchParams,
-      limit: searchLimitToUse,
-      skip: searchSkip,
-    };
+    try {
+      let result;
 
-    const result = await searchMovies(searchParamsWithPagination);
-
-    if (result.success) {
-      setSearchResults(result.movies || []);
-      setSearchHasNextPage(result.hasNextPage || false);
-      setSearchHasPrevPage(result.hasPrevPage || false);
-      setSearchTotalCount(result.totalCount || 0);
-      setIsSearchMode(true);
-      setSearchPage(1);
-      setSearchLimit(searchLimitToUse);
-      setCurrentSearchParams(searchParams);
-      setShowSearchModal(false);
-      setSelectedMovies(new Set()); // Clear selection when switching to search mode
-      
-      const totalCount = result.totalCount || 0;
-      if (totalCount === 0) {
-        setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
+      if (searchParams.searchType === 'vector-search') {
+        // Vector Search: Fetch all results and implement client-side pagination
+        const vectorSearchParams = {
+          q: searchParams.q!,
+          limit: searchParams.limit || 50, // Get more results for better pagination experience
+        };
+        result = await vectorSearchMovies(vectorSearchParams);
+        
+        if (result.success) {
+          const allResults = result.movies || [];
+          const pageSize = searchParams.limit || 20;
+          setAllVectorSearchResults(allResults);
+          setVectorSearchPage(1);
+          setVectorSearchPageSize(pageSize);
+          
+          // Calculate first page of results for immediate display
+          const firstPageResults = allResults.slice(0, pageSize);
+          setSearchResults(firstPageResults);
+          
+          // Set pagination state based on total results
+          const totalPages = Math.ceil(allResults.length / pageSize);
+          setSearchHasNextPage(totalPages > 1);
+          setSearchHasPrevPage(false);
+          setSearchTotalCount(allResults.length);
+        }
       } else {
-        setSuccessMessage(`Found ${totalCount} total movies matching your search criteria.`);
+        // MongoDB Search
+        const searchSkip = 0; // Always start from page 1 for new searches
+        const searchLimitToUse = searchParams.limit || 20;
+        
+        const searchParamsWithPagination = {
+          ...searchParams,
+          limit: searchLimitToUse,
+          skip: searchSkip,
+        };
+
+        result = await searchMovies(searchParamsWithPagination);
+        
+        if (result.success) {
+          setSearchResults(result.movies || []);
+          setSearchHasNextPage(result.hasNextPage || false);
+          setSearchHasPrevPage(result.hasPrevPage || false);
+          setSearchTotalCount(result.totalCount || 0);
+        }
       }
-    } else {
-      setError(result.error || 'Failed to search movies');
+
+      if (result.success) {
+        setIsSearchMode(true);
+        setSearchPage(1);
+        setSearchLimit(searchParams.limit || 20);
+        setCurrentSearchParams(searchParams);
+        setShowSearchModal(false);
+        setSelectedMovies(new Set()); // Clear selection when switching to search mode
+        
+        if (searchParams.searchType === 'vector-search') {
+          const returnedCount = result.movies?.length || 0;
+          
+          if (returnedCount === 0) {
+            setSuccessMessage('Vector search completed, but no movies matched your query. Try different search terms.');
+          } else {
+            setSuccessMessage(`Found ${returnedCount} results using vector search.`);
+          }
+        } else {
+          // MongoDB text search success message
+          const totalCount = (result as any).totalCount || 0;
+          
+          if (totalCount === 0) {
+            setSuccessMessage('Search completed, but no movies matched your criteria. Try different search terms.');
+          } else {
+            setSuccessMessage(`Found ${totalCount} results using MongoDB search.`);
+          }
+        }
+      } else {
+        setError(result.error || 'Failed to search movies');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred while searching');
     }
 
     setIsSearching(false);
   };
 
+  /**
+   * Clears search mode and returns to regular movie browsing
+   * Resets all search-related state including vector search pagination
+   */
   const handleClearSearch = () => {
     setIsSearchMode(false);
     setSearchResults([]);
+    setAllVectorSearchResults([]);
+    setVectorSearchPage(1);
     setSearchHasNextPage(false);
     setSearchHasPrevPage(false);
     setSearchTotalCount(0);
@@ -275,8 +343,67 @@ export default function Movies() {
   // Get the movies to display based on current mode
   const displayMovies = isSearchMode ? searchResults : movies;
 
+  /**
+   * Helper function for vector search client-side pagination
+   * Calculates pagination data for the current vector search results
+   */
+  const getVectorSearchPageData = () => {
+    if (!isSearchMode || currentSearchParams?.searchType !== 'vector-search') {
+      return { paginatedResults: [], hasNext: false, hasPrev: false, totalPages: 0 };
+    }
+
+    const startIndex = (vectorSearchPage - 1) * vectorSearchPageSize;
+    const endIndex = startIndex + vectorSearchPageSize;
+    const paginatedResults = allVectorSearchResults.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(allVectorSearchResults.length / vectorSearchPageSize);
+    
+    return {
+      paginatedResults,
+      hasNext: vectorSearchPage < totalPages,
+      hasPrev: vectorSearchPage > 1,
+      totalPages
+    };
+  };
+
+  /**
+   * Handles page navigation for vector search results (client-side pagination)
+   * Slices the cached results and updates the display
+   */
+  const handleVectorSearchPageChange = (newPage: number) => {
+    if (!isSearchMode || currentSearchParams?.searchType !== 'vector-search') return;
+    
+    const totalPages = Math.ceil(allVectorSearchResults.length / vectorSearchPageSize);
+    if (newPage < 1 || newPage > totalPages) return;
+    
+    setVectorSearchPage(newPage);
+    
+    // Update the displayed results based on the new page
+    const startIndex = (newPage - 1) * vectorSearchPageSize;
+    const endIndex = startIndex + vectorSearchPageSize;
+    const paginatedResults = allVectorSearchResults.slice(startIndex, endIndex);
+    
+    setSearchResults(paginatedResults);
+    setSearchHasNextPage(newPage < totalPages);
+    setSearchHasPrevPage(newPage > 1);
+    
+    // Clear selection and scroll to top for better UX
+    setSelectedMovies(new Set());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSearchPageChange = async (newPage: number) => {
     if (!currentSearchParams) return;
+    
+    // This function handles MongoDB search pagination (server-side)
+    // Vector search uses handleVectorSearchPageChange for client-side pagination
+    if (currentSearchParams.searchType === 'vector-search') {
+      return;
+    }
+    
+    // Validate page number and prevent invalid navigation
+    if (newPage < 1) return;
+    if (isSearching) return;
+    if (newPage > searchPage && !searchHasNextPage) return;
     
     setIsSearching(true);
     setError(null);
@@ -297,10 +424,17 @@ export default function Movies() {
         setSearchHasPrevPage(result.hasPrevPage || false);
         setSearchTotalCount(result.totalCount || 0);
         setSearchPage(newPage);
+        
+        // Clear any previously selected movies when changing pages
+        setSelectedMovies(new Set());
+        
+        // Scroll to top to show new results
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError(result.error || 'Failed to load search results');
       }
     } catch (error) {
+      console.error('Search pagination error:', error);
       setError('Failed to load search results');
     }
     
@@ -449,7 +583,7 @@ export default function Movies() {
                 <p>
                   {isSearchMode 
                     ? 'No movies found matching your search criteria. Try different search terms.'
-                    : 'No movies found. Make sure the Express server is running on port 3001.'
+                    : 'No movies found. Make sure the server is running on port 3001.'
                   }
                 </p>
               </div>
@@ -469,51 +603,107 @@ export default function Movies() {
                 
                 {/* Show pagination based on current mode */}
                 {isSearchMode ? (
-                  <nav className={movieStyles.pagination} aria-label="Search results pagination">
-                    <div className={movieStyles.paginationContainer}>
-                      {/* Previous Button */}
-                      {searchHasPrevPage ? (
-                        <button
-                          onClick={() => handleSearchPageChange(searchPage - 1)}
-                          className={movieStyles.pageButton}
-                          disabled={isSearching}
-                          aria-label="Go to previous page"
-                        >
-                          ← Previous
-                        </button>
-                      ) : (
-                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
-                          ← Previous
-                        </span>
-                      )}
+                  currentSearchParams?.searchType === 'mongodb-search' ? (
+                    <nav className={movieStyles.pagination} aria-label="Search results pagination">
+                      <div className={movieStyles.paginationContainer}>
+                        {/* Previous Button */}
+                        {searchHasPrevPage && !isSearching ? (
+                          <button
+                            onClick={() => handleSearchPageChange(searchPage - 1)}
+                            className={movieStyles.pageButton}
+                            disabled={isSearching}
+                            aria-label="Go to previous page"
+                          >
+                            ← Previous
+                          </button>
+                        ) : (
+                          <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                            ← Previous
+                          </span>
+                        )}
 
-                      {/* Current Page Info */}
-                      <div className={movieStyles.pageInfo}>
-                        Page {searchPage}
+                        {/* Current Page Info */}
+                        <div className={movieStyles.pageInfo}>
+                          Page {searchPage} {searchTotalCount > 0 ? `of ${Math.ceil(searchTotalCount / searchLimit)}` : ''}
+                        </div>
+
+                        {/* Next Button */}
+                        {searchHasNextPage && !isSearching ? (
+                          <button
+                            onClick={() => handleSearchPageChange(searchPage + 1)}
+                            className={movieStyles.pageButton}
+                            disabled={isSearching}
+                            aria-label="Go to next page"
+                          >
+                            Next →
+                          </button>
+                        ) : (
+                          <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                            Next →
+                          </span>
+                        )}
                       </div>
 
-                      {/* Next Button */}
-                      {searchHasNextPage ? (
-                        <button
-                          onClick={() => handleSearchPageChange(searchPage + 1)}
-                          className={movieStyles.pageButton}
-                          disabled={isSearching}
-                          aria-label="Go to next page"
-                        >
-                          Next →
-                        </button>
-                      ) : (
-                        <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
-                          Next →
-                        </span>
-                      )}
-                    </div>
+                      {/* Additional Info */}
+                      <div className={movieStyles.additionalInfo}>
+                        {searchLimit} movies per page • {searchTotalCount} total results
+                      </div>
+                    </nav>
+                  ) : (
+                    /* Vector search results with client-side pagination */
+                    (() => {
+                      const { hasNext, hasPrev, totalPages } = getVectorSearchPageData();
+                      return totalPages > 1 ? (
+                        <nav className={movieStyles.pagination} aria-label="Vector search results pagination">
+                          <div className={movieStyles.paginationContainer}>
+                            {/* Previous Button */}
+                            {hasPrev ? (
+                              <button
+                                onClick={() => handleVectorSearchPageChange(vectorSearchPage - 1)}
+                                className={movieStyles.pageButton}
+                                aria-label="Go to previous page"
+                              >
+                                ← Previous
+                              </button>
+                            ) : (
+                              <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                                ← Previous
+                              </span>
+                            )}
 
-                    {/* Additional Info */}
-                    <div className={movieStyles.additionalInfo}>
-                      {searchLimit} movies per page
-                    </div>
-                  </nav>
+                            {/* Current Page Info */}
+                            <div className={movieStyles.pageInfo}>
+                              Page {vectorSearchPage} of {totalPages}
+                            </div>
+
+                            {/* Next Button */}
+                            {hasNext ? (
+                              <button
+                                onClick={() => handleVectorSearchPageChange(vectorSearchPage + 1)}
+                                className={movieStyles.pageButton}
+                                aria-label="Go to next page"
+                              >
+                                Next →
+                              </button>
+                            ) : (
+                              <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                                Next →
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Additional Info */}
+                          <div className={movieStyles.additionalInfo}>
+                            {vectorSearchPageSize} movies per page • {allVectorSearchResults.length} total results
+                          </div>
+                        </nav>
+                      ) : (
+                        <div className={movieStyles.searchInfo}>
+                          Showing {allVectorSearchResults.length} results (vector search)
+                        </div>
+                      );
+                    })()
+                  )
                 ) : (
                   <Pagination
                     currentPage={page}
