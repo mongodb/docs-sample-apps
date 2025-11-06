@@ -473,7 +473,7 @@ async def aggregate_movies_recent_commented(
         # - If querying all movies: return up to 20 results
         # Tip: This prevents overwhelming the client with too much data
         {
-            "$limit": 50 if movie_id else 20
+            "$limit": 20 if movie_id else 5
         },
         # STAGE 7: $project - Shape Final Response Output
         {
