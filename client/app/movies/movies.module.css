@@ -148,6 +148,17 @@
   text-align: center;
 }
 
+.searchInfo {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+}
+
 .selectAllButton {
   padding: 0.5rem 1rem;
   background: #6c757d;
