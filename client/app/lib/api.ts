@@ -115,16 +115,16 @@ export async function updateMovie(id: string, updateData: Partial<Movie>): Promi
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to update movie: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to update movie: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -155,16 +155,16 @@ export async function deleteMovie(id: string): Promise<{ success: boolean; error
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to delete movie: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to delete movie: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -194,16 +194,16 @@ export async function createMovie(movieData: Omit<Movie, '_id'>): Promise<{ succ
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to create movie: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to create movie: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -236,16 +236,16 @@ export async function createMoviesBatch(moviesData: Omit<Movie, '_id'>[]): Promi
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to create movies: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to create movies: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -287,16 +287,16 @@ export async function deleteMoviesBatch(movieIds: string[]): Promise<{ success: 
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to delete movies: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to delete movies: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -337,16 +337,16 @@ export async function updateMoviesBatch(movieIds: string[], updateData: Partial<
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to update movies: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to update movies: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -403,16 +403,16 @@ export async function searchMovies(searchParams: {
     const result = await response.json();
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: result.error || `Failed to search movies: ${response.status}` 
+      return {
+        success: false,
+        error: result.message || result.error?.message || `Failed to search movies: ${response.status}`
       };
     }
 
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'API returned error response' 
+      return {
+        success: false,
+        error: result.message || result.error?.message || 'API returned error response'
       };
     }
 
@@ -422,8 +422,8 @@ export async function searchMovies(searchParams: {
     const hasNextPage = skip + limit < totalCount;
     const hasPrevPage = skip > 0;
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       movies,
       hasNextPage,
       hasPrevPage,

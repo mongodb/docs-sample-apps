@@ -66,9 +66,11 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
                 // Configure connection pool for optimal performance
                 .applyToConnectionPoolSettings(poolBuilder ->
                     poolBuilder.maxSize(100)                                    // Maximum connections in pool
-                           .minSize(10)                                         // Minimum connections to maintain
+                           .minSize(5)                                          // Minimum connections to maintain
                            .maxConnectionIdleTime(60000, TimeUnit.MILLISECONDS) // Release idle connections after 60s
                            .maxWaitTime(10000, TimeUnit.MILLISECONDS)           // Wait up to 10s for available connection
+                           .maintenanceInitialDelay(0, TimeUnit.MILLISECONDS)   // Start maintenance immediately
+                           .maintenanceFrequency(60000, TimeUnit.MILLISECONDS)  // Run maintenance every 60s
                 )
                 // Configure socket timeouts to prevent hanging connections
                 .applyToSocketSettings(socketBuilder ->
@@ -78,7 +80,10 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
                 // Configure server selection timeout
                 .applyToClusterSettings(clusterBuilder ->
                     clusterBuilder.serverSelectionTimeout(10000, TimeUnit.MILLISECONDS)  // 10s to select server
-                );
+                )
+                // Retry writes for better reliability
+                .retryWrites(true)
+                .retryReads(true);
     }
 
     /**

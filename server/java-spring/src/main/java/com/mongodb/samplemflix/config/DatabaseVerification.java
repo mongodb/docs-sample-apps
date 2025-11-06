@@ -22,6 +22,8 @@ import org.springframework.stereotype.Component;
  * 2. Verify the collection contains documents
  * 3. Check for text search indexes on plot, title, and fullplot fields
  * 4. Create text search index if missing
+ * 5. Verify embedded_movies collection for vector search
+ * 6. Create vector search index if missing
  * <p>
  * This matches the behavior of the Express.js backend's verifyRequirements() function.
  * The verification is non-blocking - the application will start even if verification fails,
@@ -34,9 +36,12 @@ public class DatabaseVerification {
 
     private static final String MOVIES_COLLECTION = "movies";
     private static final String COMMENTS_COLLECTION = "comments";
+    private static final String EMBEDDED_MOVIES_COLLECTION = "embedded_movies";
     private static final String TEXT_INDEX_NAME = "text_search_index";
     private static final String YEAR_INDEX_NAME = "year_index";
     private static final String MOVIE_ID_INDEX_NAME = "movie_id_index";
+    private static final String VECTOR_INDEX_NAME = "vector_index";
+    private static final String MONGODB_SEARCH_INDEX_NAME = "movieSearchIndex";
 
     private final MongoDatabase database;
 
@@ -64,6 +69,9 @@ public class DatabaseVerification {
             // Verify comments collection and create indexes for aggregation performance
             verifyCommentsCollection();
 
+            // Verify embedded_movies collection and create vector search index
+            verifyEmbeddedMoviesCollection();
+
             logger.info("Database verification completed successfully");
 
         } catch (Exception e) {
@@ -77,11 +85,11 @@ public class DatabaseVerification {
      * Verifies the movies collection exists, contains data, and has required indexes.
      *
      * <p>This method:
-     * <pre>
-     * 1. Checks if the movies collection exists (implicitly by accessing it)
-     * 2. Counts documents to verify sample data is loaded
-     * 3. Creates a text search index on plot, title, and fullplot fields
-     *</pre>
+* <ol>
+*   <li>Checks if the movies collection exists (implicitly by accessing it)</li>
+*   <li>Counts documents to verify sample data is loaded</li>
+*   <li>Creates a text search index on plot, title, and fullplot fields</li>
+* </ol>
      * <p>The text search index enables full-text search functionality across movie
      * descriptions and titles, which is used by the search endpoint.
      */
@@ -104,6 +112,9 @@ public class DatabaseVerification {
         // Create text search index for full-text search functionality
         createTextSearchIndex(moviesCollection);
 
+        // Create MongoDB Search index for advanced search functionality
+        createMongoDBSearchIndex(moviesCollection);
+
         // Create year index for aggregation performance
         createYearIndex(moviesCollection);
     }
@@ -112,41 +123,52 @@ public class DatabaseVerification {
      * Creates a text search index on the movies collection if it doesn't already exist.
      *
      * <p>The index is created on three fields:
-     * <pre>
-     * - plot: Short movie description
-     * - title: Movie title
-     * - fullplot: Full movie description
-     * </pre>
+* <ul>
+*   <li>plot: Short movie description</li>
+*   <li>title: Movie title</li>
+*   <li>fullplot: Full movie description</li>
+* </ul>
      * <p>This enables the $text search operator to perform full-text search across
      * these fields, which is used by the search endpoint in the API.
      *
      * <p>The index is created in the background to avoid blocking other operations.
-     * If the index already exists, MongoDB will ignore the duplicate creation request.
+     * If the index already exists, this method will detect it and skip creation.
      *
      * @param moviesCollection the movies collection to create the index on
      */
     private void createTextSearchIndex(MongoCollection<Document> moviesCollection) {
         try {
-            // Create compound text index on plot, title, and fullplot fields
-            // The background option allows the index to be built without blocking other operations
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(TEXT_INDEX_NAME)
-                    .background(true);
+            // Check if the text search index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listIndexes()) {
+                if (TEXT_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Text search index '{}' already exists", TEXT_INDEX_NAME);
+                    break;
+                }
+            }
 
-            // Create the text index using field name constants from Movie.Fields
-            // This makes the coupling between Movie class and index creation explicit
-            // and allows IDE "Find Usages" to track dependencies
-            // MongoDB will automatically ignore this if the index already exists
-            moviesCollection.createIndex(
-                Indexes.compoundIndex(
-                    Indexes.text(Movie.Fields.PLOT),
-                    Indexes.text(Movie.Fields.TITLE),
-                    Indexes.text(Movie.Fields.FULLPLOT)
-                ),
-                indexOptions
-            );
+            if (!indexExists) {
+                // Create compound text index on plot, title, and fullplot fields
+                // The background option allows the index to be built without blocking other operations
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(TEXT_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Text search index '{}' created/verified for movies collection", TEXT_INDEX_NAME);
+                // Create the text index using field name constants from Movie.Fields
+                // This makes the coupling between Movie class and index creation explicit
+                // and allows IDE "Find Usages" to track dependencies
+                moviesCollection.createIndex(
+                    Indexes.compoundIndex(
+                        Indexes.text(Movie.Fields.PLOT),
+                        Indexes.text(Movie.Fields.TITLE),
+                        Indexes.text(Movie.Fields.FULLPLOT)
+                    ),
+                    indexOptions
+                );
+
+                logger.info("Text search index '{}' created successfully for movies collection", TEXT_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             // Log error but don't fail - the application can still function without the index
@@ -157,7 +179,79 @@ public class DatabaseVerification {
     }
 
     /**
-     * Creates an index on the year field for the movies collection.
+     * Creates a MongoDB Search index on the movies collection if it doesn't already exist.
+     *
+     * <p>This index enables MongoDB Search functionality across multiple fields:
+     * <ul>
+     *   <li>plot: Short movie description (phrase matching)</li>
+     *   <li>fullplot: Full movie description (phrase matching)</li>
+     *   <li>directors: Director names (fuzzy text matching)</li>
+     *   <li>writers: Writer names (fuzzy text matching)</li>
+     *   <li>cast: Actor names (fuzzy text matching)</li>
+     * </ul>
+     *
+     * <p>This is different from the text search index - MongoDB Search provides more advanced
+     * search capabilities including fuzzy matching, phrase search, and compound queries.
+     *
+     * @param moviesCollection the movies collection to create the index on
+     */
+    private void createMongoDBSearchIndex(MongoCollection<Document> moviesCollection) {
+        try {
+            // Check if the Search index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listSearchIndexes()) {
+                if (MONGODB_SEARCH_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("MongoDB Search index '{}' already exists", MONGODB_SEARCH_INDEX_NAME);
+                    break;
+                }
+            }
+
+            if (!indexExists) {
+                // Define the MongoDB Search index specification
+                Document indexDefinition = new Document("mappings", new Document()
+                        .append("dynamic", false)
+                        .append("fields", new Document()
+                                .append("plot", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("fullplot", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("directors", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("writers", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                                .append("cast", new Document()
+                                        .append("type", "string")
+                                        .append("analyzer", "lucene.standard"))
+                        )
+                );
+
+                // Create the index using the createSearchIndexes command
+                Document createIndexCommand = new Document("createSearchIndexes", MOVIES_COLLECTION)
+                        .append("indexes", java.util.Collections.singletonList(
+                                new Document("name", MONGODB_SEARCH_INDEX_NAME)
+                                        .append("definition", indexDefinition)
+                        ));
+
+                database.runCommand(createIndexCommand);
+
+                logger.info("MongoDB Search index '{}' created successfully. Index may take a few moments to build.", MONGODB_SEARCH_INDEX_NAME);
+                logger.info("MongoDB Search is now ready to use on the '{}' collection", MOVIES_COLLECTION);
+            }
+
+        } catch (Exception e) {
+            logger.warn("Could not create MongoDB Search index: {}", e.getMessage());
+            logger.warn("If you're using Atlas, the index may already exist or there may be a permissions issue.");
+            logger.warn("Search endpoint (/api/movies/search) will not work without this index.");
+        }
+    }
+
+    /**
+     * Creates an index on the year field for the movies collection if it doesn't already exist.
      *
      * <p>This index improves performance for aggregation queries that filter by year,
      * such as the movies with comments aggregation.
@@ -166,16 +260,28 @@ public class DatabaseVerification {
      */
     private void createYearIndex(MongoCollection<Document> moviesCollection) {
         try {
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(YEAR_INDEX_NAME)
-                    .background(true);
+            // Check if the year index already exists
+            boolean indexExists = false;
+            for (Document index : moviesCollection.listIndexes()) {
+                if (YEAR_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Year index '{}' already exists", YEAR_INDEX_NAME);
+                    break;
+                }
+            }
 
-            moviesCollection.createIndex(
-                Indexes.ascending(Movie.Fields.YEAR),
-                indexOptions
-            );
+            if (!indexExists) {
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(YEAR_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Year index '{}' created/verified for movies collection", YEAR_INDEX_NAME);
+                moviesCollection.createIndex(
+                    Indexes.ascending(Movie.Fields.YEAR),
+                    indexOptions
+                );
+
+                logger.info("Year index '{}' created successfully for movies collection", YEAR_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             logger.error("Could not create year index: {}", e.getMessage());
@@ -208,7 +314,7 @@ public class DatabaseVerification {
     }
 
     /**
-     * Creates an index on the movie_id field for the comments collection.
+     * Creates an index on the movie_id field for the comments collection if it doesn't already exist.
      *
      * <p>This index is critical for $lookup performance when joining movies with comments.
      * Without this index, the $lookup operation will perform a collection scan for each movie,
@@ -218,20 +324,129 @@ public class DatabaseVerification {
      */
     private void createMovieIdIndex(MongoCollection<Document> commentsCollection) {
         try {
-            IndexOptions indexOptions = new IndexOptions()
-                    .name(MOVIE_ID_INDEX_NAME)
-                    .background(true);
+            // Check if the movie_id index already exists
+            boolean indexExists = false;
+            for (Document index : commentsCollection.listIndexes()) {
+                if (MOVIE_ID_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Movie ID index '{}' already exists", MOVIE_ID_INDEX_NAME);
+                    break;
+                }
+            }
 
-            commentsCollection.createIndex(
-                Indexes.ascending("movie_id"),
-                indexOptions
-            );
+            if (!indexExists) {
+                IndexOptions indexOptions = new IndexOptions()
+                        .name(MOVIE_ID_INDEX_NAME)
+                        .background(true);
 
-            logger.info("Movie ID index '{}' created/verified for comments collection", MOVIE_ID_INDEX_NAME);
+                commentsCollection.createIndex(
+                    Indexes.ascending("movie_id"),
+                    indexOptions
+                );
+
+                logger.info("Movie ID index '{}' created successfully for comments collection", MOVIE_ID_INDEX_NAME);
+            }
 
         } catch (Exception e) {
             logger.error("Could not create movie_id index: {}", e.getMessage());
             logger.warn("$lookup aggregations joining movies with comments may timeout without the index");
+        }
+    }
+
+    /**
+     * Verifies the embedded_movies collection and creates the vector search index.
+     *
+     * <p>The embedded_movies collection contains movie documents with plot embeddings
+     * generated by the Voyage AI model. This method checks if the collection exists
+     * and creates a vector search index for semantic similarity search.
+     */
+    private void verifyEmbeddedMoviesCollection() {
+        MongoCollection<Document> embeddedMoviesCollection = database.getCollection(EMBEDDED_MOVIES_COLLECTION);
+
+        // Check if collection has documents
+        long count = embeddedMoviesCollection.estimatedDocumentCount();
+
+        if (count == 0) {
+            logger.warn(
+                "Embedded movies collection is empty. Vector search functionality will not work. " +
+                "Please ensure the embedded_movies collection is populated with plot embeddings."
+            );
+            return;
+        }
+
+        logger.info("Embedded movies collection found with {} documents", count);
+
+        // Check if documents have the required embedding field
+        Document sampleDoc = embeddedMoviesCollection.find().first();
+        if (sampleDoc != null && !sampleDoc.containsKey("plot_embedding_voyage_3_large")) {
+            logger.warn(
+                "Documents in embedded_movies collection do not have 'plot_embedding_voyage_3_large' field. " +
+                "Vector search functionality will not work. Please ensure the embedded_movies collection is populated with plot embeddings in the 'plot_embedding_voyage_3_large' field."
+            );
+            return;
+        }
+
+        // Create vector search index programmatically
+        createVectorSearchIndex(embeddedMoviesCollection);
+    }
+
+    /**
+     * Creates a vector search index on the embedded_movies collection if it doesn't already exist.
+     *
+     * <p>This method creates a vector search index named 'vector_index' for the
+     * plot_embedding_voyage_3_large field with 2048 dimensions and cosine similarity.
+     *
+     * @param embeddedMoviesCollection the embedded_movies collection to create the index on
+     */
+    private void createVectorSearchIndex(MongoCollection<Document> embeddedMoviesCollection) {
+        try {
+            // Check if the vector search index already exists
+            boolean indexExists = false;
+            for (Document index : embeddedMoviesCollection.listSearchIndexes()) {
+                if (VECTOR_INDEX_NAME.equals(index.getString("name"))) {
+                    indexExists = true;
+                    logger.info("Vector search index '{}' already exists", VECTOR_INDEX_NAME);
+                    break;
+                }
+            }
+
+            if (!indexExists) {
+                // Define the vector search index specification
+                // For vectorSearch type, use fields as an array with path, type, numDimensions, and similarity
+                Document vectorFieldDefinition = new Document()
+                        .append("type", "vector")
+                        .append("path", "plot_embedding_voyage_3_large")
+                        .append("numDimensions", 2048)
+                        .append("similarity", "cosine");
+
+                Document indexDefinition = new Document()
+                        .append("fields", java.util.Collections.singletonList(vectorFieldDefinition));
+
+                // Use the createSearchIndexes command
+                Document createIndexCommand = new Document("createSearchIndexes", EMBEDDED_MOVIES_COLLECTION)
+                        .append("indexes", java.util.Collections.singletonList(
+                                new Document("name", VECTOR_INDEX_NAME)
+                                        .append("type", "vectorSearch")
+                                        .append("definition", indexDefinition)
+                        ));
+
+                // Execute the command
+                database.runCommand(createIndexCommand);
+
+                logger.info("Vector search index '{}' created successfully. Index may take a few moments to build.", VECTOR_INDEX_NAME);
+                logger.info("Vector search is now ready to use on the '{}' collection", EMBEDDED_MOVIES_COLLECTION);
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to create vector search index: {}", e.getMessage());
+            logger.warn(
+                "To manually create the vector search index, visit the Atlas UI and create an index named '{}' with:\n" +
+                "  - Field: plot_embedding_voyage_3_large\n" +
+                "  - Dimensions: 2048\n" +
+                "  - Similarity: cosine\n" +
+                "Visit: https://www.mongodb.com/docs/atlas/atlas-vector-search/create-index/",
+                VECTOR_INDEX_NAME
+            );
         }
     }
 }

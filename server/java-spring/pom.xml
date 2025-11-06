@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.5.7</version>
         <relativePath/>
     </parent>
-    
+
     <groupId>com.mongodb</groupId>
     <artifactId>sample-app-java-mflix</artifactId>
     <version>1.0.0</version>
     <name>sample-app-java-mflix</name>
     <description>Java Spring Boot backend for MongoDB sample_mflix application demonstrating CRUD operations using Spring Data MongoDB</description>
-    
+
     <properties>
         <java.version>21</java.version>
         <springdoc.version>2.8.13</springdoc.version>
@@ -25,6 +25,7 @@
         <commons.lang3.version>3.19.0</commons.lang3.version>
         <impsort.plugin.version>1.12.0</impsort.plugin.version>
         <byte-buddy.version>1.17.8</byte-buddy.version>
+        <langchain4j.version>1.0.0-beta3</langchain4j.version>
     </properties>
 
     <dependencies>
@@ -79,7 +80,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        
+
         <!-- Spring Boot Test Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -92,8 +93,15 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+
+        <!-- LangChain4j Voyage AI for vector embeddings -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-voyage-ai</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <!-- Spring Boot Maven Plugin -->
