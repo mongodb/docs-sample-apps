@@ -726,11 +726,11 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
     // Generate embedding using Voyage AI REST API
     const queryVector = await generateVoyageEmbedding(q.trim(), process.env.VOYAGE_API_KEY);
 
-    // Get embedded movies collection
+    // Get embedded movies collection for vector search
     const embeddedMoviesCollection = getCollection("embedded_movies");
 
-    // Build the $vectorSearch aggregation pipeline
-    const pipeline = [
+    // Step 1: Build the $vectorSearch aggregation pipeline for embedded_movies
+    const vectorSearchPipeline = [
       {
         $vectorSearch: {
           index: "vector_index",
@@ -743,27 +743,94 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
       {
         $project: {
           _id: 1,
-          title: 1,
-          plot: 1,
           score: { $meta: "vectorSearchScore" },
         },
       },
     ];
 
-    const results = await embeddedMoviesCollection.aggregate(pipeline).toArray();
+    // Execute vector search to get movie IDs and scores
+    const vectorResults = await embeddedMoviesCollection.aggregate(vectorSearchPipeline).toArray();
 
-    // Convert ObjectId to string for each result
-    const vectorResults: VectorSearchResult[] = results.map((doc) => ({
-      _id: doc._id.toString(),
-      title: doc.title,
-      plot: doc.plot,
-      score: doc.score,
-    }));
+    if (vectorResults.length === 0) {
+      res.json(
+        createSuccessResponse(
+          [],
+          `No similar movies found for query: '${q}'`
+        )
+      );
+      return;
+    }
+
+    // Extract movie IDs and create score mapping
+    const movieIds = vectorResults.map(doc => doc._id);
+    const scoreMap = new Map();
+    vectorResults.forEach(doc => {
+      scoreMap.set(doc._id.toString(), doc.score);
+    });
+
+    // Step 2: Fetch complete movie data from the movies collection
+    const moviesCollection = getCollection("movies");
+    
+    // Build aggregation pipeline to safely handle year field and get complete movie data
+    const moviesPipeline = [
+      {
+        $match: {
+          _id: { $in: movieIds }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          plot: 1,
+          poster: 1,
+          genres: 1,
+          directors: 1,
+          cast: 1,
+          // Safely convert year to integer, handling strings and dirty data
+          year: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$year", null] },
+                  { $eq: [{ $type: "$year" }, "int"] }
+                ]
+              },
+              then: "$year",
+              else: null
+            }
+          }
+        }
+      }
+    ];
+
+    const movieResults = await moviesCollection.aggregate(moviesPipeline).toArray();
+
+    // Step 3: Combine movie data with vector search scores
+    const finalResults: VectorSearchResult[] = movieResults.map(movie => {
+      const movieIdStr = movie._id.toString();
+      const score = scoreMap.get(movieIdStr) || 0;
+
+      return {
+        _id: movieIdStr,
+        title: movie.title || '',
+        plot: movie.plot,
+        poster: movie.poster,
+        year: movie.year,
+        genres: movie.genres || [],
+        directors: movie.directors || [],
+        cast: movie.cast || [],
+        score: score,
+      };
+    });
+
+    // Sort results by score (highest first) to maintain relevance order
+    finalResults.sort((a, b) => b.score - a.score);
 
     res.json(
       createSuccessResponse(
-        vectorResults,
-        `Found ${vectorResults.length} similar movies for query: '${q}'`
+        finalResults,
+        `Found ${finalResults.length} similar movies for query: '${q}'`
       )
     );
   } catch (error) {

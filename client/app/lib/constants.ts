@@ -7,6 +7,7 @@ export const APP_CONFIG = {
   description: 'Browse movies from the sample MFlix database',
   defaultMovieLimit: 20,
   maxMovieLimit: 100,
+  vectorSearchPageSize: 20, // Fixed page size for vector search results display
   imageFormats: ['image/avif', 'image/webp'],
 } as const;
 

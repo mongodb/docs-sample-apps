@@ -193,6 +193,11 @@ export interface VectorSearchResult {
   _id: string;
   title: string;
   plot?: string;
+  poster?: string;
+  year?: number;
+  genres?: string[];
+  directors?: string[];
+  cast?: string[];
   score: number;
 }
 

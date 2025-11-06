@@ -15,6 +15,7 @@ import {
   SAMPLE_MOVIES,
   SAMPLE_SEARCH_RESULTS,
   SAMPLE_VECTOR_RESULTS,
+  SAMPLE_VECTOR_MOVIES,
   SAMPLE_COMMENTS_AGGREGATION,
   SAMPLE_YEARS_AGGREGATION,
   SAMPLE_DIRECTORS_AGGREGATION,
@@ -785,8 +786,17 @@ describe("Movie Controller Tests", () => {
         json: () => Promise.resolve(MOCK_VOYAGE_RESPONSE),
       } as any);
 
-      // Mock database response
-      mockToArray.mockResolvedValue(SAMPLE_VECTOR_RESULTS);
+      // Ensure SAMPLE_VECTOR_RESULTS and SAMPLE_VECTOR_MOVIES have matching IDs
+      const vectorResultsWithMatchingIds = SAMPLE_VECTOR_RESULTS.map((result, index) => ({
+        ...result,
+        _id: SAMPLE_VECTOR_MOVIES[index]._id,
+      }));
+
+      // Mock database responses - first call for embedded_movies collection (vector search)
+      mockToArray
+        .mockResolvedValueOnce(vectorResultsWithMatchingIds)
+        // Second call for movies collection (complete movie data)
+        .mockResolvedValueOnce(SAMPLE_VECTOR_MOVIES);
 
       mockRequest.query = { q: "space adventure", limit: "3" };
 
@@ -803,14 +813,22 @@ describe("Movie Controller Tests", () => {
         })
       );
 
+      // Should call embedded_movies collection first, then movies collection
       expect(mockGetCollection).toHaveBeenCalledWith("embedded_movies");
-      expect(mockAggregate).toHaveBeenCalled();
+      expect(mockGetCollection).toHaveBeenCalledWith("movies");
+      expect(mockAggregate).toHaveBeenCalledTimes(2);
 
-      const expectedResults = SAMPLE_VECTOR_RESULTS.map((result) => ({
-        _id: result._id.toString(),
-        title: result.title,
-        plot: result.plot,
-        score: result.score,
+      // Verify the final result structure includes all movie fields
+      const expectedResults = SAMPLE_VECTOR_MOVIES.map((movie, index) => ({
+        _id: movie._id.toString(),
+        title: movie.title,
+        plot: movie.plot,
+        poster: movie.poster,
+        year: movie.year,
+        genres: movie.genres,
+        directors: movie.directors,
+        cast: movie.cast,
+        score: SAMPLE_VECTOR_RESULTS[index].score,
       }));
 
       expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
@@ -888,7 +906,10 @@ describe("Movie Controller Tests", () => {
         json: () => Promise.resolve(MOCK_VOYAGE_RESPONSE),
       } as any);
 
-      mockToArray.mockResolvedValue([]);
+      // Mock empty results from vector search
+      mockToArray
+        .mockResolvedValueOnce([]) // empty vector search results
+        .mockResolvedValueOnce([]); // empty movie results
 
       mockRequest.query = { q: "test" };
 
@@ -896,12 +917,17 @@ describe("Movie Controller Tests", () => {
 
       expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
         [],
-        "Found 0 similar movies for query: 'test'"
+        "No similar movies found for query: 'test'"
       );
     });
   });
 
   describe("findSimilarMovies", () => {
+    beforeEach(() => {
+      // Reset mocks specifically for findSimilarMovies tests
+      mockToArray.mockReset();
+    });
+
     it("should successfully find similar movies", async () => {
       const targetMovie = {
         _id: new ObjectId(TEST_MOVIE_ID),

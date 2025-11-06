@@ -61,15 +61,34 @@ export const SAMPLE_SEARCH_RESULTS = [
 export const SAMPLE_VECTOR_RESULTS = [
   {
     _id: new ObjectId(),
+    score: 0.85,
+  },
+  {
+    _id: new ObjectId(),
+    score: 0.78,
+  },
+];
+
+export const SAMPLE_VECTOR_MOVIES = [
+  {
+    _id: new ObjectId(),
     title: "Space Raiders",
     plot: "A futuristic space adventure",
-    score: 0.85,
+    poster: "https://example.com/poster1.jpg",
+    year: 2024,
+    genres: ["Sci-Fi", "Action"],
+    directors: ["John Director"],
+    cast: ["Actor One", "Actor Two"],
   },
   {
     _id: new ObjectId(),
     title: "Galaxy Quest",
     plot: "An epic space journey",
-    score: 0.78,
+    poster: "https://example.com/poster2.jpg",
+    year: 2023,
+    genres: ["Sci-Fi", "Comedy"],
+    directors: ["Jane Director"],
+    cast: ["Actor Three", "Actor Four"],
   },
 ];
 
