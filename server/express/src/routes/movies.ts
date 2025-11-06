@@ -30,6 +30,54 @@ const router = express.Router();
 router.get("/", asyncHandler(movieController.getAllMovies));
 
 /**
+ * GET /api/movies/search
+ *
+ * Search movies using MongoDB Search across multiple fields.
+ * Demonstrates MongoDB Atlas Search with compound queries and fuzzy matching.
+ */
+router.get("/search", asyncHandler(movieController.searchMovies));
+
+/**
+ * GET /api/movies/vector-search
+ *
+ * Search movies using MongoDB Vector Search for semantic similarity.
+ * Demonstrates vector search using embeddings to find similar plots.
+ */
+router.get("/vector-search", asyncHandler(movieController.vectorSearchMovies));
+
+/**
+ * GET /api/movies/find-similar-movies
+ *
+ * Find similar movies using vector search based on a movie ID.
+ * Demonstrates finding semantically similar movies using plot embeddings.
+ */
+router.get("/find-similar-movies", asyncHandler(movieController.findSimilarMovies));
+
+/**
+ * GET /api/movies/aggregations/comments
+ *
+ * Aggregate movies with their most recent comments.
+ * Demonstrates MongoDB $lookup aggregation to join collections.
+ */
+router.get("/aggregations/comments", asyncHandler(movieController.getMoviesWithMostRecentComments));
+
+/**
+ * GET /api/movies/aggregations/years
+ *
+ * Aggregate movies by year with statistics.
+ * Demonstrates MongoDB $group aggregation for statistical calculations.
+ */
+router.get("/aggregations/years", asyncHandler(movieController.getMoviesByYearWithStats));
+
+/**
+ * GET /api/movies/aggregations/directors
+ *
+ * Aggregate directors with the most movies.
+ * Demonstrates MongoDB $unwind and $group for array aggregation.
+ */
+router.get("/aggregations/directors", asyncHandler(movieController.getDirectorsWithMostMovies));
+
+/**
  * GET /api/movies/:id
  *
  * Retrieves a single movie by its ObjectId.

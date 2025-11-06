@@ -185,3 +185,135 @@ export type ErrorResponse = {
 };
 
 export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+/**
+ * Interface for vector search results
+ */
+export interface VectorSearchResult {
+  _id: string;
+  title: string;
+  plot?: string;
+  score: number;
+}
+
+/**
+ * Interface for director statistics aggregation results
+ */
+export interface DirectorStatisticsResult {
+  director: string;
+  movieCount: number;
+  averageRating?: number;
+}
+
+/**
+ * Interface for movies by year aggregation results
+ */
+export interface MoviesByYearResult {
+  year: number;
+  movieCount: number;
+  averageRating?: number;
+  highestRating?: number;
+  lowestRating?: number;
+  totalVotes?: number;
+}
+
+/**
+ * Interface for movies with comments aggregation results
+ */
+export interface MovieWithCommentsResult {
+  _id: string;
+  title: string;
+  year?: number;
+  plot?: string;
+  poster?: string;
+  genres?: string[];
+  imdb?: {
+    rating?: number;
+    votes?: number;
+  };
+  recentComments: CommentInfo[];
+  totalComments: number;
+  mostRecentCommentDate?: Date;
+}
+
+/**
+ * Interface for comment information in aggregation results
+ */
+export interface CommentInfo {
+  _id?: string;
+  userName: string;
+  userEmail: string;
+  text: string;
+  date: Date;
+}
+
+/**
+ * Interface for search movies response with total count
+ */
+export interface SearchMoviesResponse {
+  movies: Movie[];
+  totalCount: number;
+}
+
+/**
+ * Interface for movie search request parameters
+ */
+export interface MovieSearchRequest {
+  plot?: string;
+  fullplot?: string;
+  directors?: string;
+  writers?: string;
+  cast?: string;
+  limit?: number;
+  skip?: number;
+  searchOperator?: string;
+}
+
+/**
+ * Type for raw search query parameters from MongoDB Search endpoint
+ */
+export type RawMovieSearchQuery = {
+  plot?: string;
+  fullplot?: string;
+  directors?: string;
+  writers?: string;
+  cast?: string;
+  limit?: string;
+  skip?: string;
+  searchOperator?: string;
+};
+
+/**
+ * Interface for MongoDB Atlas Search phrase queries
+ */
+export interface SearchPhrase {
+  phrase?: {
+    query: string;
+    path: string;
+  };
+  text?: {
+    query: string;
+    path: string;
+    fuzzy?: { maxEdits: number; prefixLength: number };
+  };
+}
+
+/**
+ * Interface for aggregation comment data from MongoDB pipelines
+ */
+export interface AggregationComment {
+  _id?: ObjectId;
+  userName: string;
+  userEmail: string;
+  text: string;
+  date: Date;
+}
+
+/**
+ * Interface for Voyage AI API response structure
+ */
+export interface VoyageAIResponse {
+  data: Array<{
+    embedding: number[];
+  }>;
+}
