@@ -70,7 +70,7 @@ export default function Movies() {
       setHasNextPage(result.hasNextPage);
       setHasPrevPage(result.hasPrevPage);
     } catch (err) {
-      setError('Failed to load movies. Make sure the Express server is running on port 3001.');
+      setError('Failed to load movies. Make sure the server is running on port 3001.');
       setMovies([]);
     }
     
@@ -583,7 +583,7 @@ export default function Movies() {
                 <p>
                   {isSearchMode 
                     ? 'No movies found matching your search criteria. Try different search terms.'
-                    : 'No movies found. Make sure the Express server is running on port 3001.'
+                    : 'No movies found. Make sure the server is running on port 3001.'
                   }
                 </p>
               </div>

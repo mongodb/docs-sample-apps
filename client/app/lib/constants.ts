@@ -14,6 +14,7 @@ export const ROUTES = {
   home: '/',
   movies: '/movies',
   movie: (id: string) => `/movie/${id}`,
+  aggregations: '/aggregations',
 } as const;
 
 export const API_ENDPOINTS = {

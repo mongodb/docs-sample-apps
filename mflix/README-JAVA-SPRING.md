@@ -18,8 +18,8 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 
 - **Java 21** or higher
 - **Node.js 20** or higher
-- **MongoDB Atlas account** with the `sample_mflix` dataset loaded
-  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) in your Atlas cluster
+- **MongoDB Atlas cluster or local deployment** with the `sample_mflix` dataset loaded
+  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) 
 - **Maven** (included via Maven Wrapper)
 
 ## Getting Started
@@ -130,12 +130,40 @@ The Next.js frontend uses:
 - **Next.js 16** with App Router
 - **Turbopack** for fast development builds
 
-To build for production:
+#### Development Mode
+
+For active development with hot reloading and fast refresh:
 
 ```bash
 cd client
-npm run build
-npm start
+npm run dev
+```
+
+This starts the development server on `http://localhost:3000` with Turbopack for fast rebuilds.
+
+#### Production Build
+
+To create an optimized production build and run it:
+
+```bash
+cd client
+npm run build  # Creates optimized production build
+npm start      # Starts production server
+```
+
+The production build:
+- Minifies and optimizes JavaScript and CSS
+- Optimizes images and assets
+- Generates static pages where possible
+- Provides better performance for end users
+
+#### Linting
+
+To check code quality:
+
+```bash
+cd client
+npm run lint
 ```
 
 ## Issues
