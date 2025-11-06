@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Query, Path, Body
-from src.database.mongo_client import db, get_collection, voyage_ai_available
-from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, MovieFilter, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse, BatchUpdateRequest, BatchDeleteRequest
+from src.database.mongo_client import get_collection, voyage_ai_available
+from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse
 
-from typing import List
-from datetime import datetime
+from typing import Any, List
 from src.utils.errorHandler import create_success_response, create_error_response
 from bson import ObjectId
 import re
@@ -986,7 +985,7 @@ async def aggregate_movies_recent_commented(
     # 5. Sorts movies by their most recent comment date
     # 6. Shapes the final output with transformed comment structure
     
-    pipeline = [
+    pipeline: list[dict[str, Any]] =[
         # STAGE 1: $match - Initial Filter
         # Filter movies to only those with valid year data
         {

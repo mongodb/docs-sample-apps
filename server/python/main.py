@@ -1,32 +1,27 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import movies
-from src.utils.errorHandler import register_error_handlers, create_error_response
+from src.utils.errorHandler import register_error_handlers
 from src.database.mongo_client import db, get_collection
-import traceback
+
 import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-app = FastAPI()
 
-# Add CORS middleware
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in cors_origins],  # Load from environment variable
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-register_error_handlers(app)
-app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create search indexes
+    await ensure_search_index()
+    await vector_search_index()
+    yield
+    # Shutdown: Clean up resources if needed
+    # Add any cleanup code here
 
 
-@app.on_event("startup")
 async def ensure_search_index():
     try:
         movies_collection = db.get_collection("movies")
@@ -64,7 +59,7 @@ async def ensure_search_index():
             f"Please check your MongoDB Atlas configuration and ensure the cluster supports search indexes."
         )
 
-@app.on_event("startup")
+
 async def vector_search_index():
     """
     Creates vector search index on application startup if it doesn't already exist.
@@ -98,7 +93,7 @@ async def vector_search_index():
             }
             
             # Create the index
-            result = await embedded_movies_collection.create_search_index(index_definition)
+            await embedded_movies_collection.create_search_index(index_definition)
             
     except Exception as e:
         raise RuntimeError(
@@ -107,4 +102,20 @@ async def vector_search_index():
             f"Please check your MongoDB Atlas configuration, ensure the cluster supports vector search, "
             f"and verify the 'embedded_movies' collection exists with the required embedding field."
         )
+
+
+app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in cors_origins],  # Load from environment variable
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+register_error_handlers(app)
+app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
 
