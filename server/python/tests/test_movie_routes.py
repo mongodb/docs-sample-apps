@@ -422,9 +422,7 @@ class TestBatchOperations:
         # Assertions
         assert result.success is True
         assert result.data["insertedCount"] == 2
-        # Note: The route handler has a bug where it calls insert_many twice
-        # This test documents the current behavior
-        assert mock_collection.insert_many.call_count == 2
+        assert mock_collection.insert_many.call_count == 1
 
     @patch('src.routers.movies.get_collection')
     async def test_create_movies_batch_empty_list(self, mock_get_collection):

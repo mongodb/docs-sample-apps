@@ -224,15 +224,7 @@ class TestBatchOperationsIntegration:
         # Create batch
         response = await client.post("/api/movies/batch", json=movies)
 
-        # Note: Due to a bug in the API (duplicate insert_many calls),
-        # this may return 500. This is a known issue to be fixed.
-        # For now, we'll accept either 201 (success) or 500 (bug)
-        assert response.status_code in [201, 500]
-
-        if response.status_code == 500:
-            # Skip the rest of the test if the bug occurs
-            import pytest
-            pytest.skip("Batch create failed due to known duplicate insert_many bug")
+        assert response.status_code == 201
         data = response.json()
         assert data["success"] is True
 

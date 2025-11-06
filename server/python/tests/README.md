@@ -56,7 +56,7 @@ The test suite is organized into three categories:
 pytest tests/ -v
 ```
 
-**Expected output:** 68 passed, 1 skipped in ~5 seconds
+**Expected output:** 69 passed in ~5 seconds
 
 ### Run Only Unit Tests (Fast, No Database Required)
 
@@ -64,7 +64,7 @@ pytest tests/ -v
 pytest -m unit -v
 ```
 
-**Expected output:** 51 passed in ~1 second
+**Expected output:** 61 passed, 8 deselected in ~1 second
 
 ### Run Only Integration Tests (Requires Database)
 
@@ -72,7 +72,7 @@ pytest -m unit -v
 pytest -m integration -v
 ```
 
-**Expected output:** 7 passed, 1 skipped in ~4 seconds
+**Expected output:** 8 passed, 61 deselected in ~4 seconds
 
 ### Run Specific Test File
 
