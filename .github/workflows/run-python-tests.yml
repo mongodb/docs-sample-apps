@@ -1,0 +1,61 @@
+name: Run Python Tests
+
+on:
+  pull_request_target:
+    branches:
+      - development
+  push:
+    branches:
+      - development
+
+jobs:
+  test:
+    name: Run Python Tests
+    runs-on: ubuntu-latest
+    # Require manual approval for fork PRs
+    environment: testing
+
+    defaults:
+      run:
+        working-directory: server/python
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest --verbose --tb=short --junit-xml=test-results.xml || true
+        env:
+          MONGO_URI: ${{ secrets.MFLIX_URI }}
+          MONGO_DB: sample_mflix
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            server/python/test-results.xml
+            server/python/htmlcov/
+          retention-days: 30
+
+      - name: Generate Test Summary
+        if: always()
+        working-directory: .
+        run: |
+          chmod +x .github/scripts/generate-test-summary-pytest.sh
+          .github/scripts/generate-test-summary-pytest.sh server/python/test-results.xml
+
