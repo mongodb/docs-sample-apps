@@ -120,6 +120,11 @@ class VectorSearchResult(BaseModel):
     id: Optional[str] = Field(alias="_id")
     title: str
     plot: Optional[str] = None
+    poster: Optional[str] = None
+    year: Optional[int] = None
+    genres: Optional[list[str]] = None
+    directors: Optional[list[str]] = None
+    cast: Optional[list[str]] = None
     score: float
 
     model_config = {
