@@ -21,6 +21,8 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 - **MongoDB Atlas cluster or local deployment** with the `sample_mflix` dataset loaded
   - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) 
 - **Maven** (included via Maven Wrapper)
+- **Voyage AI API key** (For MongoDB Vector Search)
+  - [Get a Voyage AI API key](https://www.voyageai.com/)
 
 ## Getting Started
 
