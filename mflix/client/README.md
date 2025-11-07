@@ -72,71 +72,12 @@ Open your browser and navigate to:
 
 - **Browse Movies:** View a paginated list of movies from the sample_mflix dataset with server-side rendering
 - **Movie Details:** Access comprehensive movie information including plot, cast, ratings, and metadata
-- **CRUD Operations:** Create, read, update, and delete movies through an intuitive interface
-- **Search & Filters:** Search movies with various filters and sorting options
-- **Vector Search:** Find movies with similar plot descriptions using AI-powered search
+- **CRUD Operations:** Create, read, update, and delete movies
+- **Search & Filters:** Search movies with various filters and sorting
+  options using MongoDB Search
+- **Vector Search:** Find movies with similar plot descriptions using
+  MongoDB Vector Search
 - **Data Aggregations:** View analytics and insights built with MongoDB aggregation pipelines
-- **Responsive Design:** Optimized experience across desktop and mobile devices
-- **Real-time Updates:** Dynamic content updates without page refreshes
-
-## Development
-
-### Frontend Development
-
-The Next.js frontend uses:
-- **React 19** with TypeScript for modern component development
-- **Next.js 15** with App Router for server-side rendering and routing
-- **Turbopack** for fast development builds and hot reloading
-- **CSS Modules** for component-scoped styling
-- **ESLint** for code quality and consistency
-
-#### Development Mode
-
-For active development with hot reloading and fast refresh:
-
-```bash
-npm run dev
-```
-
-This starts the development server on `http://localhost:3000` with Turbopack for fast rebuilds.
-
-#### Production Build
-
-To create an optimized production build:
-
-```bash
-npm run build  # Creates optimized production build
-npm start      # Starts production server
-```
-
-The production build:
-- Minifies and optimizes JavaScript and CSS
-- Optimizes images and assets  
-- Generates static pages where possible
-- Provides better performance for end users
-
-#### Code Quality
-
-To check code quality and formatting:
-
-```bash
-npm run lint
-```
-
-### API Integration
-
-The application connects to the backend API using:
-- **Server-Side Rendering**: Data fetched on the server for better SEO and performance
-- **TypeScript**: Type-safe API calls with interfaces matching backend data structures
-- **Error Handling**: Graceful fallbacks when the API is unavailable
-- **Loading States**: Professional loading indicators and skeleton screens
-
-### Key Technologies
-
-- **Next.js SSR**: Server-side rendering for better performance and SEO
-- **TypeScript**: Full type safety across the application
-- **CSS Modules**: Scoped styling to prevent style conflicts
-- **Responsive Design**: Mobile-first approach with flexible layouts
 
 ## Issues
 

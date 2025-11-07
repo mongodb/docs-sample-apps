@@ -65,7 +65,9 @@ CORS_ORIGIN=http://localhost:3000
 # ENABLE_SEARCH_TESTS=true
 ```
 
-**Note:** Replace `username`, `password`, and `cluster` with your actual MongoDB Atlas credentials.
+**Note:** Replace `username`, `password`, and `cluster` with your
+actual MongoDB Atlas credentials. Replace `your_voyage_api_key` with
+your key.
 
 ### 2. Start the Backend Server
 
