@@ -4,9 +4,13 @@ on:
   pull_request_target:
     branches:
       - development
+    paths:
+      - 'mflix/server/java-spring/**'
   push:
     branches:
       - development
+    paths:
+      - 'mflix/server/java-spring/**'
 
 jobs:
   test:
@@ -17,7 +21,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: server/java-spring
+        working-directory: mflix/server/java-spring
 
     env:
       MONGODB_URI: ${{ secrets.MFLIX_URI }}
@@ -39,13 +43,6 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      - name: Debug environment variables
-        run: |
-          echo "Checking environment variables..."
-          echo "MONGODB_URI is set: $(if [ -n "$MONGODB_URI" ]; then echo 'YES'; else echo 'NO'; fi)"
-          echo "ENABLE_SEARCH_TESTS is set: $(if [ -n "$ENABLE_SEARCH_TESTS" ]; then echo 'YES'; else echo 'NO'; fi)"
-          echo "MONGODB_URI length: ${#MONGODB_URI}"
-
       - name: Run unit tests
         run: ./mvnw test
 
@@ -58,7 +55,7 @@ jobs:
         if: always()
         with:
           name: test-results
-          path: server/java-spring/target/surefire-reports/
+          path: mflix/server/java-spring/target/surefire-reports/
           retention-days: 30
 
       - name: Generate Test Summary
@@ -66,4 +63,4 @@ jobs:
         working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-surefire.sh
-          .github/scripts/generate-test-summary-surefire.sh server/java-spring/target/surefire-reports
+          .github/scripts/generate-test-summary-surefire.sh mflix/server/java-spring/target/surefire-reports

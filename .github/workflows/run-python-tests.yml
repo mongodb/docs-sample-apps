@@ -4,9 +4,13 @@ on:
   pull_request_target:
     branches:
       - development
+    paths:
+      - 'mflix/server/python-fastapi/**'
   push:
     branches:
       - development
+    paths:
+      - 'mflix/server/python-fastapi/**'
 
 jobs:
   test:
@@ -17,7 +21,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: server/python
+        working-directory: mflix/server/python-fastapi
 
     steps:
       - name: Checkout code
@@ -54,9 +58,9 @@ jobs:
         with:
           name: test-results
           path: |
-            server/python/test-results-unit.xml
-            server/python/test-results-integration.xml
-            server/python/htmlcov/
+            mflix/server/python-fastapi/test-results-unit.xml
+            mflix/server/python-fastapi/test-results-integration.xml
+            mflix/server/python-fastapi/htmlcov/
           retention-days: 30
 
       - name: Generate Test Summary
@@ -65,5 +69,5 @@ jobs:
         run: |
           chmod +x .github/scripts/generate-test-summary-pytest.sh
           .github/scripts/generate-test-summary-pytest.sh \
-            server/python/test-results-unit.xml \
-            server/python/test-results-integration.xml
+            mflix/server/python-fastapi/test-results-unit.xml \
+            mflix/server/python-fastapi/test-results-integration.xml
