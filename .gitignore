@@ -1,0 +1,54 @@
+# =============================================================================
+# Root .gitignore for MongoDB Sample Apps Monorepo
+# =============================================================================
+# This file contains patterns common to all projects in the monorepo.
+# Backend-specific patterns are defined in each backend's .gitignore file.
+# =============================================================================
+
+# Environment Variables (Global)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor Files (Global)
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Logs (Global)
+logs/
+*.log
+
+# Temporary Files (Global)
+*.tmp
+*.temp
+.cache/
+
+# Node.js (Global - applies to all Node.js projects)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Test Coverage (Global)
+coverage/
+*.lcov
+.nyc_output

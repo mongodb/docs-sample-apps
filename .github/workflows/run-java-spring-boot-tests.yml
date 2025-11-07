@@ -1,0 +1,66 @@
+name: Run Java Spring Boot Tests
+
+on:
+  pull_request_target:
+    branches:
+      - development
+    paths:
+      - 'mflix/server/java-spring/**'
+  push:
+    branches:
+      - development
+    paths:
+      - 'mflix/server/java-spring/**'
+
+jobs:
+  test:
+    name: Run Java Spring Boot Tests
+    runs-on: ubuntu-latest
+    # Require manual approval for fork PRs
+    environment: testing
+
+    defaults:
+      run:
+        working-directory: mflix/server/java-spring
+
+    env:
+      MONGODB_URI: ${{ secrets.MFLIX_URI }}
+      ENABLE_SEARCH_TESTS: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Run unit tests
+        run: ./mvnw test
+
+      - name: Run integration tests
+        run: ./mvnw test -Dtest=MongoDBSearchIntegrationTest
+        continue-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: mflix/server/java-spring/target/surefire-reports/
+          retention-days: 30
+
+      - name: Generate Test Summary
+        if: always()
+        working-directory: .
+        run: |
+          chmod +x .github/scripts/generate-test-summary-surefire.sh
+          .github/scripts/generate-test-summary-surefire.sh mflix/server/java-spring/target/surefire-reports
