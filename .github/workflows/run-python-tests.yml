@@ -36,8 +36,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest --verbose --tb=short --junit-xml=test-results.xml || true
+      - name: Run unit tests
+        run: pytest -m unit --verbose --tb=short --junit-xml=test-results-unit.xml
+        env:
+          MONGO_URI: ${{ secrets.MFLIX_URI }}
+          MONGO_DB: sample_mflix
+
+      - name: Run integration tests
+        run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
         env:
           MONGO_URI: ${{ secrets.MFLIX_URI }}
           MONGO_DB: sample_mflix
@@ -48,7 +54,8 @@ jobs:
         with:
           name: test-results
           path: |
-            server/python/test-results.xml
+            server/python/test-results-unit.xml
+            server/python/test-results-integration.xml
             server/python/htmlcov/
           retention-days: 30
 
@@ -57,5 +64,6 @@ jobs:
         working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-pytest.sh
-          .github/scripts/generate-test-summary-pytest.sh server/python/test-results.xml
-
+          .github/scripts/generate-test-summary-pytest.sh \
+            server/python/test-results-unit.xml \
+            server/python/test-results-integration.xml
