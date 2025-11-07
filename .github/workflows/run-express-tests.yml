@@ -4,9 +4,13 @@ on:
   pull_request_target:
     branches:
       - development
+    paths:
+      - 'server/express/**'
   push:
     branches:
       - development
+    paths:
+      - 'server/express/**'
 
 jobs:
   test:
@@ -33,10 +37,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
-        run: npm test -- --json --outputFile=test-results.json || true
+      - name: Run unit tests
+        run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
         env:
           MONGODB_URI: ${{ secrets.MFLIX_URI }}
+
+      - name: Run integration tests
+        run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
+        env:
+          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+          ENABLE_SEARCH_TESTS: true
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_AI }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -45,7 +56,8 @@ jobs:
           name: test-results
           path: |
             server/express/coverage/
-            server/express/test-results.json
+            server/express/test-results-unit.json
+            server/express/test-results-integration.json
           retention-days: 30
 
       - name: Generate Test Summary
@@ -53,4 +65,6 @@ jobs:
         working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-jest.sh
-          .github/scripts/generate-test-summary-jest.sh server/express/test-results.json
+          .github/scripts/generate-test-summary-jest.sh \
+            server/express/test-results-unit.json \
+            server/express/test-results-integration.json

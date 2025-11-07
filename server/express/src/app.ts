@@ -161,5 +161,10 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-// Start the server
-startServer();
+// Export the app for testing
+export { app };
+
+// Only start the server if this file is run directly (not imported for testing)
+if (require.main === module) {
+  startServer();
+}
