@@ -40,9 +40,9 @@ import org.springframework.web.bind.annotation.*;
  * - DELETE /api/movies/{id} - Delete a movie
  * - DELETE /api/movies - Delete multiple movies
  * - DELETE /api/movies/{id}/find-and-delete - Find and delete a movie
- * - GET /api/movies/aggregations/comments - Aggregate movies with most comments
- * - GET /api/movies/aggregations/years - Aggregate movies by year with statistics
- * - GET /api/movies/aggregations/directors - Aggregate directors with most movies
+ * - GET /api/movies/aggregations/reportingByComments - Aggregate movies with most comments
+ * - GET /api/movies/aggregations/reportingByYear - Aggregate movies by year with statistics
+ * - GET /api/movies/aggregations/reportingByDirectors - Aggregate directors with most movies
  * - GET /api/movies/search - Text search using MongoDB Search Index across multiple fields (plot, fullplot, directors, writers, cast)
  * - GET /api/movies/vector-search - Vector search using Voyage AI embeddings to find movies with similar plots
  * - GET /api/movies/find-similar-movies - Vector search to find similar movies based on plot embeddings
@@ -296,7 +296,7 @@ public class MovieControllerImpl {
         description = "Aggregates movies with their most recent comments using MongoDB $lookup (join) operation. " +
                      "Demonstrates how to combine data from the movies and comments collections."
     )
-    @GetMapping("/aggregations/comments")
+    @GetMapping("/aggregations/reportingByComments")
     public ResponseEntity<SuccessResponse<List<MovieWithCommentsResult>>> getMoviesWithMostRecentComments(
             @Parameter(description = "Maximum number of movies to return (default: 10, max: 50)")
             @RequestParam(defaultValue = "10") Integer limit,
@@ -331,7 +331,7 @@ public class MovieControllerImpl {
         description = "Aggregates movies by year with statistics including movie count and average rating. " +
                      "Demonstrates MongoDB $group operation for statistical aggregation."
     )
-    @GetMapping("/aggregations/years")
+    @GetMapping("/aggregations/reportingByYear")
     public ResponseEntity<SuccessResponse<List<MoviesByYearResult>>> getMoviesByYearWithStats() {
 
         List<MoviesByYearResult> results = movieService.getMoviesByYearWithStats();
@@ -352,7 +352,7 @@ public class MovieControllerImpl {
         description = "Aggregates directors with the most movies and their statistics. " +
                      "Demonstrates MongoDB $unwind operation for array flattening and aggregation."
     )
-    @GetMapping("/aggregations/directors")
+    @GetMapping("/aggregations/reportingByDirectors")
     public ResponseEntity<SuccessResponse<List<DirectorStatisticsResult>>> getDirectorsWithMostMovies(
             @Parameter(description = "Maximum number of directors to return (default: 20, max: 100)")
             @RequestParam(defaultValue = "20") Integer limit) {

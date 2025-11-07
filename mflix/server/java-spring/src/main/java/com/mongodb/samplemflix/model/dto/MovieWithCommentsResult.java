@@ -24,7 +24,7 @@ public class MovieWithCommentsResult {
     /**
      * Movie ID as string.
      */
-    private String id;
+    private String _id;
 
     /**
      * Movie title.
@@ -52,9 +52,9 @@ public class MovieWithCommentsResult {
     private List<String> genres;
 
     /**
-     * IMDB rating information.
+     * IMDB rating (0.0 to 10.0).
      */
-    private ImdbInfo imdb;
+    private Double imdbRating;
 
     /**
      * Most recent comments for this movie.
@@ -70,25 +70,6 @@ public class MovieWithCommentsResult {
      * Date of the most recent comment.
      */
     private Date mostRecentCommentDate;
-
-    /**
-     * Nested class for IMDB information.
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ImdbInfo {
-        /**
-         * IMDB rating (0.0 to 10.0).
-         */
-        private Double rating;
-
-        /**
-         * Number of votes.
-         */
-        private Integer votes;
-    }
 
     /**
      * Nested class for comment information.

@@ -412,13 +412,13 @@ public class MovieServiceImpl implements MovieService {
                 // STAGE 7: Project final output with recent comments slice
                 // Shape the response and include only the 5 most recent comments per movie
                 Aggregation.project()
-                        .and(ConditionalOperators.ifNull("_id").then("")).as("id")
+                        .and(ConditionalOperators.ifNull("_id").then("")).as("_id")
                         .and("title").as("title")
                         .and("year").as("year")
                         .and("plot").as("plot")
                         .and("poster").as("poster")
                         .and("genres").as("genres")
-                        .and("imdb").as("imdb")
+                        .and("imdb.rating").as("imdbRating")
                         .and(ArrayOperators.Slice.sliceArrayOf("comments").itemCount(5)).as("recentComments")
                         .and("totalComments").as("totalComments")
                         .and("mostRecentCommentDate").as("mostRecentCommentDate")
@@ -540,15 +540,8 @@ public class MovieServiceImpl implements MovieService {
      * Helper method to map Document to MovieWithCommentsResult.
      */
     private MovieWithCommentsResult mapToMovieWithCommentsResult(Document doc) {
-        // Extract IMDB info
-        MovieWithCommentsResult.ImdbInfo imdbInfo = null;
-        Document imdbDoc = doc.get("imdb", Document.class);
-        if (imdbDoc != null) {
-            imdbInfo = MovieWithCommentsResult.ImdbInfo.builder()
-                    .rating(imdbDoc.getDouble("rating"))
-                    .votes(imdbDoc.getInteger("votes"))
-                    .build();
-        }
+        // Extract IMDB rating (just the number)
+        Double imdbRating = doc.getDouble("imdbRating");
 
         // Extract recent comments
         List<MovieWithCommentsResult.CommentInfo> recentComments = null;
@@ -569,7 +562,7 @@ public class MovieServiceImpl implements MovieService {
 
         // Extract movie ID - handle both String and ObjectId types
         String movieId = null;
-        Object idObj = doc.get("id");
+        Object idObj = doc.get("_id");
         if (idObj instanceof String) {
             movieId = (String) idObj;
         } else if (idObj instanceof ObjectId) {
@@ -577,13 +570,13 @@ public class MovieServiceImpl implements MovieService {
         }
 
         return MovieWithCommentsResult.builder()
-                .id(movieId)
+                ._id(movieId)
                 .title(doc.getString("title"))
                 .year(doc.getInteger("year"))
                 .plot(doc.getString("plot"))
                 .poster(doc.getString("poster"))
                 .genres(doc.getList("genres", String.class))
-                .imdb(imdbInfo)
+                .imdbRating(imdbRating)
                 .recentComments(recentComments)
                 .totalComments(doc.getInteger("totalComments"))
                 .mostRecentCommentDate(doc.getDate("mostRecentCommentDate"))

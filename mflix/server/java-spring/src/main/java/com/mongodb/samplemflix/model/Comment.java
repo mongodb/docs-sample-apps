@@ -15,15 +15,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
  *
  * <p>This class maps to the comments collection in the sample_mflix database.
  * Comments are user reviews/comments associated with movies.
- *
- * <p>TODO: Implement Comment functionality:
- * - Create CommentRepository extending MongoRepository
- * - Create CommentService and CommentServiceImpl
- * - Create CommentController with REST endpoints
- * - Add validation annotations (@NotNull, @Email, etc.)
- * - Add unit tests for Comment service and controller
- * - Add integration tests
- * - Implement query methods (findByMovieId, findByEmail, etc.)
  */
 @Data
 @Builder
