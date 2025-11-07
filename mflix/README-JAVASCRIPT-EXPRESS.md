@@ -5,9 +5,9 @@ This is a full-stack movie browsing application built with Express.js and Next.j
 ## Project Structure
 
 ```
-├── README-JAVASCRIPT-EXPRESS.md
+├── README.md
 ├── client/                 # Next.js frontend (TypeScript)
-└── server/js-express/      # Express.js backend
+└── server                  # Express.js backend
     ├── src/
     ├── package.json
     ├── .env.example
@@ -30,7 +30,7 @@ This is a full-stack movie browsing application built with Express.js and Next.j
 Navigate to the Express server directory:
 
 ```bash
-cd server/js-express
+cd server
 ```
 
 Create a `.env` file from the example:
@@ -42,15 +42,22 @@ cp .env.example .env
 Edit the `.env` file and set your MongoDB connection string:
 
 ```env
-# MongoDB Configuration
-# Replace with your MongoDB Atlas connection string
+# MongoDB Connection
+# Replace with your MongoDB Atlas connection string or local MongoDB URI
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/sample_mflix?retryWrites=true&w=majority
+
+# Voyage AI Configuration
+# API key for Voyage AI embedding model (required for Vector Search)
+VOYAGE_API_KEY=your_voyage_api_key
 
 # Server Configuration
 PORT=3001
 NODE_ENV=development
 
-# CORS Configuration (frontend URL)
+
+# CORS Configuration
+# Allowed origin for cross-origin requests (frontend URL)
+# For multiple origins, separate with commas
 CORS_ORIGIN=http://localhost:3000
 
 # Optional: Enable MongoDB Search tests
@@ -58,11 +65,13 @@ CORS_ORIGIN=http://localhost:3000
 # ENABLE_SEARCH_TESTS=true
 ```
 
-**Note:** Replace `<username>`, `<password>`, and `<cluster>` with your actual MongoDB Atlas credentials.
+**Note:** Replace `<username>`, `<password>`, and `<cluster>` with
+your actual MongoDB Atlas credentials. Replace `your_voyage_api_key` with
+your key.
 
 ### 2. Install Backend Dependencies
 
-From the `server/js-express` directory, run:
+From the `server` directory, run:
 
 ```bash
 npm install
@@ -70,13 +79,17 @@ npm install
 
 ### 3. Start the Backend Server
 
-From the `server/js-express` directory, run:
+From the `server` directory, run:
 
 ```bash
 # Development mode with hot reloading
 npm run dev
+```
 
-# Or production mode
+
+Or for production mode, run:
+
+```bash
 npm run build
 npm start
 ```
@@ -140,14 +153,14 @@ The Express.js backend uses:
 To run tests:
 
 ```bash
-cd server/js-express
+cd server
 npm test
 ```
 
 To run tests with coverage:
 
 ```bash
-cd server/js-express
+cd server
 npm run test:coverage
 ```
 
@@ -204,5 +217,5 @@ If you have problems running the sample app, please check the following:
 - [ ] Verify that you have no firewalls blocking access to the server or client ports.
 
 If you have verified the above and still have issues, please
-[open an issue](https://github.com/mongodb/sample-app-nodejs-mflix/issues/new/choose)
-on the source repository `mongodb/sample-app-nodejs-mflix`.
+[open an issue](https://github.com/mongodb/docs-sample-apps/issues/new/choose)
+on the source repository `mongodb/docs-sample-apps`.

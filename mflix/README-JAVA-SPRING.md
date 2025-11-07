@@ -5,9 +5,9 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 ## Project Structure
 
 ```
-├── README-JAVA-SPRING.md
+├── README.md
 ├── client/                 # Next.js frontend (TypeScript)
-└── server/java-spring/     # Java Spring Boot backend
+└── server/                 # Java Spring Boot backend
     ├── src/
     ├── pom.xml
     ├── .env.example
@@ -31,7 +31,7 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 Navigate to the Java Spring server directory:
 
 ```bash
-cd server/java-spring
+cd server
 ```
 
 Create a `.env` file from the example:
@@ -44,20 +44,32 @@ Edit the `.env` file and set your MongoDB connection string:
 
 ```env
 # MongoDB Connection
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+# Replace with your MongoDB Atlas connection string or local MongoDB URI
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/sample_mflix?retryWrites=true&w=majority
+
+# Voyage AI Configuration
+# API key for Voyage AI embedding model (required for Vector Search)
+VOYAGE_API_KEY=your_voyage_api_key
 
 # Server Configuration
+# Port on which the Spring Boot application will run
 PORT=3001
 
 # CORS Configuration
+# Allowed origin for cross-origin requests (frontend URL)
+# For multiple origins, separate with commas
 CORS_ORIGIN=http://localhost:3000
+
+# Optional: Enable MongoDB Search tests
+# Uncomment the following line to enable Search tests
+# ENABLE_SEARCH_TESTS=true
 ```
 
 **Note:** Replace `username`, `password`, and `cluster` with your actual MongoDB Atlas credentials.
 
 ### 2. Start the Backend Server
 
-From the `server/java-spring` directory, run:
+From the `server` directory, run:
 
 ```bash
 # Using Maven Wrapper (recommended)
@@ -125,7 +137,7 @@ The Java Spring Boot backend uses:
 To run tests:
 
 ```bash
-cd server/java-spring
+cd server
 ./mvnw test
 ```
 
@@ -182,5 +194,5 @@ If you have problems running the sample app, please check the following:
 - [ ] Verify that you have no firewalls blocking access to the server or client ports.
 
 If you have verified the above and still have issues, please
-[open an issue](https://github.com/mongodb/sample-app-java-mflix/issues/new/choose)
-on the source repository `mongodb/sample-app-java-mflix`.
+[open an issue](https://github.com/mongodb/docs-sample-apps/issues/new/choose)
+on the source repository `mongodb/docs-sample-apps`.
