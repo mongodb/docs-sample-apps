@@ -300,7 +300,7 @@ async def search_movies(
             - plot: Movie plot text
             - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
 """
-# Specify your Voyage API key and embedding model
+# Specify your Voyage AI embedding model
 model = "voyage-3-large"
 outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
 
@@ -402,10 +402,6 @@ async def vector_search_movies(
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-
-#------------------------------------
-# Place get_movie_by_id endpoint here
-#------------------------------------
 
 """
     GET /api/movies/{id}
@@ -539,10 +535,6 @@ async def get_all_movies(
     # Return the results wrapped in a SuccessResponse    
     return create_success_response(movies, f"Found {len(movies)} movies.")
 
-#------------------------------------
-# Place create_movie endpoint here
-#------------------------------------
-
 """
     POST /api/movies/
     Create a new movie.
@@ -599,10 +591,6 @@ async def create_movie(movie: CreateMovieRequest):
     created_movie["_id"] = str(created_movie["_id"]) # Convert ObjectId to string
     
     return create_success_response(created_movie, f"Movie '{movie_data['title']}' created successfully")
-
-#------------------------------------
-# Place create_movies_batch endpoint here
-#------------------------------------
 
 """
 POST /api/movies/batch
@@ -669,10 +657,6 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-
-#------------------------------------
-# Place update_movie endpoint here
-#------------------------------------
 
 """    
     PATCH /api/movies/{id}
@@ -744,10 +728,6 @@ async def update_movie(
 
     return create_success_response(updatedMovie, f"Movie updated successfully. Modified {len(update_dict)} fields.")
 
-#------------------------------------
-# Place update_movies_by_batch endpoint here
-#------------------------------------
-
 """
     PATCH /api/movies
 
@@ -810,10 +790,6 @@ async def update_movies_batch(
         f"Update operation completed. Matched {result.matched_count} movie(s), modified {result.modified_count} movie(s)."
 )
 
-#------------------------------------
-# Place delete_movie endpoint here
-#------------------------------------
-
 """
     DELETE /api/movies/{id}
     Delete a single movie by its ID.
@@ -860,9 +836,6 @@ async def delete_movie_by_id(id: str):
         "Movie deleted successfully"
     )
 
-#------------------------------------
-# Place delete_movies_by_batch endpoint here
-#------------------------------------
 """
     DELETE /api/movies/
 
@@ -921,10 +894,6 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
         {"deletedCount":result.deleted_count},
         f'Delete operation completed. Removed {result.deleted_count} movies.'
     )
-
-#------------------------------------
-# Place find_and_delete_movie endpoint here
-#------------------------------------
 
 """
     DELETE /api/movies/{id}/find-and-delete
