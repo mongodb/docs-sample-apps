@@ -286,7 +286,7 @@ export type RawMovieSearchQuery = {
 };
 
 /**
- * Interface for MongoDB Atlas Search phrase queries
+ * Interface for MongoDB Search phrase queries
  */
 export interface SearchPhrase {
   phrase?: {

@@ -2,7 +2,7 @@
  * Advanced Endpoints Integration Tests
  *
  * These tests verify the advanced MongoDB API endpoints including:
- * - Atlas Search
+ * - MongoDB Search
  * - Vector Search
  * - Aggregation pipelines ($lookup, $group, $unwind)
  *
@@ -322,14 +322,14 @@ describeIntegration("Advanced Endpoints Integration Tests", () => {
   });
 });
 
-describeSearch("Atlas Search Integration Tests", () => {
+describeSearch("MongoDB Search Integration Tests", () => {
   let testMovieIds: string[] = [];
 
   beforeAll(async () => {
     if (!process.env.ENABLE_SEARCH_TESTS) {
       console.log(`
-⚠️  Atlas Search tests skipped: ENABLE_SEARCH_TESTS environment variable is not set
-   To run Atlas Search integration tests, set ENABLE_SEARCH_TESTS=true in your .env file
+⚠️  MongoDB Search tests skipped: ENABLE_SEARCH_TESTS environment variable is not set
+   To run MongoDB Search integration tests, set ENABLE_SEARCH_TESTS=true in your .env file
    Example: ENABLE_SEARCH_TESTS=true npm run test:integration
 `);
       return;

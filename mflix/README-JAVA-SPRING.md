@@ -5,9 +5,9 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 ## Project Structure
 
 ```
-├── README-JAVA-SPRING.md
+├── README.md
 ├── client/                 # Next.js frontend (TypeScript)
-└── server/java-spring/     # Java Spring Boot backend
+└── server/                 # Java Spring Boot backend
     ├── src/
     ├── pom.xml
     ├── .env.example
@@ -21,6 +21,8 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 - **MongoDB Atlas cluster or local deployment** with the `sample_mflix` dataset loaded
   - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) 
 - **Maven** (included via Maven Wrapper)
+- **Voyage AI API key** (For MongoDB Vector Search)
+  - [Get a Voyage AI API key](https://www.voyageai.com/)
 
 ## Getting Started
 
@@ -29,7 +31,7 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 Navigate to the Java Spring server directory:
 
 ```bash
-cd server/java-spring
+cd server
 ```
 
 Create a `.env` file from the example:
@@ -42,20 +44,34 @@ Edit the `.env` file and set your MongoDB connection string:
 
 ```env
 # MongoDB Connection
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+# Replace with your MongoDB Atlas connection string or local MongoDB URI
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/sample_mflix?retryWrites=true&w=majority
+
+# Voyage AI Configuration
+# API key for Voyage AI embedding model (required for Vector Search)
+VOYAGE_API_KEY=your_voyage_api_key
 
 # Server Configuration
+# Port on which the Spring Boot application will run
 PORT=3001
 
 # CORS Configuration
+# Allowed origin for cross-origin requests (frontend URL)
+# For multiple origins, separate with commas
 CORS_ORIGIN=http://localhost:3000
+
+# Optional: Enable MongoDB Search tests
+# Uncomment the following line to enable Search tests
+# ENABLE_SEARCH_TESTS=true
 ```
 
-**Note:** Replace `username`, `password`, and `cluster` with your actual MongoDB Atlas credentials.
+**Note:** Replace `username`, `password`, and `cluster` with your
+actual MongoDB Atlas credentials. Replace `your_voyage_api_key` with
+your key.
 
 ### 2. Start the Backend Server
 
-From the `server/java-spring` directory, run:
+From the `server` directory, run:
 
 ```bash
 # Using Maven Wrapper (recommended)
@@ -100,11 +116,15 @@ Open your browser and navigate to:
 
 ## Features
 
-- **Browse Movies:** View a paginated list of movies from the sample_mflix dataset
-- **Search:** Full-text search using MongoDB Search
-- **Filter:** Filter movies by genre, year, rating, and more
-- **Movie Details:** View detailed information about each movie
-- **Aggregations:** Complex data aggregations and analytics
+- **Browse Movies:** View a paginated list of movies from the
+  sample_mflix dataset
+- **CRUD Operations:** Create, read, update and delete movies by using
+  the MongoDB Java driver
+- **Search:** Search movies with filters by using MongoDB Search
+- **Vector Search:** Search movie plots with similar search terms by
+  using MongoDB Vector Search
+- **Aggregations:** View data aggregations and analytics built with
+  aggregation pipelines
 
 ## Development
 
@@ -119,7 +139,7 @@ The Java Spring Boot backend uses:
 To run tests:
 
 ```bash
-cd server/java-spring
+cd server
 ./mvnw test
 ```
 

@@ -85,7 +85,7 @@ public interface MovieService {
 
     /**
      * Finds similar movies using vector search on plot embeddings.
-     * Demonstrates MongoDB Atlas Vector Search.
+     * Demonstrates MongoDB Vector Search.
      *
      * @param movieId ID of the movie to find similar movies for
      * @param limit Maximum number of similar movies to return (default: 10, max: 50)
