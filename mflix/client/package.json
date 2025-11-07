@@ -1,5 +1,8 @@
 {
   "name": "sample-mflix-front-end",
+  "description": "Next.js frontend for MongoDB sample mflix application demonstrating CRUD operations, aggregations, and search",
+  "license": "Apache-2.0",
+  "author": "MongoDB Documentation Team",
   "version": "0.1.0",
   "private": true,
   "scripts": {

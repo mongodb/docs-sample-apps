@@ -443,13 +443,13 @@ class MovieServiceTest {
         String movieId = null;
 
         Document doc1 = new Document()
-                .append("id", testId.toHexString())
+                .append("_id", testId.toHexString())
                 .append("title", "Test Movie")
                 .append("year", 2024)
                 .append("plot", "Test plot")
                 .append("poster", "http://example.com/poster.jpg")
                 .append("genres", Arrays.asList("Action", "Drama"))
-                .append("imdb", new Document("rating", 8.5).append("votes", 1000))
+                .append("imdbRating", 8.5)
                 .append("recentComments", Arrays.asList(
                         new Document()
                                 .append("_id", new ObjectId())
