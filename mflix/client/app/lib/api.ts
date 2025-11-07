@@ -593,7 +593,7 @@ export async function searchMovies(searchParams: {
   cast?: string;
   limit?: number;
   skip?: number;
-  search_operator?: 'must' | 'should' | 'mustNot' | 'filter';
+  searchOperator?: 'must' | 'should' | 'mustNot' | 'filter';
 }): Promise<{ success: boolean; error?: string; movies?: Movie[]; hasNextPage?: boolean; hasPrevPage?: boolean; totalCount?: number }> {
   try {
     // Build query parameters
@@ -609,7 +609,7 @@ export async function searchMovies(searchParams: {
     if (searchParams.cast) queryParams.append('cast', searchParams.cast);
     queryParams.append('limit', limit.toString());
     queryParams.append('skip', skip.toString());
-    if (searchParams.search_operator) queryParams.append('search_operator', searchParams.search_operator);
+    if (searchParams.searchOperator) queryParams.append('searchOperator', searchParams.searchOperator);
 
     const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams}`, {
       method: 'GET',

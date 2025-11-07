@@ -100,11 +100,15 @@ Open your browser and navigate to:
 
 ## Features
 
-- **Browse Movies:** View a paginated list of movies from the sample_mflix dataset
-- **Search:** Full-text search using MongoDB Search
-- **Filter:** Filter movies by genre, year, rating, and more
-- **Movie Details:** View detailed information about each movie
-- **Aggregations:** Complex data aggregations and analytics
+- **Browse Movies:** View a paginated list of movies from the
+  sample_mflix dataset
+- **CRUD Operations:** Create, read, update and delete movies by using
+  the MongoDB Java driver
+- **Search:** Search movies with filters by using MongoDB Search
+- **Vector Search:** Search movie plots with similar search terms by
+  using MongoDB Vector Search
+- **Aggregations:** View data aggregations and analytics built with
+  aggregation pipelines
 
 ## Development
 
@@ -176,5 +180,5 @@ If you have problems running the sample app, please check the following:
 - [ ] Verify that you have no firewalls blocking access to the server or client ports.
 
 If you have verified the above and still have issues, please
-[open an issue](https://github.com/mongodb/docs-sample-apps/issues/new/choose)
-on the source repository `mongodb/docs-sample-apps`.
+[open an issue](https://github.com/mongodb/sample-app-java-mflix/issues/new/choose)
+on the source repository `mongodb/sample-app-java-mflix`.

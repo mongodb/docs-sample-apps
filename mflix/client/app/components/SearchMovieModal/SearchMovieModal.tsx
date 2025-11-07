@@ -28,7 +28,7 @@ export interface SearchParams {
   cast?: string;
   limit?: number;
   skip?: number;
-  search_operator?: 'must' | 'should' | 'mustNot' | 'filter';
+  searchOperator?: 'must' | 'should' | 'mustNot' | 'filter';
   // Vector Search fields
   q?: string;
 }
@@ -42,7 +42,7 @@ interface SearchFormData {
   writers: string;
   cast: string;
   limit: string;
-  search_operator: 'must' | 'should' | 'mustNot' | 'filter';
+  searchOperator: 'must' | 'should' | 'mustNot' | 'filter';
   // Vector Search fields
   q: string;
 }
@@ -56,7 +56,7 @@ const getInitialFormData = (): SearchFormData => ({
   writers: '',
   cast: '',
   limit: '20',
-  search_operator: 'must',
+  searchOperator: 'must',
   // Vector Search fields
   q: '',
 });
@@ -115,7 +115,7 @@ export default function SearchMovieModal({
 
     if (formData.searchType === 'mongodb-search') {
       // Add MongoDB Search specific parameters
-      searchParams.search_operator = formData.search_operator;
+      searchParams.searchOperator = formData.searchOperator;
       searchParams.skip = 0; // Always start from beginning for new search
 
       if (formData.plot.trim()) {
@@ -316,13 +316,13 @@ export default function SearchMovieModal({
 
             {/* Search Operator */}
             <div className={styles.formGroup}>
-              <label htmlFor="search_operator" className={styles.label}>
+              <label htmlFor="searchOperator" className={styles.label}>
                 Search Logic
               </label>
               <select
-                id="search_operator"
-                value={formData.search_operator}
-                onChange={(e) => handleInputChange('search_operator', e.target.value)}
+                id="searchOperator"
+                value={formData.searchOperator}
+                onChange={(e) => handleInputChange('searchOperator', e.target.value)}
                 className={styles.input}
                 disabled={isLoading}
               >
@@ -333,7 +333,7 @@ export default function SearchMovieModal({
                 ))}
               </select>
               <small className={styles.searchOperatorDescription}>
-                {searchOperatorOptions.find(opt => opt.value === formData.search_operator)?.description}
+                {searchOperatorOptions.find(opt => opt.value === formData.searchOperator)?.description}
               </small>
             </div>
           </>

@@ -1,12 +1,12 @@
-# Atlas Search Integration Tests
+# MongoDB Search Integration Tests
 
-This directory contains integration tests for MongoDB Atlas Search functionality.
+This directory contains integration tests for MongoDB Search functionality.
 
 ## Overview
 
-The `AtlasSearchIntegrationTest` class tests the Atlas Search endpoints with a real MongoDB Atlas instance. These tests verify that:
+The `MongoDBSearchIntegrationTest` class tests the MongoDB Search endpoints with a real MongoDB Atlas instance. These tests verify that:
 
-1. The Atlas Search index is created correctly
+1. The MongoDB Search index is created correctly
 2. The index becomes ready for use (using polling)
 3. The `/search` endpoint returns correct results
 4. Pagination works correctly
@@ -17,7 +17,7 @@ The `AtlasSearchIntegrationTest` class tests the Atlas Search endpoints with a r
 These tests require:
 
 - **MongoDB Atlas cluster** (not local MongoDB or Testcontainers)
-- **Atlas Search capability** enabled on the cluster
+- **MongoDB Search capability** enabled on the cluster
 - **MONGODB_URI** environment variable pointing to your Atlas cluster
 - **ENABLE_SEARCH_TESTS=true** environment variable to enable the tests
 
@@ -49,10 +49,10 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/sample_mflix?ret
 
 ```bash
 # Run all integration tests
-./mvnw test -Dtest=AtlasSearchIntegrationTest
+./mvnw test -Dtest=MongoDBSearchIntegrationTest
 
 # Run a specific test
-./mvnw test -Dtest=AtlasSearchIntegrationTest#testSearchMoviesByPlot_Success
+./mvnw test -Dtest=MongoDBSearchIntegrationTest#testSearchMoviesByPlot_Success
 ```
 
 ## How the Tests Work
@@ -113,7 +113,7 @@ export ENABLE_SEARCH_TESTS=true
 
 If the tests fail with "Search index did not become ready within 120 seconds":
 
-1. Check that your cluster has Atlas Search enabled
+1. Check that your cluster has MongoDB Search enabled
 2. Verify you're using a MongoDB Atlas cluster (not local MongoDB)
 3. Check the Atlas UI to see if the index is being created
 4. Increase `MAX_INDEX_WAIT_SECONDS` if needed

@@ -13,7 +13,7 @@ The integration tests are organized into three main categories:
    - Automatically skipped if `MONGODB_URI` is not set
 
 2. **MongoDB Search Integration Tests** (`mongodbSearch.integration.test.ts`)
-   - Tests the MongoDB Atlas Search API endpoint using `supertest`
+   - Tests the MongoDB Search API endpoint using `supertest`
    - Makes actual HTTP requests to test the `/api/movies/search` endpoint
    - Tests search by plot, directors, cast, pagination, and search operators
    - Automatically skipped if `ENABLE_SEARCH_TESTS` is not set
@@ -22,10 +22,10 @@ The integration tests are organized into three main categories:
    - Tests advanced API endpoints using `supertest`
    - Makes actual HTTP requests to test:
      - **Aggregation endpoints**: Movies with comments, statistics by year, directors with most movies
-     - **Atlas Search endpoint**: Compound queries, phrase matching, fuzzy matching
+     - **MongoDB Search endpoint**: Compound queries, phrase matching, fuzzy matching
      - **Vector Search endpoint**: Semantic similarity search using embeddings
    - Aggregation tests automatically run if `MONGODB_URI` is set
-   - Atlas Search tests require `ENABLE_SEARCH_TESTS=true`
+   - MongoDB Search tests require `ENABLE_SEARCH_TESTS=true`
    - Vector Search tests require `VOYAGE_API_KEY` to be set
 
 **Note:** Tests use `describeIntegration`, `describeSearch`, and `describeVectorSearch` wrappers (from `setup.ts` and test files) that automatically skip entire test suites when the required environment variables are not set.
@@ -49,7 +49,7 @@ This approach ensures that the API endpoints work correctly from the client's pe
 - **MONGODB_URI** environment variable must be set
 - MongoDB instance must be accessible (can be local MongoDB or Atlas)
 
-### Atlas Search Tests
+### MongoDB Search Tests
 
 - **MongoDB instance** with Search enabled (local MongoDB or Atlas)
 - **MONGODB_URI** environment variable

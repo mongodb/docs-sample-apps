@@ -1,7 +1,7 @@
 /**
- * MongoDB Atlas Search API Integration Tests
+ * MongoDB Search API Integration Tests
  *
- * These tests verify the Atlas Search API endpoints with actual HTTP requests.
+ * These tests verify the MongoDB Search API endpoints with actual HTTP requests.
  * The tests require:
  * - A MongoDB Atlas instance with Search enabled
  * - MONGODB_URI environment variable
@@ -15,7 +15,7 @@ import request from "supertest";
 import { app } from "../../src/app";
 import { describeSearch } from "./setup";
 
-describeSearch("MongoDB Atlas Search API Integration Tests", () => {
+describeSearch("MongoDB API Integration Tests", () => {
 
   describe("GET /api/movies/search - Search by plot", () => {
     test("should find movies with plot search", async () => {

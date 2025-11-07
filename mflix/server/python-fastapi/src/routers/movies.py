@@ -118,7 +118,7 @@ async def search_movies(
     cast: str = Query(default=None),
     limit:int = Query(default=20, ge=1, le=100),
     skip:int = Query(default=0, ge=0),
-    search_operator: str = Query(default="must")
+    search_operator: str = Query(default="must", alias="searchOperator")
 ) -> SuccessResponse[SearchMoviesResponse]:
     
     search_phrases = []
@@ -345,7 +345,7 @@ async def vector_search_movies(
                     "index": "vector_index",
                     "path": "plot_embedding_voyage_3_large",
                     "queryVector": query_embedding, #2048
-                    "numCandidates": limit * 15,  # Search more candidates for better results
+                    "numCandidates": limit * 20,  # We recommend searching 20 times higher than the limit to improve result relevance
                     "limit": limit
                 }
             },
@@ -482,12 +482,12 @@ async def get_all_movies(
     title: str = Query(default=None),
     genre:str = Query(default=None),
     year:int = Query(default=None),
-    min_rating:float = Query(default=None),
-    max_rating:float = Query(default=None),
+    min_rating:float = Query(default=None, alias="minRating"),
+    max_rating:float = Query(default=None, alias="maxRating"),
     limit:int = Query(default=20, ge=1, le=100),
     skip:int = Query(default=0, ge=0),
-    sort_by:str = Query(default="title"),
-    sort_order:str = Query(default="asc")
+    sort_by:str = Query(default="title", alias="sortBy"),
+    sort_order:str = Query(default="asc", alias="sortOrder")
 ):
     movies_collection = get_collection("movies")
     filter_dict = {}

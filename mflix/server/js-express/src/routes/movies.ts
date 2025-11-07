@@ -122,8 +122,8 @@ router.get("/", asyncHandler(movieController.getAllMovies));
  * @swagger
  * /api/movies/search:
  *   get:
- *     summary: Search movies using MongoDB Atlas Search
- *     description: Search movies using MongoDB Atlas Search across multiple fields with compound queries and fuzzy matching. Demonstrates MongoDB Atlas Search capabilities.
+ *     summary: Search movies using MongoDB Search
+ *     description: Search movies using MongoDB Search across multiple fields with compound queries and fuzzy matching. Demonstrates MongoDB Search capabilities.
  *     tags: [Movies]
  *     parameters:
  *       - in: query

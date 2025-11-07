@@ -759,7 +759,7 @@ public class MovieServiceImpl implements MovieService {
                 .append("index", "plotEmbeddingIndex")
                 .append("path", "plot_embedding")
                 .append("queryVector", plotEmbedding)
-                .append("numCandidates", resultLimit * 10)
+                .append("numCandidates", resultLimit * 20) // We recommend searching 20 times higher than the limit to improve result relevance
                 .append("limit", resultLimit + 1) // +1 to exclude the source movie
         );
 
@@ -847,7 +847,7 @@ public class MovieServiceImpl implements MovieService {
                     .append("index", "vector_index")
                     .append("path", "plot_embedding_voyage_3_large")
                     .append("queryVector", queryVector)
-                    .append("numCandidates", resultLimit * 15)  // Search more candidates for better results
+                    .append("numCandidates", resultLimit * 20)  // We recommend searching 20 times higher than the limit to improve result relevance
                     .append("limit", resultLimit)
             );
 
