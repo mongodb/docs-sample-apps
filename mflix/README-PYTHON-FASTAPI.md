@@ -5,9 +5,9 @@ This is a full-stack movie browsing application built with Python FastAPI and Ne
 ## Project Structure
 
 ```
-├── README-PYTHON-FASTAPI.md
+├── README.md
 ├── client/                 # Next.js frontend (TypeScript)
-└── server/python-fastapi/  # Python FastAPI backend
+└── server/  # Python FastAPI backend
     ├── src/
     ├── tests/
     ├── .env.example
@@ -34,7 +34,7 @@ This is a full-stack movie browsing application built with Python FastAPI and Ne
 Navigate to the Python FastAPI server directory:
 
 ```bash
-cd server/python-fastapi
+cd server/
 ```
 
 Create a `.env` file from the example:
@@ -82,7 +82,7 @@ pip install -r requirements.txt
 
 ### 2. Start the Backend Server
 
-From the `server/python-fastapi` directory, run:
+From the `server/` directory, run:
 
 ```bash
 fastapi dev main.py --reload
@@ -143,7 +143,7 @@ The Python FastAPI backend uses:
 To run all tests:
 
 ```bash
-cd server/python-fastapi
+cd server/
 source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 pytest tests/ -v
 ```
