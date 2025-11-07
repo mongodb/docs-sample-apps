@@ -712,8 +712,6 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
-
-    // TODO: Implement vector search
     @Override
     public List<Movie> findSimilarMovies(String movieId, Integer limit) {
         // Validate movie ID
