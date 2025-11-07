@@ -1,0 +1,328 @@
+# MFlix Configuration with Batch PR Config
+# Source: mongodb/docs-sample-apps
+# This config uses batch_pr_config to create ONE PR per target repo with accurate file counts
+
+source_repo: "mongodb/docs-sample-apps"
+source_branch: "main"
+
+# Enable batching - all rules targeting the same repo will be combined into one PR
+batch_by_repo: true
+
+# Configure PR metadata for batched PRs with accurate file counts
+batch_pr_config:
+  pr_title: "Update MFlix application from docs-sample-apps"
+  pr_body: |
+    Automated update of MFlix application files
+
+    **Source Information:**
+    - Repository: ${source_repo}
+    - Branch: ${source_branch}
+    - PR: #${pr_number}
+    - Commit: ${commit_sha}
+
+    **Changes:**
+    - Total files: ${file_count}
+    - Target branch: ${target_branch}
+
+    This PR includes client files, server files, README, and .gitignore updates.
+    All files have been automatically synchronized from the source repository.
+  use_pr_template: true  # Fetch and merge PR template from target repos
+  commit_message: "Update MFlix from ${source_repo} PR #${pr_number} (${file_count} files)"
+
+copy_rules:
+  # ============================================================================
+  # Java Target: mongodb/sample-app-java-mflix
+  # ============================================================================
+  
+  # Rule 1: Copy client directory to Java target
+  - name: "mflix-client-to-java"
+    source_pattern:
+      type: "prefix"
+      pattern: "mflix/client/"
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-java-mflix"
+        branch: "main"
+        path_transform: "client/${relative_path}"  
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix client from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Next.js client
+            
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+          file: "deprecated_examples.json"
+
+  # Rule 2: Copy Java server files (removing the java-spring subdirectory)
+  - name: "java-server"
+    source_pattern:
+      type: "regex"
+      pattern: "^mflix/server/java-spring/(?P<file>.+)$"
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-java-mflix"
+        branch: "main"
+        path_transform: "server/${file}"  
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix Java server from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Java/Spring Boot server
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 3: Copy Java README (renaming to just README.md)
+  - name: "mflix-java-readme"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/README-JAVA-SPRING.md"
+    targets:
+      - repo: "mongodb/sample-app-java-mflix"
+        branch: "main"
+        path_transform: "README.md"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update README from docs-sample-apps"
+          pr_body: |
+            Automated update of README
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 4: Copy Java .gitignore (renaming to just .gitignore)
+  - name: "mflix-java-gitignore"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/.gitignore-java"
+    targets:
+      - repo: "mongodb/sample-app-java-mflix"
+        branch: "main"
+        path_transform: ".gitignore"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update .gitignore from docs-sample-apps"
+          pr_body: |
+            Automated update of .gitignore
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # ============================================================================
+  # JavaScript Target: mongodb/sample-app-nodejs-mflix
+  # ============================================================================
+
+  # Rule 5: Copy client directory to JavaScript target 
+  - name: "mflix-client-to-js"
+    source_pattern:
+      type: "prefix"
+      pattern: "mflix/client/"
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-nodejs-mflix"
+        branch: "main"
+        path_transform: "client/${relative_path}"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix client from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Next.js client
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+          file: "deprecated_examples.json"
+
+  # Rule 6: Copy Express server files (removing the express subdirectory)
+  - name: "mflix-express-server"
+    source_pattern:
+      type: "regex"
+      pattern: "^mflix/server/js-express/(?P<file>.+)$"
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-nodejs-mflix"
+        branch: "main"
+        path_transform: "server/${file}"  
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix Express server from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Express.js server
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 7: Copy JavaScript README (renaming to just README.md)
+  - name: "mflix-js-readme"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/README-JAVASCRIPT-EXPRESS.md"
+    targets:
+      - repo: "mongodb/sample-app-nodejs-mflix"
+        branch: "main"
+        path_transform: "README.md"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update README from docs-sample-apps"
+          pr_body: |
+            Automated update of README
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 8: Copy JavaScript .gitignore (renaming to just .gitignore)
+  - name: "mflix-js-gitignore"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/.gitignore-js"
+    targets:
+      - repo: "mongodb/sample-app-nodejs-mflix"
+        branch: "main"
+        path_transform: ".gitignore"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update .gitignore from docs-sample-apps"
+          pr_body: |
+            Automated update of .gitignore
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # ============================================================================
+  # Python Target: mongodb/sample-app-python-mflix
+  # ============================================================================
+
+  # Rule 9: Copy client directory to Python target
+  - name: "mflix-client-to-python"
+    source_pattern:
+      type: "prefix"
+      pattern: "mflix/client/"
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-python-mflix"
+        branch: "main"
+        path_transform: "client/${relative_path}"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix client from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Next.js client
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+          file: "deprecated_examples.json"
+
+  # Rule 10: Copy Python server files (removing the python subdirectory)
+  - name: "mflix-python-server"
+    source_pattern:
+      type: "regex"
+      pattern: "^mflix/server/python-fastapi/(?P<file>.+)$" 
+      exclude_patterns:
+        - "\\.gitignore$"       # Exclude .gitignore files
+        - "README.md$"          # Exclude README files
+        - "\\.env$"             # Exclude environment files
+    targets:
+      - repo: "mongodb/sample-app-python-mflix"
+        branch: "main"
+        path_transform: "server/${file}"  
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update MFlix Python server from docs-sample-apps"
+          pr_body: |
+            Automated update of MFlix Python/FastAPI server
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+            Commit: ${commit_sha}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 11: Copy Python README (renaming to just README.md)
+  - name: "mflix-python-readme"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/README-PYTHON-FASTAPI.md"
+    targets:
+      - repo: "mongodb/sample-app-python-mflix"
+        branch: "main"
+        path_transform: "README.md"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update README from docs-sample-apps"
+          pr_body: |
+            Automated update of README
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
+
+  # Rule 12: Copy Python .gitignore (renaming to just .gitignore)
+  - name: "mflix-python-gitignore"
+    source_pattern:
+      type: "glob"
+      pattern: "mflix/.gitignore-python"
+    targets:
+      - repo: "mongodb/sample-app-python-mflix"
+        branch: "main"
+        path_transform: ".gitignore"
+        commit_strategy:
+          type: "pull_request"
+          pr_title: "Update .gitignore from docs-sample-apps"
+          pr_body: |
+            Automated update of .gitignore
+
+            Source: ${source_repo}
+            PR: #${pr_number}
+          auto_merge: false
+        deprecation_check:
+          enabled: true
