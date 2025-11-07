@@ -48,8 +48,8 @@ def server():
     if is_port_in_use(test_port):
         pytest.skip(f"Port {test_port} is already in use. Cannot start test server.")
 
-    # Get the absolute path to the server/python directory
-    # Tests are in server/python/tests/integration, so go up two levels
+    # Get the absolute path to the server/python-fastapi directory
+    # Tests are in server/python-fastapi/tests/integration, so go up two levels
     test_dir = os.path.dirname(os.path.abspath(__file__))
     server_python_dir = os.path.abspath(os.path.join(test_dir, "..", ".."))
 

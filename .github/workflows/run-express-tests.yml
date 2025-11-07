@@ -5,12 +5,12 @@ on:
     branches:
       - development
     paths:
-      - 'server/express/**'
+      - 'server/js-express/**'
   push:
     branches:
       - development
     paths:
-      - 'server/express/**'
+      - 'server/js-express/**'
 
 jobs:
   test:
@@ -21,7 +21,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: server/express
+        working-directory: server/js-express
 
     steps:
       - name: Checkout code
@@ -55,9 +55,9 @@ jobs:
         with:
           name: test-results
           path: |
-            server/express/coverage/
-            server/express/test-results-unit.json
-            server/express/test-results-integration.json
+            server/js-express/coverage/
+            server/js-express/test-results-unit.json
+            server/js-express/test-results-integration.json
           retention-days: 30
 
       - name: Generate Test Summary
@@ -66,5 +66,5 @@ jobs:
         run: |
           chmod +x .github/scripts/generate-test-summary-jest.sh
           .github/scripts/generate-test-summary-jest.sh \
-            server/express/test-results-unit.json \
-            server/express/test-results-integration.json
+            server/js-express/test-results-unit.json \
+            server/js-express/test-results-integration.json
