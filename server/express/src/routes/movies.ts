@@ -119,42 +119,301 @@ const router = express.Router();
 router.get("/", asyncHandler(movieController.getAllMovies));
 
 /**
- * GET /api/movies/search
- *
- * Search movies using MongoDB Search across multiple fields.
- * Demonstrates MongoDB Atlas Search with compound queries and fuzzy matching.
+ * @swagger
+ * /api/movies/search:
+ *   get:
+ *     summary: Search movies using MongoDB Atlas Search
+ *     description: Search movies using MongoDB Atlas Search across multiple fields with compound queries and fuzzy matching. Demonstrates MongoDB Atlas Search capabilities.
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: query
+ *         name: plot
+ *         schema:
+ *           type: string
+ *         description: Search in plot field using phrase matching
+ *         example: detective solving mystery
+ *       - in: query
+ *         name: fullplot
+ *         schema:
+ *           type: string
+ *         description: Search in fullplot field using phrase matching
+ *         example: crime investigation
+ *       - in: query
+ *         name: directors
+ *         schema:
+ *           type: string
+ *         description: Search for directors with fuzzy matching
+ *         example: Christopher Nolan
+ *       - in: query
+ *         name: writers
+ *         schema:
+ *           type: string
+ *         description: Search for writers with fuzzy matching
+ *         example: Quentin Tarantino
+ *       - in: query
+ *         name: cast
+ *         schema:
+ *           type: string
+ *         description: Search for cast members with fuzzy matching
+ *         example: Tom Hanks
+ *       - in: query
+ *         name: searchOperator
+ *         schema:
+ *           type: string
+ *           enum: [must, should, mustNot, filter]
+ *           default: must
+ *         description: Search operator for compound queries
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Number of results to return
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of documents to skip for pagination
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         movies:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Movie'
+ *                         count:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         skip:
+ *                           type: integer
+ *       400:
+ *         description: Bad request - invalid search operator or no search parameters provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/search", asyncHandler(movieController.searchMovies));
 
 /**
- * GET /api/movies/vector-search
- *
- * Search movies using MongoDB Vector Search for semantic similarity.
- * Demonstrates vector search using embeddings to find similar plots.
+ * @swagger
+ * /api/movies/vector-search:
+ *   get:
+ *     summary: Search movies using MongoDB Vector Search
+ *     description: Search movies using MongoDB Vector Search for semantic similarity. Demonstrates vector search using embeddings to find movies with similar plots. Requires VOYAGE_API_KEY to be configured.
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query for semantic similarity
+ *         example: space exploration and alien encounters
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of results to return
+ *     responses:
+ *       200:
+ *         description: Vector search results with similarity scores
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Movie'
+ *                           - type: object
+ *                             properties:
+ *                               score:
+ *                                 type: number
+ *                                 description: Vector similarity score
+ *       400:
+ *         description: Bad request - missing query parameter or VOYAGE_API_KEY not configured
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/vector-search", asyncHandler(movieController.vectorSearchMovies));
 
 /**
- * GET /api/movies/aggregations/reportingByComments
- *
- * Aggregate movies with their most recent comments.
- * Demonstrates MongoDB $lookup aggregation to join collections.
+ * @swagger
+ * /api/movies/aggregations/reportingByComments:
+ *   get:
+ *     summary: Get movies with their most recent comments
+ *     description: Aggregate movies with their most recent comments using MongoDB $lookup aggregation. Demonstrates joining collections and sorting by nested fields.
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of recent comments to include per movie
+ *       - in: query
+ *         name: movieId
+ *         schema:
+ *           type: string
+ *         description: Optional MongoDB ObjectId to filter for a specific movie
+ *         example: 573a1390f29313caabcd4135
+ *     responses:
+ *       200:
+ *         description: Movies with their most recent comments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           year:
+ *                             type: integer
+ *                           genres:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           imdbRating:
+ *                             type: number
+ *                           recentComments:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 userName:
+ *                                   type: string
+ *                                 userEmail:
+ *                                   type: string
+ *                                 text:
+ *                                   type: string
+ *                                 date:
+ *                                   type: string
+ *                                   format: date-time
+ *       400:
+ *         description: Invalid movie ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/aggregations/reportingByComments", asyncHandler(movieController.getMoviesWithMostRecentComments));
 
 /**
- * GET /api/movies/aggregations/reportingByYear
- *
- * Aggregate movies by year with statistics.
- * Demonstrates MongoDB $group aggregation for statistical calculations.
+ * @swagger
+ * /api/movies/aggregations/reportingByYear:
+ *   get:
+ *     summary: Get movie statistics by year
+ *     description: Aggregate movies by year with statistics including count, average rating, highest/lowest ratings, and total votes. Demonstrates MongoDB $group aggregation for statistical calculations.
+ *     tags: [Movies]
+ *     responses:
+ *       200:
+ *         description: Movie statistics grouped by year
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           year:
+ *                             type: integer
+ *                             example: 1994
+ *                           movieCount:
+ *                             type: integer
+ *                             example: 150
+ *                           averageRating:
+ *                             type: number
+ *                             example: 7.25
+ *                           highestRating:
+ *                             type: number
+ *                             example: 9.3
+ *                           lowestRating:
+ *                             type: number
+ *                             example: 4.5
+ *                           totalVotes:
+ *                             type: integer
+ *                             example: 1500000
  */
 router.get("/aggregations/reportingByYear", asyncHandler(movieController.getMoviesByYearWithStats));
 
 /**
- * GET /api/movies/aggregations/reportingByDirectors
- *
- * Aggregate directors with the most movies.
- * Demonstrates MongoDB $unwind and $group for array aggregation.
+ * @swagger
+ * /api/movies/aggregations/reportingByDirectors:
+ *   get:
+ *     summary: Get directors with the most movies
+ *     description: Aggregate directors with the most movies, including their movie count and average rating. Demonstrates MongoDB $unwind and $group for array aggregation.
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Number of directors to return
+ *     responses:
+ *       200:
+ *         description: Directors with the most movies
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           director:
+ *                             type: string
+ *                             example: Steven Spielberg
+ *                           movieCount:
+ *                             type: integer
+ *                             example: 25
+ *                           averageRating:
+ *                             type: number
+ *                             example: 7.85
  */
 router.get("/aggregations/reportingByDirectors", asyncHandler(movieController.getDirectorsWithMostMovies));
 
