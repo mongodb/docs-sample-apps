@@ -46,36 +46,28 @@ router.get("/search", asyncHandler(movieController.searchMovies));
 router.get("/vector-search", asyncHandler(movieController.vectorSearchMovies));
 
 /**
- * GET /api/movies/find-similar-movies
- *
- * Find similar movies using vector search based on a movie ID.
- * Demonstrates finding semantically similar movies using plot embeddings.
- */
-router.get("/find-similar-movies", asyncHandler(movieController.findSimilarMovies));
-
-/**
- * GET /api/movies/aggregations/comments
+ * GET /api/movies/aggregations/reportingByComments
  *
  * Aggregate movies with their most recent comments.
  * Demonstrates MongoDB $lookup aggregation to join collections.
  */
-router.get("/aggregations/comments", asyncHandler(movieController.getMoviesWithMostRecentComments));
+router.get("/aggregations/reportingByComments", asyncHandler(movieController.getMoviesWithMostRecentComments));
 
 /**
- * GET /api/movies/aggregations/years
+ * GET /api/movies/aggregations/reportingByYear
  *
  * Aggregate movies by year with statistics.
  * Demonstrates MongoDB $group aggregation for statistical calculations.
  */
-router.get("/aggregations/years", asyncHandler(movieController.getMoviesByYearWithStats));
+router.get("/aggregations/reportingByYear", asyncHandler(movieController.getMoviesByYearWithStats));
 
 /**
- * GET /api/movies/aggregations/directors
+ * GET /api/movies/aggregations/reportingByDirectors
  *
  * Aggregate directors with the most movies.
  * Demonstrates MongoDB $unwind and $group for array aggregation.
  */
-router.get("/aggregations/directors", asyncHandler(movieController.getDirectorsWithMostMovies));
+router.get("/aggregations/reportingByDirectors", asyncHandler(movieController.getDirectorsWithMostMovies));
 
 /**
  * GET /api/movies/:id

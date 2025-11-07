@@ -117,7 +117,6 @@ import {
   findAndDeleteMovie,
   searchMovies,
   vectorSearchMovies,
-  findSimilarMovies,
   getMoviesWithMostRecentComments,
   getMoviesByYearWithStats,
   getDirectorsWithMostMovies,
@@ -922,123 +921,14 @@ describe("Movie Controller Tests", () => {
     });
   });
 
-  describe("findSimilarMovies", () => {
-    beforeEach(() => {
-      // Reset mocks specifically for findSimilarMovies tests
-      mockToArray.mockReset();
-    });
-
-    it("should successfully find similar movies", async () => {
-      const targetMovie = {
-        _id: new ObjectId(TEST_MOVIE_ID),
-        title: "Target Movie",
-        plot_embedding_voyage_3_large: new Array(2048).fill(0.1),
-      };
-
-      mockRequest.query = { movieId: TEST_MOVIE_ID, limit: "5" };
-      mockFindOne.mockResolvedValue(targetMovie);
-      mockToArray.mockResolvedValue(SAMPLE_SEARCH_RESULTS);
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expect(mockGetCollection).toHaveBeenCalledWith("embedded_movies");
-      expect(mockFindOne).toHaveBeenCalledWith({
-        _id: new ObjectId(TEST_MOVIE_ID),
-      });
-      expect(mockAggregate).toHaveBeenCalled();
-      expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
-        SAMPLE_SEARCH_RESULTS,
-        "Found 2 similar movies"
-      );
-    });
-
-    it("should return 400 when movieId is missing", async () => {
-      mockRequest.query = {};
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expectErrorResponse(
-        mockStatus,
-        mockJson,
-        400,
-        "Query parameter 'movieId' is required",
-        "MISSING_MOVIE_ID"
-      );
-    });
-
-    it("should return 400 for invalid movieId format", async () => {
-      mockRequest.query = { movieId: INVALID_MOVIE_ID };
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expectErrorResponse(
-        mockStatus,
-        mockJson,
-        400,
-        "Invalid movie ID format",
-        "INVALID_OBJECT_ID"
-      );
-    });
-
-    it("should return 404 when movie not found", async () => {
-      mockRequest.query = { movieId: TEST_MOVIE_ID };
-      mockFindOne.mockResolvedValue(null);
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expectErrorResponse(
-        mockStatus,
-        mockJson,
-        404,
-        "Movie not found",
-        "MOVIE_NOT_FOUND"
-      );
-    });
-
-    it("should return 400 when movie has no embedding data", async () => {
-      const targetMovie = {
-        _id: new ObjectId(TEST_MOVIE_ID),
-        title: "Target Movie",
-        // No plot_embedding_voyage_3_large field
-      };
-
-      mockRequest.query = { movieId: TEST_MOVIE_ID };
-      mockFindOne.mockResolvedValue(targetMovie);
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expectErrorResponse(
-        mockStatus,
-        mockJson,
-        400,
-        "Movie does not have embedding data",
-        "NO_EMBEDDING_DATA"
-      );
-    });
-
-    it("should use default limit when not provided", async () => {
-      const targetMovie = {
-        _id: new ObjectId(TEST_MOVIE_ID),
-        title: "Target Movie",
-        plot_embedding_voyage_3_large: new Array(2048).fill(0.1),
-      };
-
-      mockRequest.query = { movieId: TEST_MOVIE_ID };
-      mockFindOne.mockResolvedValue(targetMovie);
-      mockToArray.mockResolvedValue([]);
-
-      await findSimilarMovies(mockRequest as Request, mockResponse as Response);
-
-      expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
-        [],
-        "Found 0 similar movies"
-      );
-    });
-  });
-
   // ==================== AGGREGATION ENDPOINTS TESTS ====================
 
   describe("getMoviesWithMostRecentComments", () => {
+    beforeEach(() => {
+      // Reset mocks for aggregation tests to avoid interference from vector search tests
+      mockToArray.mockReset();
+    });
+
     it("should successfully get movies with comments", async () => {
       mockRequest.query = { limit: "10" };
       mockToArray.mockResolvedValue(SAMPLE_COMMENTS_AGGREGATION);
@@ -1056,7 +946,7 @@ describe("Movie Controller Tests", () => {
         title: result.title,
         year: result.year,
         genres: result.genres,
-        imdb: result.imdbRating ? { rating: result.imdbRating } : undefined,
+        imdbRating: result.imdbRating,
         recentComments: result.recentComments.map((comment) => ({
           _id: comment._id?.toString(),
           userName: comment.userName,

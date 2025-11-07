@@ -719,8 +719,8 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
     return;
   }
 
-  // Validate and set limit (default: 10, min: 1, max: 50)
-  const limitNum = Math.min(Math.max(parseInt(limit as string) || 10, 1), 50);
+  // Validate and set limit (default: 20, min: 1, max: 50)
+  const limitNum = Math.min(Math.max(parseInt(limit as string) || 20, 1), 50);
 
   try {
     // Generate embedding using Voyage AI REST API
@@ -736,7 +736,7 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
           index: "vector_index",
           path: "plot_embedding_voyage_3_large",
           queryVector: queryVector,
-          numCandidates: limitNum * 15, // Search more candidates for better results
+          numCandidates: limitNum * 20, // We recommend searching 20 times higher than the limit to improve result relevance
           limit: limitNum,
         },
       },
@@ -841,121 +841,6 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
         createErrorResponse(
           "Error performing vector search",
           "VECTOR_SEARCH_ERROR",
-          error instanceof Error ? error.message : "Unknown error"
-        )
-      );
-  }
-}
-
-/**
- * GET /api/movies/find-similar-movies
- *
- * Find similar movies using vector search based on a movie ID.
- * Demonstrates finding semantically similar movies using plot embeddings.
- */
-export async function findSimilarMovies(req: Request, res: Response): Promise<void> {
-  const { movieId, limit = "10" } = req.query;
-
-  // Validate movieId parameter
-  if (!movieId || typeof movieId !== "string") {
-    res
-      .status(400)
-      .json(
-        createErrorResponse(
-          "Query parameter 'movieId' is required",
-          "MISSING_MOVIE_ID"
-        )
-      );
-    return;
-  }
-
-  if (!ObjectId.isValid(movieId)) {
-    res
-      .status(400)
-      .json(
-        createErrorResponse("Invalid movie ID format", "INVALID_OBJECT_ID")
-      );
-    return;
-  }
-
-  // Validate and set limit (default: 10, min: 1, max: 50)
-  const limitNum = Math.min(Math.max(parseInt(limit as string) || 10, 1), 50);
-
-  try {
-    const embeddedMoviesCollection = getCollection("embedded_movies");
-
-    // First, get the target movie's embedding
-    const targetMovie = await embeddedMoviesCollection.findOne({
-      _id: new ObjectId(movieId),
-    });
-
-    if (!targetMovie) {
-      res
-        .status(404)
-        .json(createErrorResponse("Movie not found", "MOVIE_NOT_FOUND"));
-      return;
-    }
-
-    if (!targetMovie.plot_embedding_voyage_3_large) {
-      res
-        .status(400)
-        .json(
-          createErrorResponse(
-            "Movie does not have embedding data",
-            "NO_EMBEDDING_DATA"
-          )
-        );
-      return;
-    }
-
-    // Use the target movie's embedding to find similar movies
-    const pipeline = [
-      {
-        $vectorSearch: {
-          index: "vector_index",
-          path: "plot_embedding_voyage_3_large",
-          queryVector: targetMovie.plot_embedding_voyage_3_large,
-          numCandidates: (limitNum + 1) * 15, // +1 to account for self-match
-          limit: limitNum + 1, // +1 to exclude self from results
-        },
-      },
-      {
-        $match: {
-          _id: { $ne: new ObjectId(movieId) }, // Exclude the original movie
-        },
-      },
-      {
-        $limit: limitNum,
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          year: 1,
-          plot: 1,
-          fullplot: 1,
-          genres: 1,
-          directors: 1,
-          cast: 1,
-          poster: 1,
-          imdb: 1,
-        },
-      },
-    ];
-
-    const results = await embeddedMoviesCollection.aggregate(pipeline).toArray();
-
-    res.json(
-      createSuccessResponse(results, `Found ${results.length} similar movies`)
-    );
-  } catch (error) {
-    console.error("Find similar movies error:", error);
-    res
-      .status(500)
-      .json(
-        createErrorResponse(
-          "Failed to find similar movies",
-          "SIMILAR_MOVIES_ERROR",
           error instanceof Error ? error.message : "Unknown error"
         )
       );
@@ -1079,7 +964,7 @@ export async function getMoviesWithMostRecentComments(
     title: result.title,
     year: result.year,
     genres: result.genres,
-    imdb: result.imdbRating ? { rating: result.imdbRating } : undefined,
+    imdbRating: result.imdbRating,
     recentComments: result.recentComments.map((comment: AggregationComment) => ({
       _id: comment._id?.toString(),
       userName: comment.userName,

@@ -232,10 +232,7 @@ export interface MovieWithCommentsResult {
   plot?: string;
   poster?: string;
   genres?: string[];
-  imdb?: {
-    rating?: number;
-    votes?: number;
-  };
+  imdbRating?: number;
   recentComments: CommentInfo[];
   totalComments: number;
   mostRecentCommentDate?: Date;

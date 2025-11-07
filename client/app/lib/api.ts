@@ -410,7 +410,7 @@ export async function fetchMoviesWithComments(
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());
     if (movieId) {
-      queryParams.append('movie_id', movieId);
+      queryParams.append('movieId', movieId);
     }
 
     console.log(`Fetching comments from: ${API_BASE_URL}/api/movies/aggregations/reportingByComments?${queryParams}`);
