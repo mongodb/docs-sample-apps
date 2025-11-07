@@ -848,7 +848,7 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
 }
 
 /**
- * GET /api/movies/aggregations/comments
+ * GET /api/movies/aggregations/reportingByComments
  *
  * Aggregate movies with their most recent comments.
  * Demonstrates MongoDB $lookup aggregation to join collections.
@@ -991,7 +991,7 @@ export async function getMoviesWithMostRecentComments(
 }
 
 /**
- * GET /api/movies/aggregations/years
+ * GET /api/movies/aggregations/reportingByYear
  *
  * Aggregate movies by year with statistics.
  * Demonstrates MongoDB $group aggregation for statistical calculations.
@@ -1091,7 +1091,7 @@ export async function getMoviesByYearWithStats(
 }
 
 /**
- * GET /api/movies/aggregations/directors
+ * GET /api/movies/aggregations/reportingByDirectors
  *
  * Aggregate directors with the most movies.
  * Demonstrates MongoDB $unwind and $group for array aggregation.
