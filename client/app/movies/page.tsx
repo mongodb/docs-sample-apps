@@ -239,16 +239,18 @@ export default function Movies() {
       let result;
 
       if (searchParams.searchType === 'vector-search') {
-        // Vector Search: Fetch all results and implement client-side pagination
+        // Vector Search: Use the limit from search params as the fetch limit
         const vectorSearchParams = {
           q: searchParams.q!,
-          limit: searchParams.limit || 50, // Get more results for better pagination experience
+          limit: searchParams.limit || 50, // This is how many results to fetch from backend
         };
+        
         result = await vectorSearchMovies(vectorSearchParams);
         
         if (result.success) {
           const allResults = result.movies || [];
-          const pageSize = searchParams.limit || 20;
+          const pageSize = APP_CONFIG.vectorSearchPageSize; // Fixed page size for UI display
+          
           setAllVectorSearchResults(allResults);
           setVectorSearchPage(1);
           setVectorSearchPageSize(pageSize);
@@ -257,10 +259,7 @@ export default function Movies() {
           const firstPageResults = allResults.slice(0, pageSize);
           setSearchResults(firstPageResults);
           
-          // Set pagination state based on total results
-          const totalPages = Math.ceil(allResults.length / pageSize);
-          setSearchHasNextPage(totalPages > 1);
-          setSearchHasPrevPage(false);
+          // Set pagination state for vector search
           setSearchTotalCount(allResults.length);
         }
       } else {
@@ -352,15 +351,19 @@ export default function Movies() {
       return { paginatedResults: [], hasNext: false, hasPrev: false, totalPages: 0 };
     }
 
+    const totalResults = allVectorSearchResults.length;
+    const totalPages = Math.ceil(totalResults / vectorSearchPageSize);
+    const hasNext = vectorSearchPage < totalPages;
+    const hasPrev = vectorSearchPage > 1;
+    
     const startIndex = (vectorSearchPage - 1) * vectorSearchPageSize;
     const endIndex = startIndex + vectorSearchPageSize;
     const paginatedResults = allVectorSearchResults.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(allVectorSearchResults.length / vectorSearchPageSize);
     
     return {
       paginatedResults,
-      hasNext: vectorSearchPage < totalPages,
-      hasPrev: vectorSearchPage > 1,
+      hasNext,
+      hasPrev,
       totalPages
     };
   };
@@ -653,55 +656,60 @@ export default function Movies() {
                     /* Vector search results with client-side pagination */
                     (() => {
                       const { hasNext, hasPrev, totalPages } = getVectorSearchPageData();
-                      return totalPages > 1 ? (
-                        <nav className={movieStyles.pagination} aria-label="Vector search results pagination">
-                          <div className={movieStyles.paginationContainer}>
-                            {/* Previous Button */}
-                            {hasPrev ? (
-                              <button
-                                onClick={() => handleVectorSearchPageChange(vectorSearchPage - 1)}
-                                className={movieStyles.pageButton}
-                                aria-label="Go to previous page"
-                              >
-                                ← Previous
-                              </button>
-                            ) : (
-                              <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
-                                ← Previous
-                              </span>
-                            )}
+                      
+                      if (totalPages > 1) {
+                        return (
+                          <nav className={movieStyles.pagination} aria-label="Vector search results pagination">
+                            <div className={movieStyles.paginationContainer}>
+                              {/* Previous Button */}
+                              {hasPrev ? (
+                                <button
+                                  onClick={() => handleVectorSearchPageChange(vectorSearchPage - 1)}
+                                  className={movieStyles.pageButton}
+                                  aria-label="Go to previous page"
+                                >
+                                  ← Previous
+                                </button>
+                              ) : (
+                                <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                                  ← Previous
+                                </span>
+                              )}
 
-                            {/* Current Page Info */}
-                            <div className={movieStyles.pageInfo}>
-                              Page {vectorSearchPage} of {totalPages}
+                              {/* Current Page Info */}
+                              <div className={movieStyles.pageInfo}>
+                                Page {vectorSearchPage} of {totalPages}
+                              </div>
+
+                              {/* Next Button */}
+                              {hasNext ? (
+                                <button
+                                  onClick={() => handleVectorSearchPageChange(vectorSearchPage + 1)}
+                                  className={movieStyles.pageButton}
+                                  aria-label="Go to next page"
+                                >
+                                  Next →
+                                </button>
+                              ) : (
+                                <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
+                                  Next →
+                                </span>
+                              )}
                             </div>
 
-                            {/* Next Button */}
-                            {hasNext ? (
-                              <button
-                                onClick={() => handleVectorSearchPageChange(vectorSearchPage + 1)}
-                                className={movieStyles.pageButton}
-                                aria-label="Go to next page"
-                              >
-                                Next →
-                              </button>
-                            ) : (
-                              <span className={`${movieStyles.pageButton} ${movieStyles.disabled}`}>
-                                Next →
-                              </span>
-                            )}
+                            {/* Additional Info */}
+                            <div className={movieStyles.additionalInfo}>
+                              {vectorSearchPageSize} movies per page • {allVectorSearchResults.length} total results
+                            </div>
+                          </nav>
+                        );
+                      } else {
+                        return (
+                          <div className={movieStyles.searchInfo}>
+                            Showing {allVectorSearchResults.length} results (vector search)
                           </div>
-
-                          {/* Additional Info */}
-                          <div className={movieStyles.additionalInfo}>
-                            {vectorSearchPageSize} movies per page • {allVectorSearchResults.length} total results
-                          </div>
-                        </nav>
-                      ) : (
-                        <div className={movieStyles.searchInfo}>
-                          Showing {allVectorSearchResults.length} results (vector search)
-                        </div>
-                      );
+                        );
+                      }
                     })()
                   )
                 ) : (
