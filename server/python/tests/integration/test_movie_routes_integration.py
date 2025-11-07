@@ -323,3 +323,65 @@ class TestAggregationIntegration:
         assert "lowestRating" in first_result
         assert "totalVotes" in first_result
 
+    @pytest.mark.asyncio
+    async def test_aggregate_movies_by_comments(self, client):
+        """
+        Test aggregation reporting by comments.
+
+        This test demonstrates:
+        - $lookup aggregation (joining collections)
+        - Testing against existing dataset with comments
+        - Validating nested data structures
+        """
+        response = await client.get("/api/movies/aggregations/reportingByComments?limit=5")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+        # Should return movies that have comments
+        if len(data["data"]) > 0:
+            first_result = data["data"][0]
+            # Validate structure of aggregation results
+            assert "_id" in first_result
+            assert "title" in first_result
+            assert "year" in first_result
+            assert "totalComments" in first_result
+            assert "recentComments" in first_result
+            assert isinstance(first_result["recentComments"], list)
+
+            # If there are recent comments, validate their structure
+            if len(first_result["recentComments"]) > 0:
+                comment = first_result["recentComments"][0]
+                assert "userName" in comment
+                assert "userEmail" in comment
+                assert "text" in comment
+                assert "date" in comment
+
+    @pytest.mark.asyncio
+    async def test_aggregate_directors_most_movies(self, client):
+        """
+        Test aggregation reporting by directors.
+
+        This test demonstrates:
+        - $unwind aggregation (array flattening)
+        - Grouping and sorting operations
+        - Testing against existing dataset
+        """
+        response = await client.get("/api/movies/aggregations/reportingByDirectors?limit=10")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) > 0
+
+        # Validate structure of aggregation results
+        first_result = data["data"][0]
+        assert "director" in first_result
+        assert "movieCount" in first_result
+        assert "averageRating" in first_result
+
+        # Verify results are sorted by movieCount (descending)
+        if len(data["data"]) > 1:
+            assert data["data"][0]["movieCount"] >= data["data"][1]["movieCount"]
+

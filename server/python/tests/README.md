@@ -29,11 +29,11 @@ The test suite is organized into three categories:
 - Requires a running MongoDB instance with MFlix dataset
 - Uses a real server running in a subprocess
 - Tests are idempotent (clean up after themselves)
-- **8 tests** (7 passing, 1 skipped due to known bug) covering:
-  - End-to-end CRUD operations
-  - Search against real data
-  - Batch operations with cleanup
-  - Aggregation queries
+- **10 tests** covering:
+  - CRUD operations
+  - Batch operations
+  - Search functionality
+  - Aggregation pipelines
 
 ## Running Tests
 
@@ -56,7 +56,7 @@ The test suite is organized into three categories:
 pytest tests/ -v
 ```
 
-**Expected output:** 69 passed in ~5 seconds
+**Expected output:** 71 passed in ~6 seconds
 
 ### Run Only Unit Tests (Fast, No Database Required)
 
@@ -64,7 +64,7 @@ pytest tests/ -v
 pytest -m unit -v
 ```
 
-**Expected output:** 61 passed, 8 deselected in ~1 second
+**Expected output:** 61 passed, 10 deselected in ~1.5 seconds
 
 ### Run Only Integration Tests (Requires Database)
 
@@ -72,7 +72,7 @@ pytest -m unit -v
 pytest -m integration -v
 ```
 
-**Expected output:** 8 passed, 61 deselected in ~4 seconds
+**Expected output:** 10 passed, 61 deselected in ~5 seconds
 
 ### Run Specific Test File
 
