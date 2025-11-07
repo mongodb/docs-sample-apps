@@ -17,6 +17,14 @@ async def lifespan(app: FastAPI):
     # Startup: Create search indexes
     await ensure_search_index()
     await vector_search_index()
+
+    # Print server information
+    print(f"\n{'='*60}")
+    print(f"  Server started at http://127.0.0.1:3001")
+    print(f"  Documentation at http://127.0.0.1:3001/docs")
+    print(f"  Interactive API docs at http://127.0.0.1:3001/redoc")
+    print(f"{'='*60}\n")
+
     yield
     # Shutdown: Clean up resources if needed
     # Add any cleanup code here
