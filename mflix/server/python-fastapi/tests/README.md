@@ -41,7 +41,7 @@ The test suite is organized into three categories:
 
 1. **For all tests:**
    ```bash
-   cd server/python-fastapi
+   cd server/
    source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
    ```
 
