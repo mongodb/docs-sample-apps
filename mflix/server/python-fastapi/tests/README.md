@@ -41,7 +41,7 @@ The test suite is organized into three categories:
 
 1. **For all tests:**
    ```bash
-   cd server/python
+   cd server/python-fastapi
    source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
    ```
 
@@ -170,7 +170,7 @@ The `test_batch_create_movies` test is currently skipped due to a known bug in t
 **Solution**:
 - Ensure virtual environment is activated
 - Install dependencies: `pip install -r requirements.txt`
-- Run from `server/python` directory
+- Run from `server/python-fastapi` directory
 
 ## Contributing
 

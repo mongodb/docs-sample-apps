@@ -87,7 +87,7 @@ npx jest --config jest.integration.config.json tests/integration/advancedEndpoin
 
 #### Using .env file
 
-Create a `.env` file in the `server/express` directory:
+Create a `.env` file in the `server/js-express` directory:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017/sample_mflix
