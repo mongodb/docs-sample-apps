@@ -2,17 +2,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError, DuplicateKeyError, WriteError
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from src.models.models import ErrorDetails, ErrorResponse, SuccessResponse, T
-
-
-'''
-Open to having a conversation about parity in the code. From my understanding exception handeling, validation errors and enforcement(Pydantic),
-and error response formatting are all handled natively by FastAPI. So I don't believe I need to create the ValidationError
-class, middleware, or exception handlers present in the TS code.
-
-'''
-
 
 '''
 Creates a standardized success response.
@@ -26,8 +17,6 @@ Returns:
     SuccessResponse[T]: A standardized success response object.
     '''
 
-
-# TODO: Verify the timestamp format is acceptable.
 def create_success_response(data:T, message: Optional[str] = None) -> SuccessResponse[T]:
     return SuccessResponse(
         message=message or "Operation completed successfully.",
@@ -35,7 +24,6 @@ def create_success_response(data:T, message: Optional[str] = None) -> SuccessRes
         timestamp=datetime.now(timezone.utc).isoformat() + "Z",
         
     )
-
 
 '''
 Creates a standardized error response.
@@ -50,7 +38,6 @@ Returns:
 
 '''
 
-# TODO: Verify the timestamp format is acceptable.
 def create_error_response(message: str, code: Optional[str]=None, details: Optional[Any]=None) -> ErrorResponse:
     return ErrorResponse(
         message=message,
@@ -62,13 +49,6 @@ def create_error_response(message: str, code: Optional[str]=None, details: Optio
         timestamp=datetime.now(timezone.utc).isoformat() + "Z",
     )
 
-
-
-'''
-This is interesting, I am not sure if this is worth explaining that compared to Node, you are 
-not going to get exceptions thrown from MongoDB operations in the same way. You are not getting
-error codes back from operations, you are getting exceptions. 
-'''
 
 def parse_mongo_exception(exc: Exception) -> dict:
     if isinstance(exc, DuplicateKeyError):

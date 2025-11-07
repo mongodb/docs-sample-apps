@@ -18,7 +18,7 @@ This is a full-stack movie browsing application built with Express.js and Next.j
 
 - **Node.js 22** or higher
 - **MongoDB Atlas cluster or local deployment** with the `sample_mflix` dataset loaded
-  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) 
+  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/)
 - **npm** (included with Node.js)
 - **Voyage AI API key** (For MongoDB Vector Search)
   - [Get a Voyage AI API key](https://www.voyageai.com/)
@@ -53,7 +53,6 @@ VOYAGE_API_KEY=your_voyage_api_key
 # Server Configuration
 PORT=3001
 NODE_ENV=development
-
 
 # CORS Configuration
 # Allowed origin for cross-origin requests (frontend URL)

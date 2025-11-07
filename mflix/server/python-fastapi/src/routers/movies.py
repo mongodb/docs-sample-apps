@@ -78,9 +78,7 @@ router = APIRouter()
 # MongoDB Search
 #
 # MongoDB Search based on searching the plot, fullplot, directors, writers, and cast fields.
-# This function was made with the assumption that the UI will have fields for plot,fullplot, 
-# directors, writers, and cast to search on. Or some sort of combined search field.
-# Also this fuzzy operator is being used to allow for some misspellings in the search terms
+# This fuzzy operator is being used to allow for some misspellings in the search terms
 # but that allows for very generous matching. This can be adjusted as needed.
 #----------------------------------------------------------------------------------------------------------
 """
@@ -98,7 +96,7 @@ router = APIRouter()
         cast (str, optional): Text to search against the cast field.
         limit (int, optional): Number of results to return (default: 20)
         skip (int, optional): Number of results to skip for pagination (default: 0)
-        search_operator (str, optional): How to combine multiple search fields. 
+        search_operator (str, optional): How to combine multiple search fields.
             Must be one of "must", "should", "mustNot", or "filter". Default is "must".
 
     Returns:
@@ -120,7 +118,7 @@ async def search_movies(
     skip:int = Query(default=0, ge=0),
     search_operator: str = Query(default="must", alias="searchOperator")
 ) -> SuccessResponse[SearchMoviesResponse]:
-    
+
     search_phrases = []
 
     # Validate the search_operator parameter to ensure it's a valid compound operator
@@ -247,24 +245,24 @@ async def search_movies(
             message="An error occurred while performing the search.",
             code="DATABASE_ERROR",
             details=str(e)
-        )    
+        )
 
     # Extract total count and movies from facet results with proper bounds checking
     if not results or len(results) == 0:
         return create_success_response(
-            SearchMoviesResponse(movies=[], totalCount=0), 
+            SearchMoviesResponse(movies=[], totalCount=0),
             "No movies found matching the search criteria."
         )
-    
+
     facet_result = results[0]
-    
+
     # Safely extract total count
     total_count_array = facet_result.get("totalCount", [])
     total_count = total_count_array[0].get("count", 0) if total_count_array else 0
-    
+
     # Safely extract movies data
     movies_data = facet_result.get("results", [])
-    
+
     # Convert ObjectId to string for each movie in the results
     movies = []
     for movie in movies_data:
@@ -272,7 +270,7 @@ async def search_movies(
         movies.append(movie)
 
     return create_success_response(
-        SearchMoviesResponse(movies=movies, totalCount=total_count), 
+        SearchMoviesResponse(movies=movies, totalCount=total_count),
         f"Found {total_count} movies matching the search criteria."
       )
 
@@ -296,11 +294,11 @@ async def search_movies(
         SuccessResponse[List[VectorSearchResult]]: A response object containing movies with similarity scores.
         Each result includes:
             - _id: Movie ObjectId
-            - title: Movie title  
+            - title: Movie title
             - plot: Movie plot text
             - score: Vector search similarity score (0.0 to 1.0, higher = more similar)
 """
-# Specify your Voyage API key and embedding model
+# Specify your Voyage AI embedding model
 model = "voyage-3-large"
 outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
 
@@ -312,11 +310,11 @@ async def vector_search_movies(
 ):
     """
     Vector search endpoint for finding movies with similar plots.
-    
+
     Args:
         q: The search query string
         limit: Maximum number of results to return
-    
+
     Returns:
         SuccessResponse containing a list of movies with similarity scores
     """
@@ -326,18 +324,18 @@ async def vector_search_movies(
             code="SERVICE_UNAVAILABLE",
             details="VOYAGE_API_KEY not configured. Please add your API key to your .env file."
         )
-    
+
     try:
         # Initialize the client here to avoid import-time errors
         vo = voyageai.Client()
-        
+
         # The vector search index was already created at startup time
         # Generate embedding for the search query
         query_embedding = get_embedding(q, input_type="query", client=vo)
-        
+
         # Get the embedded movies collection
         embedded_movies_collection = get_collection("embedded_movies")
-        
+
         # Define vector search pipeline
         pipeline = [
             {
@@ -378,7 +376,7 @@ async def vector_search_movies(
         ]
 
         raw_results = await execute_aggregation_on_collection(embedded_movies_collection, pipeline)
-        
+
         # Convert ObjectId to string and create VectorSearchResult objects
         for result in raw_results:
             if "_id" in result and result["_id"]:
@@ -387,25 +385,21 @@ async def vector_search_movies(
                 except (InvalidId, TypeError):
                     # Handle invalid ObjectId conversion
                     result["_id"] = str(result["_id"]) if result["_id"] else None
-        
+
         # This code converts the raw results into VectorSearchResult objects
         results = [VectorSearchResult(**doc) for doc in raw_results]
-        
+
         return create_success_response(
-            results, 
+            results,
             f"Found {len(results)} similar movies for query: '{q}'"
         )
-        
+
     except Exception as e:
         return create_error_response(
             message="Vector search failed",
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-
-#------------------------------------
-# Place get_movie_by_id endpoint here
-#------------------------------------
 
 """
     GET /api/movies/{id}
@@ -449,7 +443,7 @@ async def get_movie_by_id(id: str):
         )
 
     movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
-    
+
     return create_success_response(movie, "Movie retrieved successfully")
 
 """
@@ -492,9 +486,9 @@ async def get_all_movies(
     movies_collection = get_collection("movies")
     filter_dict = {}
     if q:
-        filter_dict["$text"] = {"$search": q} 
+        filter_dict["$text"] = {"$search": q}
     if title:
-        filter_dict["title"] = {"$regex": title, "$options": "i"}       
+        filter_dict["title"] = {"$regex": title, "$options": "i"}
     if genre:
         filter_dict["genres"] = {"$regex": genre, "$options": "i"}
     if year:
@@ -506,7 +500,7 @@ async def get_all_movies(
         if max_rating is not None:
             rating_filter["$lte"] = max_rating
         filter_dict["imdb.rating"] = rating_filter
-        
+
     # Building the sort object based on user input
     sort_order = -1 if sort_order == "desc" else 1
 
@@ -515,13 +509,13 @@ async def get_all_movies(
     # Query the database with the constructed filter, sort, skip, and limit.
 
     try:
-        result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)  
+        result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)
     except Exception as e:
         return create_error_response(
             message="An error occurred while fetching movies.",
             code="DATABASE_ERROR",
             details=str(e)
-        )   
+        )
 
     movies = []
 
@@ -535,13 +529,9 @@ async def get_all_movies(
             except ValueError:
                 movie["year"] = None
 
-        movies.append(movie)            
-    # Return the results wrapped in a SuccessResponse    
+        movies.append(movie)
+    # Return the results wrapped in a SuccessResponse
     return create_success_response(movies, f"Found {len(movies)} movies.")
-
-#------------------------------------
-# Place create_movie endpoint here
-#------------------------------------
 
 """
     POST /api/movies/
@@ -553,14 +543,14 @@ async def get_all_movies(
         SuccessResponse[Movie]: A response object containing the created movie data.
 """
 
-@router.post("/", 
+@router.post("/",
             response_model=SuccessResponse[Movie],
             status_code=201,
             summary="Creates a new movie in the database.")
 async def create_movie(movie: CreateMovieRequest):
     # Pydantic automatically validates the structure
     movie_data = movie.model_dump(by_alias=True, exclude_none=True)
-    
+
     movies_collection = get_collection("movies")
     try:
         result = await movies_collection.insert_one(movie_data)
@@ -570,7 +560,7 @@ async def create_movie(movie: CreateMovieRequest):
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-    
+
     # Verify that the document was created before querying it
     if not result.acknowledged:
         return create_error_response(
@@ -578,7 +568,7 @@ async def create_movie(movie: CreateMovieRequest):
             code="INTERNAL_SERVER_ERROR",
             details="The database did not acknowledge the insert operation"
         )
-    
+
     try:
         # Retrieve the created document to return complete data
         created_movie = await movies_collection.find_one({"_id": result.inserted_id})
@@ -588,7 +578,7 @@ async def create_movie(movie: CreateMovieRequest):
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-    
+
     if created_movie is None:
         return create_error_response(
             message="Movie creation verification failed",
@@ -597,17 +587,13 @@ async def create_movie(movie: CreateMovieRequest):
         )
 
     created_movie["_id"] = str(created_movie["_id"]) # Convert ObjectId to string
-    
-    return create_success_response(created_movie, f"Movie '{movie_data['title']}' created successfully")
 
-#------------------------------------
-# Place create_movies_batch endpoint here
-#------------------------------------
+    return create_success_response(created_movie, f"Movie '{movie_data['title']}' created successfully")
 
 """
 POST /api/movies/batch
 
-Create multiple movies in a single request. 
+Create multiple movies in a single request.
 
 Request Body:
         movies (List[CreateMovieRequest]): A list of movie objects to insert. Each object should include:
@@ -646,7 +632,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
             code="INVALID_INPUT",
             details=None
         )
-    
+
     movies_dicts = []
 
     for movie in movies:
@@ -670,11 +656,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
             details=str(e)
         )
 
-#------------------------------------
-# Place update_movie endpoint here
-#------------------------------------
-
-"""    
+"""
     PATCH /api/movies/{id}
 
     Update a single movie by its ID.
@@ -699,7 +681,7 @@ async def update_movie(
 ) -> SuccessResponse[Movie]:
 
     movies_collection = get_collection("movies")
-    
+
     # Validate the ObjectId
     try:
         movie_id = ObjectId(movie_id)
@@ -708,8 +690,8 @@ async def update_movie(
             message="Invalid movie_id format.",
             code="INVALID_OBJECT_ID",
             details=str(movie_id)
-        )    
-    
+        )
+
     update_dict = movie_data.model_dump(exclude_unset=True, exclude_none=True)
 
     # Validate that the dict is not empty
@@ -730,7 +712,7 @@ async def update_movie(
             message="An error occurred while updating the movie.",
             code="DATABASE_ERROR",
             details=str(e)
-        )    
+        )
 
     if result.matched_count == 0:
         return create_error_response(
@@ -738,15 +720,11 @@ async def update_movie(
             code="MOVIE_NOT_FOUND",
             details=str(movie_id)
         )
-    
+
     updatedMovie = await movies_collection.find_one({"_id": movie_id})
     updatedMovie["_id"] = str(updatedMovie["_id"])
 
     return create_success_response(updatedMovie, f"Movie updated successfully. Modified {len(update_dict)} fields.")
-
-#------------------------------------
-# Place update_movies_by_batch endpoint here
-#------------------------------------
 
 """
     PATCH /api/movies
@@ -802,17 +780,13 @@ async def update_movies_batch(
             code="DATABASE_ERROR",
             details=str(e)
         )
-    
+
     return create_success_response({
         "matchedCount": result.matched_count,
         "modifiedCount": result.modified_count
         },
         f"Update operation completed. Matched {result.matched_count} movie(s), modified {result.modified_count} movie(s)."
 )
-
-#------------------------------------
-# Place delete_movie endpoint here
-#------------------------------------
 
 """
     DELETE /api/movies/{id}
@@ -851,18 +825,15 @@ async def delete_movie_by_id(id: str):
     if result.deleted_count == 0:
         return create_error_response(
             message="Movie not found",
-            code="INTERNAL_SERVER_ERROR", 
+            code="INTERNAL_SERVER_ERROR",
             details=f"No movie found with ID: {id}"
         )
-    
+
     return create_success_response(
-        {"deletedCount": result.deleted_count}, 
+        {"deletedCount": result.deleted_count},
         "Movie deleted successfully"
     )
 
-#------------------------------------
-# Place delete_movies_by_batch endpoint here
-#------------------------------------
 """
     DELETE /api/movies/
 
@@ -884,7 +855,7 @@ async def delete_movie_by_id(id: str):
 async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse[dict]:
 
     movies_collection = get_collection("movies")
-    
+
     # Extract filter from the request body
     filter_data = request_body.get("filter", {})
 
@@ -921,10 +892,6 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
         {"deletedCount":result.deleted_count},
         f'Delete operation completed. Removed {result.deleted_count} movies.'
     )
-
-#------------------------------------
-# Place find_and_delete_movie endpoint here
-#------------------------------------
 
 """
     DELETE /api/movies/{id}/find-and-delete
@@ -966,11 +933,11 @@ async def find_and_delete_movie(id: str):
     if deleted_movie is None:
         return create_error_response(
             message="Movie not found",
-            code="INTERNAL_SERVER_ERROR", 
+            code="INTERNAL_SERVER_ERROR",
             details=f"No movie found with ID: {id}"
         )
     deleted_movie["_id"] = str(deleted_movie["_id"]) # Convert ObjectId to string
-    
+
     return create_success_response(deleted_movie, "Movie found and deleted successfully")
 
 """
@@ -992,7 +959,7 @@ async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
     movie_id: str = Query(default=None)
 ):
-    
+
     # Add a multi-stage aggregation that:
     # 1. Filters movies by valid year range
     # 2. Joins with comments collection (like SQL JOIN)
@@ -1000,7 +967,7 @@ async def aggregate_movies_recent_commented(
     # 4. Sorts comments by date and extracts most recent ones
     # 5. Sorts movies by their most recent comment date
     # 6. Shapes the final output with transformed comment structure
-    
+
     pipeline: list[dict[str, Any]] =[
         # STAGE 1: $match - Initial Filter
         # Filter movies to only those with valid year data
@@ -1022,7 +989,7 @@ async def aggregate_movies_recent_commented(
                 code="INTERNAL_SERVER_ERROR",
                 details="The provided movie_id is not a valid ObjectId"
             )
-    
+
     # Add remaining pipeline stages
     pipeline.extend([
         # STAGE 2: $lookup - Join with the 'comments' Collection
@@ -1117,12 +1084,12 @@ async def aggregate_movies_recent_commented(
     for result in results:
         if "_id" in result:
             result["_id"] = str(result["_id"])
-    
+
     # Calculate total comments from all movies
     total_comments = sum(result.get("totalComments", 0) for result in results)
-    
+
     return create_success_response(
-        results, 
+        results,
         f"Found {total_comments} comments from movie{'s' if len(results) != 1 else ''}"
     )
 
@@ -1147,7 +1114,7 @@ async def aggregate_movies_by_year():
     # 2. Groups movies by release year and calculates statistics per year
     # 3. Shapes the final output with clean field names and rounded averages
     # 4. Sorts results by year (newest first) for chronological presentation
-    
+
     pipeline = [
         # STAGE 1: $match - Data Quality Filter
         # Clean data: ensure year is an integer and within reasonable range
@@ -1157,14 +1124,14 @@ async def aggregate_movies_by_year():
                 "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
             }
         },
-        
+
         # STAGE 2: $group - Aggregate Movies by Year
         # Group all movies by their release year and calculate various statistics
         {
             "$group": {
                 "_id": "$year",  # Group by year field
                 "movieCount": {"$sum": 1},  # Count total movies per year
-                
+
                 # Calculate average rating (only for valid numeric ratings)
                 "averageRating": {
                     "$avg": {
@@ -1179,7 +1146,7 @@ async def aggregate_movies_by_year():
                         ]
                     }
                 },
-                
+
                 # Find highest rating for the year (same validation as average rating)
                 "highestRating": {
                     "$max": {
@@ -1194,7 +1161,7 @@ async def aggregate_movies_by_year():
                         ]
                     }
                 },
-                
+
                 # Find lowest rating for the year (same validation as average and highest rating)
                 "lowestRating": {
                     "$min": {
@@ -1209,12 +1176,12 @@ async def aggregate_movies_by_year():
                         ]
                     }
                 },
-                
+
                 # Sum total votes across all movies in the year
                 "totalVotes": {"$sum": "$imdb.votes"}
             }
         },
-        
+
         # STAGE 3: $project - Shape Final Output
         # Transform the grouped data into a clean, readable format
         {
@@ -1228,7 +1195,7 @@ async def aggregate_movies_by_year():
                 "_id": 0  # Exclude the _id field from output
             }
         },
-        
+
         # STAGE 4: $sort - Sort by Year (Newest First)
         # Sort results in descending order to show most recent years first
         {"$sort": {"year": -1}}  # -1 = descending order
@@ -1243,9 +1210,9 @@ async def aggregate_movies_by_year():
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-    
+
     return create_success_response(
-        results, 
+        results,
         f"Aggregated statistics for {len(results)} years"
     )
 
@@ -1268,7 +1235,7 @@ async def aggregate_directors_most_movies(
 ):
     # Define aggregation pipeline to find directors with the most movies
     # This pipeline demonstrates array unwinding, filtering, and ranking
-    
+
     # Add a multi-stage aggregation that:
     # 1. Filters movies with valid directors and year data (data quality filter)
     # 2. Unwinds directors array to create separate documents per director
@@ -1287,14 +1254,14 @@ async def aggregate_directors_most_movies(
                 "year": {"$type": "number", "$gte": 1800, "$lte": 2030}  # Valid year range
             }
         },
-        
+
         # STAGE 2: $unwind - Flatten Directors Array
         # Convert each movie's directors array into separate documents
         # Example: Movie with ["Director A", "Director B"] becomes 2 documents
         {
             "$unwind": "$directors"
         },
-        
+
         # STAGE 3: $match - Clean Director Names
         # Filter out any null or empty director names after unwinding
         {
@@ -1302,7 +1269,7 @@ async def aggregate_directors_most_movies(
                 "directors": {"$ne": None, "$ne": ""}
             }
         },
-        
+
         # STAGE 4: $group - Aggregate by Director
         # Group all movies by director name and calculate statistics
         {
@@ -1312,15 +1279,15 @@ async def aggregate_directors_most_movies(
                 "averageRating": {"$avg": "$imdb.rating"}  # Average rating of director's movies
             }
         },
-        
+
         # STAGE 5: $sort - Rank Directors by Movie Count
         # Sort directors by number of movies (highest first)
         {"$sort": {"movieCount": -1}},  # -1 = descending (most movies first)
-        
+
         # STAGE 6: $limit - Restrict Results
         # Limit to top N directors based on user input
         {"$limit": limit},
-        
+
         # STAGE 7: $project - Shape Final Output
         # Transform the grouped data into a clean, readable format
         {
@@ -1342,9 +1309,9 @@ async def aggregate_directors_most_movies(
             code="INTERNAL_SERVER_ERROR",
             details=str(e)
         )
-    
+
     return create_success_response(
-        results, 
+        results,
         f"Found {len(results)} directors with most movies"
     )
 
@@ -1352,36 +1319,36 @@ async def aggregate_directors_most_movies(
 #Helper Functions
 #------------------------------------
 
-"""  
-    Helper function to execute aggregation pipeline and return results.  
+"""
+    Helper function to execute aggregation pipeline and return results.
 
-    Args:  
-        pipeline: MongoDB aggregation pipeline stages  
+    Args:
+        pipeline: MongoDB aggregation pipeline stages
 
-    Returns:  
-        List of documents from aggregation result  
-"""  
+    Returns:
+        List of documents from aggregation result
+"""
 
 async def execute_aggregation(pipeline: list) -> list:
     """Helper function to execute aggregation pipeline and return results"""
-    
+
     movies_collection = get_collection("movies")
     # For the async Pymongo driver, we need to await the aggregate call
     cursor = await movies_collection.aggregate(pipeline)
     results = await cursor.to_list(length=None)  # Convert cursor to list to collect all data at once rather than processing data per document
-    
+
     return results
 
-"""  
-    Helper function to execute aggregation pipeline and return results from a specified collection. 
+"""
+    Helper function to execute aggregation pipeline and return results from a specified collection.
 
-    Args:  
+    Args:
         collection: The MongoDB collection to run the aggregation on
-        pipeline: MongoDB aggregation pipeline stages  
+        pipeline: MongoDB aggregation pipeline stages
 
-    Returns:  
-        List of documents from aggregation result  
-"""  
+    Returns:
+        List of documents from aggregation result
+"""
 
 async def execute_aggregation_on_collection(collection, pipeline: list) -> list:
     """Helper function to execute aggregation pipeline on a specified collection and return results"""
@@ -1391,15 +1358,15 @@ async def execute_aggregation_on_collection(collection, pipeline: list) -> list:
 
     return results
 
-"""  
+"""
     Helper function to generate vector embeddings from an input.
 
-    Args:  
+    Args:
         data: Input data to generate embeddings for
         input_type: Type of input data
         client: Voyage AI client instance
 
-    Returns:  
+    Returns:
         Vector embeddings for the given input
 """
 
@@ -1407,17 +1374,17 @@ def get_embedding(data, input_type = "document", client=None):
     """
     Helper function to generate vector embeddings from an input.
 
-    Args:  
+    Args:
         data: Input data to generate embeddings for
         input_type: Type of input data
         client: Voyage AI client instance
 
-    Returns:  
+    Returns:
         Vector embeddings for the given input
     """
     if client is None:
         client = voyageai.Client()
-    
+
     embeddings = client.embed(
         data, model = model, output_dimension = outputDimension, input_type = input_type
     ).embeddings

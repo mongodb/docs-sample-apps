@@ -22,7 +22,7 @@ This is a full-stack movie browsing application built with Python FastAPI and Ne
 - **Python 3.10** to **Python 3.13**
 - **Node.js 20** or higher
 - **MongoDB Atlas cluster or local deployment** with the `sample_mflix` dataset loaded
-  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/) 
+  - [Load sample data](https://www.mongodb.com/docs/atlas/sample-data/)
 - **pip** for Python package management
 - **Voyage AI API key** (For MongoDB Vector Search)
   - [Get a Voyage AI API key](https://www.voyageai.com/)
@@ -56,7 +56,7 @@ VOYAGE_API_KEY=your_voyage_api_key
 
 # CORS Configuration
 # Comma-separated list of allowed origins for CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 ```
 
 **Note:** Replace `username`, `password`, and `cluster` with your actual MongoDB Atlas
@@ -69,7 +69,7 @@ python -m venv .venv
 ```
 
 Activate the virtual environment:
-    
+
 ```bash
 source .venv/bin/activate
 ```
@@ -85,12 +85,13 @@ pip install -r requirements.txt
 From the `server/` directory, run:
 
 ```bash
-fastapi dev main.py --reload
+uvicorn main:app --reload --port 3001
 ```
 
-The server will start on `http://localhost:8000`. You can verify it's running by visiting:
-- API root: http://localhost:8000/api/movies
-- API documentation (Swagger UI): http://localhost:8000/docs
+The server will start on `http://localhost:3001`. You can verify it's running by visiting:
+- API root: http://localhost:3001/api/movies
+- API documentation (Swagger UI): http://localhost:3001/docs
+- Interactive API documentation (ReDoc): http://localhost:3001/redoc
 
 ### 3. Configure and Start the Frontend
 
@@ -118,8 +119,8 @@ The Next.js application will start on `http://localhost:3000`.
 
 Open your browser and navigate to:
 - **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8000
-- **API Documentation:** http://localhost:8000/docs
+- **Backend API:** http://localhost:3001
+- **API Documentation:** http://localhost:3001/docs
 
 ## Features
 
@@ -204,4 +205,3 @@ If you have problems running the sample app, please check the following:
 If you have verified the above and still have issues, please
 [open an issue](https://github.com/mongodb/docs-sample-apps/issues/new/choose)
 on the source repository `mongodb/docs-sample-apps`.
-

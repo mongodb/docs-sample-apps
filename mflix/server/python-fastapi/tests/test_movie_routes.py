@@ -9,7 +9,6 @@ an actual database connection or server instance.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from bson import ObjectId
-from bson.errors import InvalidId
 
 from src.models.models import CreateMovieRequest, UpdateMovieRequest
 

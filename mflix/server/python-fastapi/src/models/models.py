@@ -38,17 +38,6 @@ class Movie(BaseModel):
         "populate_by_name" : True
     }
 
-
-'''
-So this an interesting conversion. Pydanic doesn't cleanly support constructing
-models that have MongoDB query operators as field names. This becomes an issue when
-we want to convert the validated model back to a dictionary to use as a MongoDB query filter.
-For example, if a user leaves the 'q' parameter blank, we don't want to include the '$text' operator
-in the filter at all but validation will send an empty value for it and that causes errors. So
-I am handling the validation in the query router itself, but leaving this here as an example of how
-it could be done, if I am wrong about Pydantic's capabilities.
-'''
-
 class TextFilter(BaseModel):
     search: str = Field(..., alias="$search")
 

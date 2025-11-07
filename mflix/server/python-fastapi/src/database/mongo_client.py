@@ -8,7 +8,6 @@ load_dotenv()
 client = AsyncMongoClient(os.getenv("MONGO_URI"))
 db = client[os.getenv("MONGO_DB")]
 
-# Set the API key but don't instantiate the client here
 voyage_api_key = os.getenv("VOYAGE_API_KEY")
 if voyage_api_key:
     voyageai.api_key = voyage_api_key
