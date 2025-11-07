@@ -1,20 +1,23 @@
 /**
  * Movie CRUD Integration Tests
  *
- * These tests verify the full database operations for movie CRUD functionality.
- * Unlike unit tests, these tests connect to a real MongoDB instance.
+ * These tests verify the full API functionality for movie CRUD operations.
+ * Unlike unit tests, these tests make actual HTTP requests to the Express app
+ * and connect to a real MongoDB instance.
  *
  * Requirements:
  * - MONGODB_URI environment variable must be set
  * - MongoDB instance must be accessible
  */
 
+import request from "supertest";
 import { ObjectId } from "mongodb";
+import { app } from "../../src/app";
 import { getCollection } from "../../src/config/database";
 import { describeIntegration } from "./setup";
 
-describeIntegration("Movie CRUD Integration Tests", () => {
-  let testMovieIds: ObjectId[] = [];
+describeIntegration("Movie CRUD API Integration Tests", () => {
+  let testMovieIds: string[] = [];
 
   beforeAll(async () => {
     // Clean up any orphaned test data from previous failed runs
@@ -33,6 +36,7 @@ describeIntegration("Movie CRUD Integration Tests", () => {
         { title: { $regex: /^Movie to Delete/ } },
         { title: { $regex: /^Delete Test/ } },
         { title: { $regex: /^Find and Delete Test/ } },
+        { title: { $regex: /^Batch Test Movie/ } },
       ],
     });
   });
@@ -42,16 +46,14 @@ describeIntegration("Movie CRUD Integration Tests", () => {
     if (testMovieIds.length > 0) {
       const moviesCollection = getCollection("movies");
       await moviesCollection.deleteMany({
-        _id: { $in: testMovieIds },
+        _id: { $in: testMovieIds.map((id) => new ObjectId(id)) },
       });
       testMovieIds = [];
     }
   });
 
-  describe("Create Operations", () => {
-    test("should create a single movie with insertOne", async () => {
-      const moviesCollection = getCollection("movies");
-
+  describe("POST /api/movies - Create Single Movie", () => {
+    test("should create a single movie", async () => {
       const newMovie = {
         title: "Integration Test Movie",
         year: 2024,
@@ -59,180 +61,219 @@ describeIntegration("Movie CRUD Integration Tests", () => {
         genres: ["Test", "Drama"],
       };
 
-      const result = await moviesCollection.insertOne(newMovie);
+      const response = await request(app)
+        .post("/api/movies")
+        .send(newMovie)
+        .expect(201);
 
-      expect(result.acknowledged).toBe(true);
-      expect(result.insertedId).toBeDefined();
-      expect(result.insertedId).toBeInstanceOf(ObjectId);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data._id).toBeDefined();
+      expect(response.body.data.title).toBe(newMovie.title);
+      expect(response.body.data.year).toBe(newMovie.year);
+      expect(response.body.data.plot).toBe(newMovie.plot);
+      expect(response.body.data.genres).toEqual(newMovie.genres);
 
-      testMovieIds.push(result.insertedId);
-
-      // Verify the movie was actually inserted
-      const insertedMovie = await moviesCollection.findOne({
-        _id: result.insertedId,
-      });
-
-      expect(insertedMovie).toBeDefined();
-      expect(insertedMovie?.title).toBe(newMovie.title);
-      expect(insertedMovie?.year).toBe(newMovie.year);
-      expect(insertedMovie?.plot).toBe(newMovie.plot);
+      testMovieIds.push(response.body.data._id.toString());
     });
 
-    test("should create multiple movies with insertMany", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 400 when title is missing", async () => {
+      const invalidMovie = {
+        year: 2024,
+        plot: "Missing title",
+      };
 
+      const response = await request(app)
+        .post("/api/movies")
+        .send(invalidMovie)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
+    });
+  });
+
+  describe("POST /api/movies/batch - Create Multiple Movies", () => {
+    test("should create multiple movies", async () => {
       const newMovies = [
         {
-          title: "Integration Test Movie 1",
+          title: "Batch Test Movie 1",
           year: 2024,
           plot: "First test movie",
           genres: ["Test"],
         },
         {
-          title: "Integration Test Movie 2",
+          title: "Batch Test Movie 2",
           year: 2024,
           plot: "Second test movie",
           genres: ["Test"],
         },
         {
-          title: "Integration Test Movie 3",
+          title: "Batch Test Movie 3",
           year: 2024,
           plot: "Third test movie",
           genres: ["Test"],
         },
       ];
 
-      const result = await moviesCollection.insertMany(newMovies);
+      const response = await request(app)
+        .post("/api/movies/batch")
+        .send(newMovies)
+        .expect(201);
 
-      expect(result.acknowledged).toBe(true);
-      expect(result.insertedCount).toBe(3);
-      expect(Object.keys(result.insertedIds).length).toBe(3);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.insertedCount).toBe(3);
+      expect(response.body.data.insertedIds).toBeDefined();
+      expect(Object.keys(response.body.data.insertedIds).length).toBe(3);
 
-      testMovieIds.push(...Object.values(result.insertedIds));
+      // Extract IDs from the insertedIds object
+      const ids = Object.values(response.body.data.insertedIds) as string[];
+      testMovieIds.push(...ids);
+    });
 
-      // Verify all movies were inserted
-      const insertedMovies = await moviesCollection
-        .find({ _id: { $in: Object.values(result.insertedIds) } })
-        .toArray();
+    test("should return 400 when request body is not an array", async () => {
+      const response = await request(app)
+        .post("/api/movies/batch")
+        .send({ title: "Single Movie" })
+        .expect(400);
 
-      expect(insertedMovies.length).toBe(3);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
   });
 
-  describe("Read Operations", () => {
-    test("should find a movie by ObjectId", async () => {
-      const moviesCollection = getCollection("movies");
-
+  describe("GET /api/movies/:id - Get Movie by ID", () => {
+    test("should get a movie by ID", async () => {
       // Create a test movie
       const newMovie = {
         title: "Find By ID Test Movie",
         year: 2024,
-        plot: "Testing findOne by ID",
+        plot: "Testing get by ID",
       };
 
-      const insertResult = await moviesCollection.insertOne(newMovie);
-      testMovieIds.push(insertResult.insertedId);
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(newMovie)
+        .expect(201);
 
-      // Find the movie by ID
-      const foundMovie = await moviesCollection.findOne({
-        _id: insertResult.insertedId,
-      });
+      const movieId = createResponse.body.data._id.toString();
+      testMovieIds.push(movieId);
 
-      expect(foundMovie).toBeDefined();
-      expect(foundMovie?._id.toString()).toBe(insertResult.insertedId.toString());
-      expect(foundMovie?.title).toBe(newMovie.title);
+      // Get the movie by ID
+      const response = await request(app)
+        .get(`/api/movies/${movieId}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data._id).toBe(movieId);
+      expect(response.body.data.title).toBe(newMovie.title);
     });
 
-    test("should find movies with filters", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 404 for non-existent movie", async () => {
+      const fakeId = new ObjectId().toString();
 
-      // Create test movies
-      const testMovies = [
-        {
-          title: "Action Movie 2024",
-          year: 2024,
-          genres: ["Action"],
-        },
-        {
-          title: "Drama Movie 2024",
-          year: 2024,
-          genres: ["Drama"],
-        },
-        {
-          title: "Action Movie 2023",
-          year: 2023,
-          genres: ["Action"],
-        },
-      ];
+      const response = await request(app)
+        .get(`/api/movies/${fakeId}`)
+        .expect(404);
 
-      const insertResult = await moviesCollection.insertMany(testMovies);
-      testMovieIds.push(...Object.values(insertResult.insertedIds));
-
-      // Find movies by year
-      const movies2024 = await moviesCollection
-        .find({ year: 2024 })
-        .toArray();
-
-      const testMovies2024 = movies2024.filter((m) =>
-        testMovieIds.some((id) => id.toString() === m._id.toString())
-      );
-
-      expect(testMovies2024.length).toBe(2);
-
-      // Find movies by genre
-      const actionMovies = await moviesCollection
-        .find({ genres: { $regex: /Action/i } })
-        .toArray();
-
-      const testActionMovies = actionMovies.filter((m) =>
-        testMovieIds.some((id) => id.toString() === m._id.toString())
-      );
-
-      expect(testActionMovies.length).toBe(2);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
 
-    test("should support pagination with limit and skip", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 400 for invalid ObjectId format", async () => {
+      const response = await request(app)
+        .get("/api/movies/invalid-id")
+        .expect(400);
 
-      // Create 5 test movies
-      const testMovies = Array.from({ length: 5 }, (_, i) => ({
-        title: `Pagination Test Movie ${i + 1}`,
-        year: 2024,
-      }));
-
-      const insertResult = await moviesCollection.insertMany(testMovies);
-      testMovieIds.push(...Object.values(insertResult.insertedIds));
-
-      // Get first page (2 movies)
-      const firstPage = await moviesCollection
-        .find({ _id: { $in: testMovieIds } })
-        .limit(2)
-        .toArray();
-
-      expect(firstPage.length).toBe(2);
-
-      // Get second page (2 movies, skip first 2)
-      const secondPage = await moviesCollection
-        .find({ _id: { $in: testMovieIds } })
-        .skip(2)
-        .limit(2)
-        .toArray();
-
-      expect(secondPage.length).toBe(2);
-
-      // Verify different results
-      const firstPageIds = firstPage.map((m) => m._id.toString());
-      const secondPageIds = secondPage.map((m) => m._id.toString());
-      const hasOverlap = firstPageIds.some((id) => secondPageIds.includes(id));
-
-      expect(hasOverlap).toBe(false);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
   });
 
-  describe("Update Operations", () => {
-    test("should update a single movie with updateOne", async () => {
-      const moviesCollection = getCollection("movies");
+  describe("GET /api/movies - Get All Movies with Filters", () => {
+    test("should get movies with year filter", async () => {
+      // Create a test movie with a specific year
+      const testMovie = {
+        title: "Action Movie 2024",
+        year: 2024,
+        genres: ["Action"],
+      };
 
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(testMovie)
+        .expect(201);
+
+      testMovieIds.push(createResponse.body.data._id.toString());
+
+      // Get movies from 2024
+      const response = await request(app)
+        .get("/api/movies")
+        .query({ year: 2024 })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+
+      // Verify all returned movies have year 2024
+      const allHaveCorrectYear = response.body.data.every(
+        (m: any) => m.year === 2024
+      );
+      expect(allHaveCorrectYear).toBe(true);
+    });
+
+    test("should get movies with genre filter", async () => {
+      // Create a test movie with a specific genre
+      const testMovie = {
+        title: "Action Movie 2024",
+        year: 2024,
+        genres: ["Action", "Thriller"],
+      };
+
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(testMovie)
+        .expect(201);
+
+      testMovieIds.push(createResponse.body.data._id.toString());
+
+      // Get action movies
+      const response = await request(app)
+        .get("/api/movies")
+        .query({ genre: "Action" })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+
+      // Verify all returned movies have "Action" in their genres
+      const allHaveActionGenre = response.body.data.every((m: any) =>
+        m.genres && m.genres.some((g: string) => /action/i.test(g))
+      );
+      expect(allHaveActionGenre).toBe(true);
+    });
+
+    test("should support pagination with limit and skip", async () => {
+      const response = await request(app)
+        .get("/api/movies")
+        .query({ limit: 5, skip: 0 })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe("PATCH /api/movies/:id - Update Single Movie", () => {
+    test("should update a single movie", async () => {
       // Create a test movie
       const newMovie = {
         title: "Original Title",
@@ -240,32 +281,46 @@ describeIntegration("Movie CRUD Integration Tests", () => {
         plot: "Original plot",
       };
 
-      const insertResult = await moviesCollection.insertOne(newMovie);
-      testMovieIds.push(insertResult.insertedId);
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(newMovie)
+        .expect(201);
+
+      const movieId = createResponse.body.data._id.toString();
+      testMovieIds.push(movieId);
 
       // Update the movie
-      const updateResult = await moviesCollection.updateOne(
-        { _id: insertResult.insertedId },
-        { $set: { title: "Updated Title", plot: "Updated plot" } }
-      );
+      const updateData = {
+        title: "Updated Title",
+        plot: "Updated plot",
+      };
 
-      expect(updateResult.acknowledged).toBe(true);
-      expect(updateResult.matchedCount).toBe(1);
-      expect(updateResult.modifiedCount).toBe(1);
+      const response = await request(app)
+        .patch(`/api/movies/${movieId}`)
+        .send(updateData)
+        .expect(200);
 
-      // Verify the update
-      const updatedMovie = await moviesCollection.findOne({
-        _id: insertResult.insertedId,
-      });
-
-      expect(updatedMovie?.title).toBe("Updated Title");
-      expect(updatedMovie?.plot).toBe("Updated plot");
-      expect(updatedMovie?.year).toBe(2024); // Unchanged field
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.title).toBe("Updated Title");
+      expect(response.body.data.plot).toBe("Updated plot");
+      expect(response.body.data.year).toBe(2024); // Unchanged field
     });
 
-    test("should update multiple movies with updateMany", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 404 for non-existent movie", async () => {
+      const fakeId = new ObjectId().toString();
 
+      const response = await request(app)
+        .patch(`/api/movies/${fakeId}`)
+        .send({ title: "Updated" })
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe("PATCH /api/movies - Update Multiple Movies", () => {
+    test("should update multiple movies", async () => {
       // Create test movies
       const testMovies = [
         { title: "Movie 1", year: 2024, rated: "PG" },
@@ -273,63 +328,111 @@ describeIntegration("Movie CRUD Integration Tests", () => {
         { title: "Movie 3", year: 2024, rated: "R" },
       ];
 
-      const insertResult = await moviesCollection.insertMany(testMovies);
-      testMovieIds.push(...Object.values(insertResult.insertedIds));
+      const createdIds: string[] = [];
+      for (const movie of testMovies) {
+        const createResponse = await request(app)
+          .post("/api/movies")
+          .send(movie)
+          .expect(201);
+        createdIds.push(createResponse.body.data._id.toString());
+        testMovieIds.push(createResponse.body.data._id.toString());
+      }
 
-      // Update all PG movies
-      const updateResult = await moviesCollection.updateMany(
-        { _id: { $in: testMovieIds }, rated: "PG" },
-        { $set: { rated: "PG-13" } }
-      );
+      // Update all PG movies to PG-13
+      const response = await request(app)
+        .patch("/api/movies")
+        .send({
+          filter: { _id: { $in: createdIds }, rated: "PG" },
+          update: { rated: "PG-13" },
+        })
+        .expect(200);
 
-      expect(updateResult.acknowledged).toBe(true);
-      expect(updateResult.matchedCount).toBe(2);
-      expect(updateResult.modifiedCount).toBe(2);
-
-      // Verify the updates
-      const updatedMovies = await moviesCollection
-        .find({ _id: { $in: testMovieIds }, rated: "PG-13" })
-        .toArray();
-
-      expect(updatedMovies.length).toBe(2);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.modifiedCount).toBe(2);
     });
   });
 
-  describe("Delete Operations", () => {
-    test("should delete a single movie with deleteOne", async () => {
-      const moviesCollection = getCollection("movies");
-
+  describe("DELETE /api/movies/:id - Delete Single Movie", () => {
+    test("should delete a single movie", async () => {
       // Create a test movie
       const newMovie = {
         title: "Movie to Delete",
         year: 2024,
       };
 
-      const insertResult = await moviesCollection.insertOne(newMovie);
-      const movieId = insertResult.insertedId;
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(newMovie)
+        .expect(201);
 
-      // Track the ID in case the test fails before deletion
+      const movieId = createResponse.body.data._id.toString();
       testMovieIds.push(movieId);
 
       // Delete the movie
-      const deleteResult = await moviesCollection.deleteOne({
-        _id: movieId,
-      });
+      const response = await request(app)
+        .delete(`/api/movies/${movieId}`)
+        .expect(200);
 
-      expect(deleteResult.acknowledged).toBe(true);
-      expect(deleteResult.deletedCount).toBe(1);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.deletedCount).toBe(1);
 
-      // Verify deletion
-      const deletedMovie = await moviesCollection.findOne({ _id: movieId });
-      expect(deletedMovie).toBeNull();
+      // Verify deletion - should return 404
+      await request(app).get(`/api/movies/${movieId}`).expect(404);
 
       // Remove from tracking since it's successfully deleted
-      testMovieIds = testMovieIds.filter(id => id.toString() !== movieId.toString());
+      testMovieIds = testMovieIds.filter((id) => id !== movieId);
     });
 
-    test("should delete multiple movies with deleteMany", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 404 when deleting non-existent movie", async () => {
+      const fakeId = new ObjectId().toString();
 
+      const response = await request(app)
+        .delete(`/api/movies/${fakeId}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe("DELETE /api/movies/:id/find-and-delete - Find and Delete", () => {
+    test("should atomically find and delete a movie", async () => {
+      // Create a test movie
+      const newMovie = {
+        title: "Find and Delete Test",
+        year: 2024,
+        plot: "Testing find and delete",
+      };
+
+      const createResponse = await request(app)
+        .post("/api/movies")
+        .send(newMovie)
+        .expect(201);
+
+      const movieId = createResponse.body.data._id.toString();
+      testMovieIds.push(movieId);
+
+      // Find and delete
+      const response = await request(app)
+        .delete(`/api/movies/${movieId}/find-and-delete`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data._id).toBe(movieId);
+      expect(response.body.data.title).toBe(newMovie.title);
+
+      // Verify deletion
+      await request(app).get(`/api/movies/${movieId}`).expect(404);
+
+      // Remove from tracking
+      testMovieIds = testMovieIds.filter((id) => id !== movieId);
+    });
+  });
+
+  describe("DELETE /api/movies - Delete Multiple Movies", () => {
+    test("should delete multiple movies", async () => {
       // Create test movies
       const testMovies = [
         { title: "Delete Test 1", year: 2024 },
@@ -337,64 +440,42 @@ describeIntegration("Movie CRUD Integration Tests", () => {
         { title: "Delete Test 3", year: 2024 },
       ];
 
-      const insertResult = await moviesCollection.insertMany(testMovies);
-      const movieIds = Object.values(insertResult.insertedIds);
+      const createdIds: string[] = [];
+      for (const movie of testMovies) {
+        const createResponse = await request(app)
+          .post("/api/movies")
+          .send(movie)
+          .expect(201);
+        createdIds.push(createResponse.body.data._id.toString());
+        testMovieIds.push(createResponse.body.data._id.toString());
+      }
 
-      // Track the IDs in case the test fails before deletion
-      testMovieIds.push(...movieIds);
+      // Delete all test movies using filter
+      const response = await request(app)
+        .delete("/api/movies")
+        .send({ filter: { _id: { $in: createdIds } } })
+        .expect(200);
 
-      // Delete all test movies
-      const deleteResult = await moviesCollection.deleteMany({
-        _id: { $in: movieIds },
-      });
-
-      expect(deleteResult.acknowledged).toBe(true);
-      expect(deleteResult.deletedCount).toBe(3);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.deletedCount).toBe(3);
 
       // Verify deletion
-      const remainingMovies = await moviesCollection
-        .find({ _id: { $in: movieIds } })
-        .toArray();
+      for (const id of createdIds) {
+        await request(app).get(`/api/movies/${id}`).expect(404);
+      }
 
-      expect(remainingMovies.length).toBe(0);
-
-      // Remove from tracking since they're successfully deleted
-      testMovieIds = testMovieIds.filter(
-        id => !movieIds.some(deletedId => deletedId.toString() === id.toString())
-      );
+      // Remove from tracking
+      testMovieIds = testMovieIds.filter((id) => !createdIds.includes(id));
     });
 
-    test("should find and delete a movie with findOneAndDelete", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return 400 when filter is missing", async () => {
+      const response = await request(app)
+        .delete("/api/movies")
+        .send({})
+        .expect(400);
 
-      // Create a test movie
-      const newMovie = {
-        title: "Find and Delete Test",
-        year: 2024,
-        plot: "This movie will be found and deleted",
-      };
-
-      const insertResult = await moviesCollection.insertOne(newMovie);
-      const movieId = insertResult.insertedId;
-
-      // Track the ID in case the test fails before deletion
-      testMovieIds.push(movieId);
-
-      // Find and delete the movie
-      const result = await moviesCollection.findOneAndDelete({
-        _id: movieId,
-      });
-
-      expect(result).toBeDefined();
-      expect(result?._id.toString()).toBe(movieId.toString());
-      expect(result?.title).toBe(newMovie.title);
-
-      // Verify deletion
-      const deletedMovie = await moviesCollection.findOne({ _id: movieId });
-      expect(deletedMovie).toBeNull();
-
-      // Remove from tracking since it's successfully deleted
-      testMovieIds = testMovieIds.filter(id => id.toString() !== movieId.toString());
+      expect(response.body.success).toBe(false);
     });
   });
 });

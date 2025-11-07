@@ -32,6 +32,14 @@ export function isSearchTestEnabled(): boolean {
   return process.env.ENABLE_SEARCH_TESTS === "true" && isIntegrationTestEnabled();
 }
 
+/**
+ * Check if Vector Search tests should run
+ * Vector Search tests require VOYAGE_API_KEY environment variable
+ */
+export function isVectorSearchEnabled(): boolean {
+    return !!process.env.VOYAGE_API_KEY && process.env.VOYAGE_API_KEY.trim().length > 0;
+}
+
 // Track whether we've already shown the skip messages to avoid duplicates
 let hasShownIntegrationSkipMessage = false;
 let hasShownSearchSkipMessage = false;
@@ -72,6 +80,28 @@ export const describeSearch: jest.Describe = isSearchTestEnabled()
         hasShownSearchSkipMessage = true;
       }
       return describe.skip(...args);
+    }) as jest.Describe;
+
+/**
+ * Conditional describe for Vector Search tests
+ */
+/**
+ * Get the appropriate describe function based on whether Vector Search tests are enabled
+ * Usage: describeVectorSearch("My Vector Search Test Suite", () => { ... })
+ * This will skip the entire suite if VOYAGE_API_KEY is not set
+ */
+export const describeVectorSearch: jest.Describe = isVectorSearchEnabled()
+    ? describe
+    : ((...args: Parameters<jest.Describe>) => {
+        if (!hasShownSearchSkipMessage) {
+            console.log(`
+⚠️  Vector Search tests skipped: VOYAGE_API_KEY environment variable is not set
+   To run Vector Search integration tests, set VOYAGE_API_KEY in your .env file
+   Example: VOYAGE_API_KEY=your-api-key npm run test:integration
+`);
+            hasShownSearchSkipMessage = true;
+        }
+        return describe.skip(...args);
     }) as jest.Describe;
 
 // Global setup - runs once before all tests

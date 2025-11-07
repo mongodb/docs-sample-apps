@@ -38,13 +38,16 @@ export function errorHandler(
 ): void {
   // Log the error for debugging purposes
   // In production, we recommend using a logging service
-  console.error("Error occurred:", {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-  });
+  // Suppress error logging during tests to keep test output clean
+  if (process.env.NODE_ENV !== "test") {
+    console.error("Error occurred:", {
+      message: err.message,
+      stack: err.stack,
+      url: req.url,
+      method: req.method,
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   // Determine the appropriate HTTP status code and error message
   const errorDetails = parseErrorDetails(err);

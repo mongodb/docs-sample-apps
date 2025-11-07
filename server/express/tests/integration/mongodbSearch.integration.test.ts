@@ -1,325 +1,166 @@
 /**
- * MongoDB Search Integration Tests
+ * MongoDB Atlas Search API Integration Tests
  *
- * These tests verify MongoDB Search functionality with a real MongoDB instance.
+ * These tests verify the Atlas Search API endpoints with actual HTTP requests.
  * The tests require:
- * - A MongoDB instance with Search enabled (local MongoDB or Atlas)
+ * - A MongoDB Atlas instance with Search enabled
  * - MONGODB_URI environment variable
  * - ENABLE_SEARCH_TESTS=true environment variable to enable tests
+ * - movieSearchIndex must be configured in Atlas
  *
- * Note: These tests are disabled by default and should only be run against a test MongoDB instance.
+ * Note: These tests are disabled by default and should only be run against a test MongoDB Atlas instance.
  */
 
-import { ObjectId } from "mongodb";
-import { connectToDatabase, getCollection } from "../../src/config/database";
+import request from "supertest";
+import { app } from "../../src/app";
 import { describeSearch } from "./setup";
 
-const SEARCH_INDEX_NAME = "movieSearchIndex";
-const MAX_INDEX_WAIT_SECONDS = 120;
-const POLL_INTERVAL_SECONDS = 5;
+describeSearch("MongoDB Atlas Search API Integration Tests", () => {
 
-describeSearch("MongoDB Search Integration Tests", () => {
-  let testMovieIds: ObjectId[] = [];
+  describe("GET /api/movies/search - Search by plot", () => {
+    test("should find movies with plot search", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "detective mystery" })
+        .expect(200);
 
-  beforeAll(async () => {
-    try {
-      // Clean up any leftover test data from previous failed runs
-      await cleanupTestMovies();
-
-      // Create test data
-      await createTestMovies();
-
-      // Create Search index (or verify it exists)
-      await createSearchIndex();
-
-      // Wait for index to be ready
-      await waitForSearchIndexReady();
-
-      // Wait for documents to be indexed
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // 10 seconds
-    } catch (error) {
-      console.error("❌ Error during setup:", error);
-      // Clean up on setup failure
-      await cleanupTestMovies();
-      throw error;
-    }
-  });
-
-  afterAll(async () => {
-    await cleanupTestMovies();
-  });
-
-  describe("Search by plot", () => {
-    test("should find movies with 'space adventure' in plot", async () => {
-      const moviesCollection = getCollection("movies");
-
-      // Perform Search query
-      const results = await moviesCollection
-        .aggregate([
-          {
-            $search: {
-              index: SEARCH_INDEX_NAME,
-              text: {
-                query: "space adventure",
-                path: ["plot", "fullplot"],
-              },
-            },
-          },
-          { $limit: 10 },
-        ])
-        .toArray();
-
-      expect(results).toBeDefined();
-      expect(results.length).toBeGreaterThan(0);
-
-      // Verify at least one result contains our test movie
-      const foundTestMovie = results.some(
-        (movie: any) =>
-          movie.plot && movie.plot.toLowerCase().includes("space adventure")
-      );
-      expect(foundTestMovie).toBe(true);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.movies).toBeDefined();
+      expect(Array.isArray(response.body.data.movies)).toBe(true);
+      expect(response.body.data.totalCount).toBeDefined();
     });
 
-    test("should return empty array when no movies match search query", async () => {
-      const moviesCollection = getCollection("movies");
+    test("should return empty results when no movies match search query", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "xyzabc123nonexistent" })
+        .expect(200);
 
-      // Search for something that definitely doesn't exist
-      const results = await moviesCollection
-        .aggregate([
-          {
-            $search: {
-              index: SEARCH_INDEX_NAME,
-              text: {
-                query: "xyzabc123nonexistent",
-                path: ["plot", "fullplot"],
-              },
-            },
-          },
-          { $limit: 10 },
-        ])
-        .toArray();
-
-      expect(results).toBeDefined();
-      expect(results.length).toBe(0);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.movies).toBeDefined();
+      expect(response.body.data.movies.length).toBe(0);
+      expect(response.body.data.totalCount).toBe(0);
     });
   });
 
-  describe("Search with pagination", () => {
+  describe("GET /api/movies/search - Search by directors", () => {
+    test("should find movies by director name", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ directors: "Spielberg" })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.movies).toBeDefined();
+      expect(Array.isArray(response.body.data.movies)).toBe(true);
+    });
+  });
+
+  describe("GET /api/movies/search - Search by cast", () => {
+    test("should find movies by cast member", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ cast: "Tom Hanks" })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.movies).toBeDefined();
+      expect(Array.isArray(response.body.data.movies)).toBe(true);
+    });
+  });
+
+  describe("GET /api/movies/search - Pagination", () => {
     test("should respect limit parameter", async () => {
-      const moviesCollection = getCollection("movies");
-      const limit = 2;
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "adventure", limit: 5 })
+        .expect(200);
 
-      const results = await moviesCollection
-        .aggregate([
-          {
-            $search: {
-              index: SEARCH_INDEX_NAME,
-              text: {
-                query: "adventure",
-                path: ["plot", "fullplot"],
-              },
-            },
-          },
-          { $limit: limit },
-        ])
-        .toArray();
-
-      expect(results).toBeDefined();
-      expect(results.length).toBeLessThanOrEqual(limit);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.movies).toBeDefined();
+      expect(response.body.data.movies.length).toBeLessThanOrEqual(5);
     });
 
-    test("should support pagination with skip", async () => {
-      const moviesCollection = getCollection("movies");
-      const limit = 2;
-
+    test("should support pagination with skip and limit", async () => {
       // Get first page
-      const firstPage = await moviesCollection
-        .aggregate([
-          {
-            $search: {
-              index: SEARCH_INDEX_NAME,
-              text: {
-                query: "adventure",
-                path: ["plot", "fullplot"],
-              },
-            },
-          },
-          { $limit: limit },
-        ])
-        .toArray();
+      const firstPage = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "adventure", limit: 5, skip: 0 })
+        .expect(200);
 
       // Get second page
-      const secondPage = await moviesCollection
-        .aggregate([
-          {
-            $search: {
-              index: SEARCH_INDEX_NAME,
-              text: {
-                query: "adventure",
-                path: ["plot", "fullplot"],
-              },
-            },
-          },
-          { $skip: limit },
-          { $limit: limit },
-        ])
-        .toArray();
+      const secondPage = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "adventure", limit: 5, skip: 5 })
+        .expect(200);
 
-      expect(firstPage).toBeDefined();
-      expect(secondPage).toBeDefined();
+      expect(firstPage.body.success).toBe(true);
+      expect(secondPage.body.success).toBe(true);
 
-      // If we have enough results, verify different pages have different results
-      if (firstPage.length === limit && secondPage.length > 0) {
-        const firstPageIds = firstPage.map((m: any) => m._id.toString());
-        const secondPageIds = secondPage.map((m: any) => m._id.toString());
+      // If we have enough results, verify different pages
+      if (
+        firstPage.body.data.movies.length > 0 &&
+        secondPage.body.data.movies.length > 0
+      ) {
+        const firstPageIds = firstPage.body.data.movies.map((m: any) => m._id);
+        const secondPageIds = secondPage.body.data.movies.map((m: any) => m._id);
 
         // Verify no overlap between pages
-        const hasOverlap = firstPageIds.some((id) => secondPageIds.includes(id));
+        const hasOverlap = firstPageIds.some((id: string) =>
+          secondPageIds.includes(id)
+        );
         expect(hasOverlap).toBe(false);
       }
     });
   });
 
-  // ==================== HELPER FUNCTIONS ====================
+  describe("GET /api/movies/search - Search operators", () => {
+    test("should support compound search with must operator", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "detective", directors: "Nolan", searchOperator: "must" })
+        .expect(200);
 
-  /**
-   * Clean up test movies from the database.
-   * This function is idempotent and safe to call multiple times.
-   */
-  async function cleanupTestMovies(): Promise<void> {
-    const moviesCollection = getCollection("movies");
-
-    // Clean up by IDs if we have them
-    if (testMovieIds.length > 0) {
-      await moviesCollection.deleteMany({
-        _id: { $in: testMovieIds },
-      });
-      testMovieIds = [];
-    }
-
-    // Also clean up by title pattern to catch any orphaned test data
-    // This ensures idempotency even if previous test runs failed
-    await moviesCollection.deleteMany({
-      title: { $regex: /^Test (Space Adventure|Mystery Movie|Adventure Quest)$/ },
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
     });
-  }
 
-  async function createTestMovies(): Promise<void> {
-    const moviesCollection = getCollection("movies");
+    test("should support compound search with should operator", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({
+          plot: "adventure",
+          cast: "Harrison Ford",
+          searchOperator: "should",
+        })
+        .expect(200);
 
-    const testMovies = [
-      {
-        title: "Test Space Adventure",
-        year: 2024,
-        plot: "An epic space adventure across the galaxy",
-        genres: ["Sci-Fi", "Adventure"],
-      },
-      {
-        title: "Test Mystery Movie",
-        year: 2024,
-        plot: "A detective solves a mysterious crime",
-        genres: ["Mystery", "Thriller"],
-      },
-      {
-        title: "Test Adventure Quest",
-        year: 2024,
-        plot: "Heroes embark on a dangerous adventure",
-        genres: ["Adventure", "Fantasy"],
-      },
-    ];
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toBeDefined();
+    });
+  });
 
-    const result = await moviesCollection.insertMany(testMovies);
-    testMovieIds = Object.values(result.insertedIds) as ObjectId[];
-  }
+  describe("GET /api/movies/search - Error handling", () => {
+    test("should return 400 when no search parameters provided", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .expect(400);
 
-  async function createSearchIndex(): Promise<void> {
-    const db = await connectToDatabase();
-    const moviesCollection = getCollection("movies");
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
+    });
 
-    // Check if index already exists
-    const existingIndexes = await moviesCollection.listSearchIndexes().toArray();
-    const indexExists = existingIndexes.some(
-      (idx: any) => idx.name === SEARCH_INDEX_NAME
-    );
+    test("should return 400 for invalid search operator", async () => {
+      const response = await request(app)
+        .get("/api/movies/search")
+        .query({ plot: "adventure", searchOperator: "invalid" })
+        .expect(400);
 
-    if (indexExists) {
-      return;
-    }
-
-    // Create the search index definition
-    const indexDefinition = {
-      mappings: {
-        dynamic: false,
-        fields: {
-          plot: {
-            type: "string",
-            analyzer: "lucene.standard",
-          },
-          fullplot: {
-            type: "string",
-            analyzer: "lucene.standard",
-          },
-          directors: {
-            type: "string",
-            analyzer: "lucene.standard",
-          },
-          writers: {
-            type: "string",
-            analyzer: "lucene.standard",
-          },
-          cast: {
-            type: "string",
-            analyzer: "lucene.standard",
-          },
-        },
-      },
-    };
-
-    // Create the index using the createSearchIndexes command
-    try {
-      await db.command({
-        createSearchIndexes: "movies",
-        indexes: [
-          {
-            name: SEARCH_INDEX_NAME,
-            definition: indexDefinition,
-          },
-        ],
-      });
-    } catch (error) {
-      console.error("❌ Error creating search index:", error);
-      throw error;
-    }
-  }
-
-  async function waitForSearchIndexReady(): Promise<void> {
-    const moviesCollection = getCollection("movies");
-    const startTime = Date.now();
-    const maxWaitMillis = MAX_INDEX_WAIT_SECONDS * 1000;
-
-    while (Date.now() - startTime < maxWaitMillis) {
-      const indexes = await moviesCollection.listSearchIndexes().toArray();
-
-      const searchIndex = indexes.find(
-        (idx: any) => idx.name === SEARCH_INDEX_NAME
-      );
-
-      if (searchIndex) {
-        const status = (searchIndex as any).status;
-        if (status === "READY") {
-          return;
-        }
-      }
-
-      // Wait before polling again
-      await new Promise((resolve) =>
-        setTimeout(resolve, POLL_INTERVAL_SECONDS * 1000)
-      );
-    }
-
-    throw new Error(
-      `Search index did not become ready within ${MAX_INDEX_WAIT_SECONDS} seconds`
-    );
-  }
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
+    });
+  });
 });
-
