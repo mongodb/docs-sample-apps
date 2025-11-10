@@ -11,11 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack Notification for New Issue
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          REPO_NAME: ${{ github.repository }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
-          MESSAGE_TEXT="*📢 New Issue Opened in ${{ github.repository }} 📢*\n\n*Issue Title:* ${{ github.event.issue.title }}\n*Opened By:* ${{ github.event.issue.user.login }}\n\n*View Issue:* ${{ github.event.issue.html_url }}"
+          # Build message text using jq to safely handle user input
+          MESSAGE_TEXT=$(jq -n \
+            --arg repo "$REPO_NAME" \
+            --arg title "$ISSUE_TITLE" \
+            --arg user "$ISSUE_USER" \
+            --arg url "$ISSUE_URL" \
+            '*📢 New Issue Opened in \($repo) 📢*\n\n*Issue Title:* \($title)\n*Opened By:* \($user)\n\n*View Issue:* \($url)')
 
+          # Build Slack payload
           SLACK_PAYLOAD=$(jq -n \
-            --arg text "${MESSAGE_TEXT}" \
+            --arg text "$MESSAGE_TEXT" \
             '{
               "channel": "#docs-devdocs-notifications",
               "username": "Issue Notifier",
@@ -23,7 +36,8 @@ jobs:
               "text": $text
             }')
 
+          # Send to Slack
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
-               ${{ secrets.SLACK_WEBHOOK }}
+               "$SLACK_WEBHOOK"
