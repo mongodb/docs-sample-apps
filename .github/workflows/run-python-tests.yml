@@ -1,7 +1,7 @@
 name: Run Python Tests
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - development
     paths:
@@ -16,40 +16,56 @@ jobs:
   test:
     name: Run Python Tests
     runs-on: ubuntu-latest
-    # Require manual approval for fork PRs
-    environment: testing
-
-    defaults:
-      run:
-        working-directory: mflix/server/python-fastapi
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Atlas CLI
+        run: |
+          curl https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_1.47.0_linux_x86_64.deb --output atlas-cli.deb
+          sudo apt install ./atlas-cli.deb
+
+      - name: Set up a local deployment using Atlas CLI
+        run: |
+          atlas deployments setup myLocalRs1 --type local --port 27017 --force
+
+      - name: Install MongoDB Database Tools to load sample data
+        run: |
+          curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.13.0.deb --output mdb-db-tools.deb
+          sudo apt install ./mdb-db-tools.deb
+
+      - name: Download sample data
+        run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+
+      - name: Add sample data to database
+        run: mongorestore --archive=sampledata.archive --port=27017
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: 'pip'
+          cache-dependency-path: mflix/server/python-fastapi/requirements.txt
 
       - name: Install dependencies
+        working-directory: mflix/server/python-fastapi
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run unit tests
+        working-directory: mflix/server/python-fastapi
         run: pytest -m unit --verbose --tb=short --junit-xml=test-results-unit.xml
         env:
-          MONGO_URI: ${{ secrets.MFLIX_URI }}
+          MONGO_URI: mongodb://localhost:27017
           MONGO_DB: sample_mflix
 
       - name: Run integration tests
+        working-directory: mflix/server/python-fastapi
         run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
         env:
-          MONGO_URI: ${{ secrets.MFLIX_URI }}
+          MONGO_URI: mongodb://localhost:27017
           MONGO_DB: sample_mflix
 
       - name: Upload test results
@@ -65,7 +81,6 @@ jobs:
 
       - name: Generate Test Summary
         if: always()
-        working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-pytest.sh
           .github/scripts/generate-test-summary-pytest.sh \
