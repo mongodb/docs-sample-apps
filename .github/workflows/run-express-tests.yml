@@ -1,7 +1,7 @@
 name: Run Express Tests
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - development
     paths:
@@ -16,18 +16,30 @@ jobs:
   test:
     name: Run Express Tests
     runs-on: ubuntu-latest
-    # Require manual approval for fork PRs
-    environment: testing
-
-    defaults:
-      run:
-        working-directory: server/js-express
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Atlas CLI
+        run: |
+          curl https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_1.47.0_linux_x86_64.deb --output atlas-cli.deb
+          sudo apt install ./atlas-cli.deb
+
+      - name: Set up a local deployment using Atlas CLI
+        run: |
+          atlas deployments setup myLocalRs1 --type local --port 27017 --force
+
+      - name: Install MongoDB Database Tools to load sample data
+        run: |
+          curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.13.0.deb --output mdb-db-tools.deb
+          sudo apt install ./mdb-db-tools.deb
+
+      - name: Download sample data
+        run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+
+      - name: Add sample data to database
+        run: mongorestore --archive=sampledata.archive --port=27017
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -35,19 +47,23 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
+        working-directory: server/js-express
         run: npm install
 
       - name: Run unit tests
+        working-directory: server/js-express
         run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
         env:
-          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix
 
       - name: Run integration tests
+        working-directory: server/js-express
         run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
         env:
-          MONGODB_URI: ${{ secrets.MFLIX_URI }}
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix
           ENABLE_SEARCH_TESTS: true
-          VOYAGE_API_KEY: ${{ secrets.VOYAGE_AI }}
+          # Note: Vector search tests will be skipped without VOYAGE_API_KEY
+          # Run these tests locally with a valid API key
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -62,7 +78,6 @@ jobs:
 
       - name: Generate Test Summary
         if: always()
-        working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-jest.sh
           .github/scripts/generate-test-summary-jest.sh \

@@ -1,7 +1,7 @@
 name: Run Java Spring Boot Tests
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - development
     paths:
@@ -16,22 +16,30 @@ jobs:
   test:
     name: Run Java Spring Boot Tests
     runs-on: ubuntu-latest
-    # Require manual approval for fork PRs
-    environment: testing
-
-    defaults:
-      run:
-        working-directory: mflix/server/java-spring
-
-    env:
-      MONGODB_URI: ${{ secrets.MFLIX_URI }}
-      ENABLE_SEARCH_TESTS: true
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Atlas CLI
+        run: |
+          curl https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_1.47.0_linux_x86_64.deb --output atlas-cli.deb
+          sudo apt install ./atlas-cli.deb
+
+      - name: Set up a local deployment using Atlas CLI
+        run: |
+          atlas deployments setup myLocalRs1 --type local --port 27017 --force
+
+      - name: Install MongoDB Database Tools to load sample data
+        run: |
+          curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.13.0.deb --output mdb-db-tools.deb
+          sudo apt install ./mdb-db-tools.deb
+
+      - name: Download sample data
+        run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+
+      - name: Add sample data to database
+        run: mongorestore --archive=sampledata.archive --port=27017
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -41,14 +49,24 @@ jobs:
           cache: 'maven'
 
       - name: Make mvnw executable
+        working-directory: mflix/server/java-spring
         run: chmod +x mvnw
 
       - name: Run unit tests
+        working-directory: mflix/server/java-spring
         run: ./mvnw test
+        env:
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix
 
       - name: Run integration tests
+        working-directory: mflix/server/java-spring
         run: ./mvnw test -Dtest=MongoDBSearchIntegrationTest
         continue-on-error: true
+        env:
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix
+          ENABLE_SEARCH_TESTS: true
+          # Note: Vector search tests will be skipped without VOYAGE_API_KEY
+          # Run these tests locally with a valid API key
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -60,7 +78,6 @@ jobs:
 
       - name: Generate Test Summary
         if: always()
-        working-directory: .
         run: |
           chmod +x .github/scripts/generate-test-summary-surefire.sh
           .github/scripts/generate-test-summary-surefire.sh mflix/server/java-spring/target/surefire-reports
