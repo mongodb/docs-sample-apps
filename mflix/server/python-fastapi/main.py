@@ -114,20 +114,24 @@ async def vector_search_index():
         )
 
 async def ensure_standard_index():
+    """
+    Creates a standard MongoDB index on the comments collection on application startup.
+    This improves performance for queries filtering by movie_id such as ReportingByComments().
+    """
 
-        try:
-            comments_collection = db.get_collection("comments")
+    try:
+        comments_collection = db.get_collection("comments")
 
-            existing_indexes_cursor = await comments_collection.list_search_indexes()
-            existing_indexes = await existing_indexes_cursor.to_list(length=None)
-            index_names = [index.get("name") for index in existing_indexes]
+        existing_indexes_cursor = await comments_collection.list_search_indexes()
+        existing_indexes = await existing_indexes_cursor.to_list(length=None)
+        index_names = [index.get("name") for index in existing_indexes]
 
-            if "movie_id" not in index_names:
-                await comments_collection.create_index("movie_id")
+        if "movie_id" not in index_names:
+            await comments_collection.create_index("movie_id")
 
-        except Exception as e:
-            print(f"Failed to create standard index on 'comments' collection: {str(e)}. ")
-            print(f"Performance may be degraded. Please check your MongoDB configuration.")
+    except Exception as e:
+        print(f"Failed to create standard index on 'comments' collection: {str(e)}. ")
+        print(f"Performance may be degraded. Please check your MongoDB configuration.")
 
 
 app = FastAPI(lifespan=lifespan)
