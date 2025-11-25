@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import movies
-from src.utils.errorHandler import register_error_handlers
 from src.database.mongo_client import db, get_collection
 
 import os
@@ -15,8 +14,9 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create search indexes
-    await ensure_search_index()
+    await ensure_mongodb_search_index()
     await vector_search_index()
+    await ensure_standard_index()
 
     # Print server information
     print(f"\n{'='*60}")
@@ -30,10 +30,9 @@ async def lifespan(app: FastAPI):
     # Add any cleanup code here
 
 
-async def ensure_search_index():
+async def ensure_mongodb_search_index():
     try:
         movies_collection = db.get_collection("movies")
-        comments_collection = db.get_collection("comments")
         
         # Check and create search index for movies collection
         result = await movies_collection.list_search_indexes()
@@ -114,6 +113,22 @@ async def vector_search_index():
             f"and verify the 'embedded_movies' collection exists with the required embedding field."
         )
 
+async def ensure_standard_index():
+
+        try:
+            comments_collection = db.get_collection("comments")
+
+            existing_indexes_cursor = await comments_collection.list_search_indexes()
+            existing_indexes = await existing_indexes_cursor.to_list(length=None)
+            index_names = [index.get("name") for index in existing_indexes]
+
+            if "movie_id" not in index_names:
+                await comments_collection.create_index("movie_id")
+
+        except Exception as e:
+            print(f"Failed to create standard index on 'comments' collection: {str(e)}. ")
+            print(f"Performance may be degraded. Please check your MongoDB configuration.")
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -127,6 +142,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-register_error_handlers(app)
 app.include_router(movies.router, prefix="/api/movies", tags=["movies"])
 
