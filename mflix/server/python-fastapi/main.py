@@ -15,7 +15,7 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     # Startup: Create search indexes
     await ensure_mongodb_search_index()
-    await vector_search_index()
+    await ensure_vector_search_index()
     await ensure_standard_index()
 
     # Print server information
@@ -70,7 +70,7 @@ async def ensure_mongodb_search_index():
         )
 
 
-async def vector_search_index():
+async def ensure_vector_search_index():
     """
     Creates vector search index on application startup if it doesn't already exist.
     This ensures the index is ready before any vector search requests are made.

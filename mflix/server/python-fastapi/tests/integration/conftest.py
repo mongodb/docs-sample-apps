@@ -209,5 +209,5 @@ async def multiple_test_movies(client):
             if response_data.get("success") is False and "not found" in response_data.get("error", {}).get("message", "").lower():
                 # Movie was already deleted, which is fine
                 continue
-        assert cleanup_response.status_code == 200, f"Failed to clean up movie {movie_id}"
+        assert cleanup_response.status_code in [200,404], f"Failed to clean up movie {movie_id}"
 

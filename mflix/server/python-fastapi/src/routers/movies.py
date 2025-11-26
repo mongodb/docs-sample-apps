@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Path, Body, HTTPException
 from src.database.mongo_client import get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse
-from typing import Any, List
+from typing import Any, List, Optional
 from src.utils.successResponse import create_success_response
-from bson import ObjectId
+from bson import ObjectId, errors
 import re
 from bson.errors import InvalidId
 import voyageai
@@ -104,15 +104,15 @@ router = APIRouter()
 @router.get(
     "/search",
     response_model=SuccessResponse[SearchMoviesResponse],
-    status_code=200,
+    status_code = 200,
     summary="Search movies using MongoDB Search."
 )
 async def search_movies(
-    plot: str = Query(default=None),
-    fullplot: str = Query(default=None),
-    directors: str = Query(default=None),
-    writers: str = Query(default=None),
-    cast: str = Query(default=None),
+    plot: Optional[str] = None,
+    fullplot: Optional[str] = None,
+    directors: Optional[str] = None,
+    writers: Optional[str] = None,
+    cast: Optional[str] = None,
     limit:int = Query(default=20, ge=1, le=100),
     skip:int = Query(default=0, ge=0),
     search_operator: str = Query(default="must", alias="searchOperator")
@@ -125,14 +125,14 @@ async def search_movies(
 
     if search_operator not in valid_operators:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid search_operator '{search_operator}'. The search_operator must be one of {valid_operators}."
+            status_code = 400,
+            detail=f"Invalid search operator '{search_operator}'. The search operator must be one of {valid_operators}."
         )
 
     # Build the search_phrases list based on which fields were provided by the user.
     # Each phrase becomes a separate clause in the MongoDB Search compound query.
 
-    if plot:
+    if plot is not None:
         search_phrases.append({
             # The phrase operator performs an exact phrase match on the specified field. This is useful for searching for specific phrases within text fields.
             # The text operator is more flexible and allows for fuzzy matching, making it suitable for fields like names where typos may occur.
@@ -141,14 +141,14 @@ async def search_movies(
                 "path": "plot",
             }
         })
-    if fullplot:
+    if fullplot is not None:
         search_phrases.append({
             "phrase": {
                 "query": fullplot,
                 "path": "fullplot",
             }
         })
-    if directors:
+    if directors is not None:
         # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
         # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
         #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
@@ -164,7 +164,7 @@ async def search_movies(
 
             }
         })
-    if writers:
+    if writers is not None:
         # See comments above regarding fuzzy search options.
         search_phrases.append({
             "text": {
@@ -173,7 +173,7 @@ async def search_movies(
                 "fuzzy":{"maxEdits":1, "prefixLength":5}
             }
         })
-    if cast:
+    if cast is not None:
         # See comments above regarding fuzzy search options.
         search_phrases.append({
             "text": {
@@ -185,7 +185,7 @@ async def search_movies(
 
     if not search_phrases:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail="At least one search parameter must be provided."
         )
 
@@ -240,7 +240,7 @@ async def search_movies(
         results = await execute_aggregation(aggregation_pipeline)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"An error occurred while performing the search: {str(e)}"
         )
         
@@ -318,7 +318,7 @@ async def vector_search_movies(
     """
     if not voyage_ai_available():
         raise HTTPException(
-            status_code=503,
+            status_code = 503,
             detail="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to your .env file."
         )
     try:
@@ -392,7 +392,7 @@ async def vector_search_movies(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"An error occurred during vector search: {str(e)}"
         )
 
@@ -407,15 +407,15 @@ async def vector_search_movies(
 
 @router.get("/{id}",
             response_model=SuccessResponse[Movie],
-            status_code=200,
+            status_code = 200,
             summary="Retrieve a single movie by its ID.")
 async def get_movie_by_id(id: str):
     # Validate ObjectId format
     try:
         object_id = ObjectId(id)
-    except InvalidId:
+    except errors.InvalidId:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail=f"The provided ID '{id}' is not a valid ObjectId"
         )
 
@@ -424,14 +424,14 @@ async def get_movie_by_id(id: str):
         movie = await movies_collection.find_one({"_id": object_id})
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
         
 
     if movie is None:
         raise HTTPException(
-            status_code=404,
+            status_code = 404,
             detail=f"No movie found with ID: {id}"
         )
 
@@ -461,7 +461,7 @@ async def get_movie_by_id(id: str):
 
 @router.get("/",
             response_model=SuccessResponse[List[Movie]],
-            status_code=200,
+            status_code = 200,
             summary="Retrieve a list of movies with optional filtering, sorting, and pagination.")
 # Validate the query parameters using FastAPI's Query functionality.
 async def get_all_movies(
@@ -505,7 +505,7 @@ async def get_all_movies(
         result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)
     except Exception as e:
         raise HTTPException(
-            code=500,
+            status_code = 500,
             detail=f"An error occurred while fetching movies. {str(e)}"
         )
 
@@ -538,7 +538,7 @@ async def get_all_movies(
 
 @router.post("/",
             response_model=SuccessResponse[Movie],
-            status_code=201,
+            status_code = 201,
             summary="Creates a new movie in the database.")
 async def create_movie(movie: CreateMovieRequest):
     # Pydantic automatically validates the structure
@@ -549,14 +549,14 @@ async def create_movie(movie: CreateMovieRequest):
         result = await movies_collection.insert_one(movie_data)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
 
     # Verify that the document was created before querying it
     if not result.acknowledged:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail="Failed to create movie: The database did not acknowledge the insert operation"
         )
 
@@ -565,13 +565,13 @@ async def create_movie(movie: CreateMovieRequest):
         created_movie = await movies_collection.find_one({"_id": result.inserted_id})
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
 
     if created_movie is None:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail="Movie was created but could not be retrieved for verification"
         )
 
@@ -617,7 +617,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
     #Verify that the movies list is not empty
     if not movies:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail="Request body must be a non-empty list of movies."
         )
 
@@ -639,7 +639,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
 
@@ -660,7 +660,7 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
 @router.patch(
         "/{id}",
         response_model=SuccessResponse[Movie],
-        status_code=200,
+        status_code = 200,
         summary="Update a single movie by its ID.")
 async def update_movie(
     movie_data: UpdateMovieRequest,
@@ -674,7 +674,7 @@ async def update_movie(
         movie_id = ObjectId(movie_id)
     except Exception :
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail=f"Invalid movie_id format: {movie_id}"
         )
 
@@ -683,7 +683,7 @@ async def update_movie(
     # Validate that the dict is not empty
     if not update_dict:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail="No valid fields provided for update."
         )
 
@@ -694,13 +694,13 @@ async def update_movie(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"An error occurred while updating the movie: {str(e)}"
         )
 
     if result.matched_count == 0:
         raise HTTPException(
-            status_code=404,
+            status_code = 404,
             detail=f"No movie with that _id was found: {movie_id}"
         )
 
@@ -723,7 +723,7 @@ async def update_movie(
 
 @router.patch("/",
         response_model=SuccessResponse[dict],
-        status_code=200,
+        status_code = 200,
         summary="Batch update movies matching the given filter."
         )
 async def update_movies_batch(
@@ -737,7 +737,7 @@ async def update_movies_batch(
 
     if not filter_data or not update_data:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail="Both filter and update objects are required"
         )
 
@@ -749,7 +749,7 @@ async def update_movies_batch(
                 filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
             except Exception:
                 raise HTTPException(
-                    status_code=400,
+                    status_code = 400,
                     detail="Invalid ObjectId format in filter",
                 )
 
@@ -757,7 +757,7 @@ async def update_movies_batch(
         result = await movies_collection.update_many(filter_data, {"$set": update_data})
     except Exception as e:
         raise HTTPException(
-            status_code="500",
+            status_code = "500",
             detail=f"An error occurred while updating movies: {str(e)}"
         )
 
@@ -779,14 +779,14 @@ async def update_movies_batch(
 
 @router.delete("/{id}",
                 response_model=SuccessResponse[dict],
-                status_code=200,
+                status_code = 200,
                 summary="Delete a single movie by its ID.")
 async def delete_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
-    except InvalidId:
-        return HTTPException(
-            status_code=400,
+    except errors.InvalidId:
+        raise HTTPException(
+            status_code = 400,
             detail=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId"
         )
 
@@ -796,13 +796,13 @@ async def delete_movie_by_id(id: str):
         result = await movies_collection.delete_one({"_id": object_id})
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
 
     if result.deleted_count == 0:
         raise HTTPException(
-            status_code=404,
+            status_code = 404,
             detail=f"No movie found with ID: {id}"
         )
 
@@ -826,7 +826,7 @@ async def delete_movie_by_id(id: str):
 @router.delete(
         "/",
         response_model=SuccessResponse[dict],
-        status_code=200,
+        status_code = 200,
         summary="Delete multiple movies matching the given filter."
 )
 async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse[dict]:
@@ -838,7 +838,7 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
 
     if not filter_data:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail="Filter object is required and cannot be empty."
         )
 
@@ -850,7 +850,7 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
                 filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
             except Exception:
                 raise HTTPException(
-                    status_code=400,
+                    status_code = 400,
                     detail="Invalid ObjectId format in filter."
                 )
 
@@ -858,7 +858,7 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
         result = await movies_collection.delete_many(filter_data)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"An error occurred while deleting movies: {str(e)}"
         )
 
@@ -879,14 +879,14 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
 
 @router.delete("/{id}/find-and-delete",
                 response_model=SuccessResponse[Movie],
-                status_code=200,
+                status_code = 200,
                 summary="Find and delete a movie in a single operation.")
 async def find_and_delete_movie(id: str):
     try:
         object_id = ObjectId(id)
-    except InvalidId:
+    except errors.InvalidId:
         raise HTTPException(
-            status_code=400,
+            status_code = 400,
             detail=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId"
         )
 
@@ -898,13 +898,13 @@ async def find_and_delete_movie(id: str):
         deleted_movie = await movies_collection.find_one_and_delete({"_id": object_id})
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred: {str(e)}"
         )
 
     if deleted_movie is None:
         raise HTTPException(
-            status_code=404,
+            status_code = 404,
             detail=f"No movie found with ID: {id}"
         )
     deleted_movie["_id"] = str(deleted_movie["_id"]) # Convert ObjectId to string
@@ -924,7 +924,7 @@ async def find_and_delete_movie(id: str):
 
 @router.get("/aggregations/reportingByComments",
             response_model=SuccessResponse[List[dict]],
-            status_code=200,
+            status_code = 200,
             summary="Aggregate movies with their most recent comments.")
 async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
@@ -956,7 +956,7 @@ async def aggregate_movies_recent_commented(
             pipeline[0]["$match"]["_id"] = object_id
         except Exception:
             raise HTTPException(
-                status_code=400,
+                status_code = 400,
                 detail="The provided movie_id is not a valid ObjectId"
             )
 
@@ -1045,7 +1045,7 @@ async def aggregate_movies_recent_commented(
         results = await execute_aggregation(pipeline)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred during aggregation: {str(e)}"
         )
 
@@ -1072,7 +1072,7 @@ async def aggregate_movies_recent_commented(
 
 @router.get("/aggregations/reportingByYear",
             response_model=SuccessResponse[List[dict]],
-            status_code=200,
+            status_code = 200,
             summary="Aggregate movies by year with average rating and movie count.")
 async def aggregate_movies_by_year():
     # Define aggregation pipeline to group movies by year with statistics
@@ -1175,7 +1175,7 @@ async def aggregate_movies_by_year():
         results = await execute_aggregation(pipeline)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred during aggregation: {str(e)}"
         )
 
@@ -1196,7 +1196,7 @@ async def aggregate_movies_by_year():
 
 @router.get("/aggregations/reportingByDirectors",
             response_model=SuccessResponse[List[dict]],
-            status_code=200,
+            status_code = 200,
             summary="Aggregate directors with the most movies and their statistics.")
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
@@ -1273,7 +1273,7 @@ async def aggregate_directors_most_movies(
         results = await execute_aggregation(pipeline)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
+            status_code = 500,
             detail=f"Database error occurred during aggregation: {str(e)}"
         )
 
