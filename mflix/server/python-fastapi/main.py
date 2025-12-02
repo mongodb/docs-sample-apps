@@ -123,14 +123,11 @@ async def ensure_standard_index():
         comments_collection = db.get_collection("comments")
 
         existing_indexes_cursor = await comments_collection.list_indexes()
-        existing_indexes = await existing_indexes_cursor.to_list(length=None)
+        existing_indexes = [index async for index in existing_indexes_cursor]
         index_names = [index.get("name") for index in existing_indexes]
-
-        print(f"Existing indexes: {existing_indexes}")  
-
         standard_index_name = "movie_id_index"
         if standard_index_name not in index_names:
-            await comments_collection.create_index("movie_id", name=standard_index_name)
+            await comments_collection.create_index([("movie_id", 1)], name=standard_index_name)
 
     except Exception as e:
         print(f"Failed to create standard index on 'comments' collection: {str(e)}. ")
