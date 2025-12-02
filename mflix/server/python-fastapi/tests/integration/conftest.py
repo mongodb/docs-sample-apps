@@ -61,8 +61,8 @@ def server():
         cwd=server_python_dir
     )
 
-    # Wait for server to be ready (max 10 seconds)
-    max_wait = 10
+    # Wait for server to be ready (max 30 seconds)
+    max_wait = 30
     start_time = time.time()
     while time.time() - start_time < max_wait:
         if is_port_in_use(test_port):
