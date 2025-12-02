@@ -757,7 +757,7 @@ async def update_movies_batch(
         result = await movies_collection.update_many(filter_data, {"$set": update_data})
     except Exception as e:
         raise HTTPException(
-            status_code = "500",
+            status_code = 500,
             detail=f"An error occurred while updating movies: {str(e)}"
         )
 
