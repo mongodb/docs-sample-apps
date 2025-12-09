@@ -1,5 +1,4 @@
 name: Security Vulnerability Slack Notification
-
 on:
   schedule:
     - cron: '0 * * * *' # Runs every hour
@@ -14,7 +13,8 @@ jobs:
 
       - name: Check for Recent Alerts
         env:
-        
+          # Use a PAT instead of the default token
+          GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           # 1. Calculate time 65 minutes ago
@@ -24,9 +24,10 @@ jobs:
 
           # 2. Fetch alerts using GitHub CLI
           # Note: We point to the API endpoint explicitly
-          ALERTS=$(gh api "https://github.com/mongodb/docs-sample-apps/security/dependabot" \
+          ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
             --jq ".[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
-
+          
+          echo "Past Alerts step."
           # 3. Check if any alerts were found
           if [ -z "$ALERTS" ]; then
             echo "No new alerts found in the last hour."
