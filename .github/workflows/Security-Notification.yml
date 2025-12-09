@@ -15,7 +15,7 @@ jobs:
         env:
           # Use a PAT instead of the default token
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK}}
         run: |
          echo "--- TEST MODE ACTIVE ---"
           echo "Fetching ALL alerts (Open, Fixed, Dismissed) to verify Slack connection..."
@@ -52,7 +52,6 @@ jobs:
           STATE=$(echo "$ALERTS" | jq -r '.[0] | .state')
 
           REPO_NAME="${{ github.repository }}"
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           
           ISSUE_TITLE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name + " (" + .security_advisory.severity + ")"')
           ISSUE_USER="Dependabot"
@@ -82,4 +81,4 @@ jobs:
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
-               "$SLACK_WEBHOOK"
+               "$SLACK_WEBHOOK_URL"
