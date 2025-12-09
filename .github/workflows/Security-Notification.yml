@@ -17,35 +17,23 @@ jobs:
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK}}
         run: |
-         echo "--- TEST MODE ACTIVE ---"
-          echo "Fetching ALL alerts (Open, Fixed, Dismissed) to verify Slack connection..."
-
-          # 1. Fetch alerts via API
-          # We use '?state=all' to find old/closed alerts
-          # We use 'per_page=1' because we only need one example to test
-          RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts?q=is%3Aclosed")
-
-          # 2. Check for Authentication Errors
-          if echo "$RESPONSE" | grep -q "Bad credentials"; then
-             echo "::error::Authentication Failed! Please check your DEPENDABOT_PAT secret."
-             exit 1
-          fi
-
-          # 3. Parse the result
-          # We just grab the first alert found. No time filter. No severity filter.
-          ALERTS=$(echo "$RESPONSE" | jq '.')
+         # 1. Calculate time 65 minutes ago
+          TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
           
-          # Check if the list is empty (Repo has NEVER had an alert)
-          LENGTH=$(echo "$ALERTS" | jq 'length')
-          if [ "$LENGTH" -eq 0 ]; then
-            echo "::warning:: No alerts found (Open or Closed). This repo has clean history!"
+          echo "Checking for alerts created after: $TIME_THRESHOLD"
+
+          # 2. Fetch alerts using GitHub CLI
+          ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
+            --jq ".[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
+
+          # 3. Check if any alerts were found
+          if [ -z "$ALERTS" ]; then
+            echo "No new alerts found in the last hour."
             exit 0
           fi
 
-          echo "Found historical alert data. Sending Slack notification..."
-
+          echo "New alerts detected! Sending notification..."
+          
           # 4. Extract details from the first alert found
           PACKAGE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name')
           SEVERITY=$(echo "$ALERTS" | jq -r '.[0] | .security_advisory.severity')
@@ -57,8 +45,6 @@ jobs:
           ISSUE_USER="Dependabot"
           ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0] | .html_url')
           
-          # FIX: We pass the template string as an argument (--arg template) 
-          # This prevents the "syntax error: unexpected '*'" because jq doesn't try to parse the asterisks as code.
           MESSAGE_TEXT=$(jq -n \
             --arg repo "$REPO_NAME" \
             --arg title "$ISSUE_TITLE" \
