@@ -51,7 +51,7 @@ jobs:
           SEVERITY=$(echo "$ALERTS" | jq -r '.[0] | .security_advisory.severity')
           STATE=$(echo "$ALERTS" | jq -r '.[0] | .state')
 
-          REPO_NAME: ${{ github.repository }}
+          REPO_NAME="${{ github.repository }}"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           
           ISSUE_TITLE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name + " (" + .security_advisory.severity + ")"')
