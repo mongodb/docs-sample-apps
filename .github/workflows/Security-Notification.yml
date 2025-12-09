@@ -1,94 +1,91 @@
 name: Security Vulnerability Slack Notification
 
 on:
-  # The real trigger (fires on real alerts)
-  repository_vulnerability_alert:
-    types: [create]
-  
-  # The manual trigger (for testing)
+  schedule:
+    - cron: '0 * * * *'
+  # Keep manual trigger for testing
   workflow_dispatch:
-    inputs:
-      mock_package:
-        description: 'Package Name'
-        required: true
-        default: 'axios (Test)'
-      mock_severity:
-        description: 'Severity'
-        required: true
-        default: 'critical'
-        type: choice
-        options:
-        - critical
-        - high
-        - moderate
-        - low
+
+permissions:
+  # Required to read the alerts via API
+  dependabot-alerts: read
+  contents: read
 
 jobs:
-  notify-slack:
+  check-alerts:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Slack Notification
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check for Recent Alerts
+        id: check
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          # LOGIC: Use real data if available, otherwise use manual inputs (or defaults)
-          PACKAGE_NAME: ${{ github.event.alert.affected_package_name || inputs.mock_package || 'Test-Package' }}
-          SEVERITY: ${{ github.event.alert.severity || inputs.mock_severity || 'high' }}
-          ALERT_URL: ${{ github.event.alert.html_url || github.server_url }}
         run: |
-          echo "Triggered by: ${{ github.event_name }}"
-          echo "Package: $PACKAGE_NAME"
+          # 1. Calculate time 65 minutes ago (covers the 60 min cron + buffer)
+          # Format must match GitHub API ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)
+          TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
           
-          # Map severity to an emoji
-          if [ "$SEVERITY" == "critical" ]; then
-            EMOJI=":rotating_light:"
-          elif [ "$SEVERITY" == "high" ]; then
-            EMOJI=":warning:"
-          else
-            EMOJI=":information_source:"
+          echo "Checking for alerts created after: $TIME_THRESHOLD"
+
+          # 2. Fetch alerts using GitHub CLI
+          # We filter for: state=open, severity is high or critical, and created recently
+          ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
+            --jq ".[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
+
+          # 3. Check if any alerts were found
+          if [ -z "$ALERTS" ]; then
+            echo "No new alerts found in the last hour."
+            exit 0
           fi
 
-          # JSON Payload
-          PAYLOAD=$(cat <<EOF
-          {
-            "channel": "#docs-devdocs-notifications",
-            "username": "Dependabot Alert",
-            "icon_emoji": ":robot_face:",
-            "attachments": [
+          echo "New alerts detected!"
+          
+          # 4. Extract details for the first alert found (to keep notification simple)
+          PACKAGE=$(echo "$ALERTS" | jq -r 'first | .dependency.package.name')
+          SEVERITY=$(echo "$ALERTS" | jq -r 'first | .security_advisory.severity')
+          URL=$(echo "$ALERTS" | jq -r 'first | .html_url')
+          SUMMARY=$(echo "$ALERTS" | jq -r 'first | .security_advisory.summary')
+
+          # 5. Send Slack Notification
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"channel\": \"#docs-devdocs-notifications\",
+            \"username\": \"Dependabot Watchdog\",
+            \"icon_emoji\": \":rotating_light:\",
+            \"attachments\": [
               {
-                "color": "#D00000",
-                "blocks": [
+                \"color\": \"#D00000\",
+                \"blocks\": [
                   {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "$EMOJI *New Vulnerability Alert Detected* (Trigger: ${{ github.event_name }})"
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*New Dependabot Alert Detected*\"
                     }
                   },
                   {
-                    "type": "section",
-                    "fields": [
+                    \"type\": \"section\",
+                    \"fields\": [
                       {
-                        "type": "mrkdwn",
-                        "text": "*Package:*\n$PACKAGE_NAME"
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Package:*\n$PACKAGE\"
                       },
                       {
-                        "type": "mrkdwn",
-                        "text": "*Severity:*\n$SEVERITY"
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Severity:*\n$SEVERITY\"
                       }
                     ]
                   },
                   {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "<$ALERT_URL|View Alert Details on GitHub>"
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"<$URL|View Alert on GitHub>\"
                     }
                   }
                 ]
               }
             ]
-          }
-          EOF
-          )
-
-          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+          }" "$SLACK_WEBHOOK_URL"
