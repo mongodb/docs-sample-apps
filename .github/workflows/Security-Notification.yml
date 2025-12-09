@@ -24,9 +24,11 @@ jobs:
 
           # 2. Fetch alerts using GitHub CLI
           # Note: We point to the API endpoint explicitly
-          ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
-            --jq ".[] | select(.state == \"closed\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
-          
+          RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts?state=all")
+
+          ALERTS=$(echo "$RESPONSE" | jq '.[]')
           echo "Past Alerts step."
           # 3. Check if any alerts were found
           if [ -z "$ALERTS" ]; then
