@@ -1,8 +1,27 @@
 name: Security Vulnerability Slack Notification
 
 on:
+  # The real trigger (fires on real alerts)
   repository_vulnerability_alert:
     types: [create]
+  
+  # The manual trigger (for testing)
+  workflow_dispatch:
+    inputs:
+      mock_package:
+        description: 'Package Name'
+        required: true
+        default: 'axios (Test)'
+      mock_severity:
+        description: 'Severity'
+        required: true
+        default: 'critical'
+        type: choice
+        options:
+        - critical
+        - high
+        - moderate
+        - low
 
 jobs:
   notify-slack:
@@ -11,13 +30,15 @@ jobs:
       - name: Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          # Extract alert details from the event payload
-          PACKAGE_NAME: ${{ github.event.alert.affected_package_name }}
-          SEVERITY: ${{ github.event.alert.severity }}
-          ALERT_URL: ${{ github.event.alert.html_url }}
-          ECOSYSTEM: ${{ github.event.alert.affected_range }} 
+          # LOGIC: Use real data if available, otherwise use manual inputs (or defaults)
+          PACKAGE_NAME: ${{ github.event.alert.affected_package_name || inputs.mock_package || 'Test-Package' }}
+          SEVERITY: ${{ github.event.alert.severity || inputs.mock_severity || 'high' }}
+          ALERT_URL: ${{ github.event.alert.html_url || github.server_url }}
         run: |
-          # Map severity to an emoji for better visibility
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Package: $PACKAGE_NAME"
+          
+          # Map severity to an emoji
           if [ "$SEVERITY" == "critical" ]; then
             EMOJI=":rotating_light:"
           elif [ "$SEVERITY" == "high" ]; then
@@ -26,7 +47,7 @@ jobs:
             EMOJI=":information_source:"
           fi
 
-          # Construct the JSON payload
+          # JSON Payload
           PAYLOAD=$(cat <<EOF
           {
             "channel": "#docs-devdocs-notifications",
@@ -40,7 +61,7 @@ jobs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "$EMOJI *New Vulnerability Alert Detected*"
+                      "text": "$EMOJI *New Vulnerability Alert Detected* (Trigger: ${{ github.event_name }})"
                     }
                   },
                   {
@@ -70,5 +91,4 @@ jobs:
           EOF
           )
 
-          # Send the request
           curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
