@@ -2,14 +2,8 @@ name: Security Vulnerability Slack Notification
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  # Keep manual trigger for testing
+    - cron: '0 * * * *' # Runs every hour
   workflow_dispatch:
-
-permissions:
-  # Required to read the alerts via API
-  dependabot-alerts: read
-  contents: read
 
 jobs:
   check-alerts:
@@ -19,19 +13,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Check for Recent Alerts
-        id: check
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use a PAT instead of the default token
+          GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          # 1. Calculate time 65 minutes ago (covers the 60 min cron + buffer)
-          # Format must match GitHub API ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)
+          # 1. Calculate time 65 minutes ago
           TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
           
           echo "Checking for alerts created after: $TIME_THRESHOLD"
 
           # 2. Fetch alerts using GitHub CLI
-          # We filter for: state=open, severity is high or critical, and created recently
+          # Note: We point to the API endpoint explicitly
           ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
             --jq ".[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
 
@@ -41,13 +34,12 @@ jobs:
             exit 0
           fi
 
-          echo "New alerts detected!"
+          echo "New alerts detected! Sending notification..."
           
-          # 4. Extract details for the first alert found (to keep notification simple)
+          # 4. Extract details
           PACKAGE=$(echo "$ALERTS" | jq -r 'first | .dependency.package.name')
           SEVERITY=$(echo "$ALERTS" | jq -r 'first | .security_advisory.severity')
           URL=$(echo "$ALERTS" | jq -r 'first | .html_url')
-          SUMMARY=$(echo "$ALERTS" | jq -r 'first | .security_advisory.summary')
 
           # 5. Send Slack Notification
           curl -X POST -H 'Content-type: application/json' --data "{
@@ -62,7 +54,7 @@ jobs:
                     \"type\": \"section\",
                     \"text\": {
                       \"type\": \"mrkdwn\",
-                      \"text\": \"*New Dependabot Alert Detected*\"
+                      \"text\": \":rotating_light: *New Dependabot Alert Detected*\"
                     }
                   },
                   {
