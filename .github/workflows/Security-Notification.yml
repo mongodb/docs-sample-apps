@@ -1,64 +1,74 @@
 name: Security Vulnerability Slack Notification
 
 on:
-  schedule:
-    - cron: "0 */2 * * *"  # Every 2 hours
-  workflow_dispatch:        # Allow manual trigger from GitHub Actions tab
+  repository_vulnerability_alert:
+    types: [create]
 
 jobs:
-  notify_slack_on_alert:
+  notify-slack:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Fetch Open Dependabot Alerts
+      - name: Send Slack Notification
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # Extract alert details from the event payload
+          PACKAGE_NAME: ${{ github.event.alert.affected_package_name }}
+          SEVERITY: ${{ github.event.alert.severity }}
+          ALERT_URL: ${{ github.event.alert.html_url }}
+          ECOSYSTEM: ${{ github.event.alert.affected_range }} 
         run: |
-          echo ":mag: Checking for open Dependabot vulnerability alerts..."
-          
-          # Fetch open alerts from GitHub API
-          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://github.com/mongodb/docs-sample-apps/security/dependabot/alerts?state=open")
-
-          ALERT_COUNT=$(echo "$RESPONSE" | jq length)
-          echo "Found $ALERT_COUNT open alerts."
-
-          # Only send Slack message if there are alerts
-          if [ "$ALERT_COUNT" -gt 0 ]; then
-            echo ":warning: Sending Slack notification..."
-
-            MESSAGE_TEXT="*:rotating_light: Dependabot found $ALERT_COUNT open security alert(s) in ${{ github.repository }}!* :rotating_light:\n\n"
-
-            # Loop through each alert to include details
-            for i in $(seq 0 $(($ALERT_COUNT - 1))); do
-              PACKAGE=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.package.name")
-              ECOSYSTEM=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.package.ecosystem")
-              SEVERITY=$(echo "$RESPONSE" | jq -r ".[$i].security_vulnerability.severity")
-              URL=$(echo "$RESPONSE" | jq -r ".[$i].html_url")
-
-              MESSAGE_TEXT+="*Package:* ${PACKAGE} (${ECOSYSTEM})\n"
-              MESSAGE_TEXT+="*Severity:* ${SEVERITY}\n"
-              MESSAGE_TEXT+="*Details:* ${URL}\n\n"
-            done
-
-            # Build Slack payload
-            SLACK_PAYLOAD=$(jq -n \
-              --arg text "$MESSAGE_TEXT" \
-              '{
-                "channel": "#docs-devdocs-notifications",
-                "username": "Dependabot Notifier",
-                "icon_emoji": ":lock:",
-                "text": $text
-              }')
-
-            # Send notification to Slack
-            curl -X POST \
-                 -H 'Content-type: application/json' \
-                 --data "$SLACK_PAYLOAD" \
-                 "$SLACK_WEBHOOK"
-
-            echo ":white_check_mark: Slack notification sent successfully!"
+          # Map severity to an emoji for better visibility
+          if [ "$SEVERITY" == "critical" ]; then
+            EMOJI=":rotating_light:"
+          elif [ "$SEVERITY" == "high" ]; then
+            EMOJI=":warning:"
           else
-            echo ":white_check_mark: No active alerts — no Slack message sent."
+            EMOJI=":information_source:"
           fi
+
+          # Construct the JSON payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "channel": "#docs-devdocs-notifications",
+            "username": "Dependabot Alert",
+            "icon_emoji": ":robot_face:",
+            "attachments": [
+              {
+                "color": "#D00000",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "$EMOJI *New Vulnerability Alert Detected*"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Package:*\n$PACKAGE_NAME"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Severity:*\n$SEVERITY"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "<$ALERT_URL|View Alert Details on GitHub>"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+
+          # Send the request
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
