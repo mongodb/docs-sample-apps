@@ -40,11 +40,16 @@ jobs:
 
       - name: Setup Database (Data & Indexes)
         run: |
+          # 1. Restore the data
           mongorestore --archive=sampledata.archive --port=27017
+
           # ---------------------------------------------------------
-          # 1. Prepare the Search Index Definition 
+          # 2. Prepare the Search Index Definition
           # ---------------------------------------------------------
           echo '{
+            "name": "movieSearchIndex",
+            "database": "sample_mflix",
+            "collectionName": "movies",
             "mappings": {
               "dynamic": false,
               "fields": {
@@ -58,16 +63,18 @@ jobs:
           }' > search_index.json
 
           # 3. Create the Search Index
-          atlas deployments search indexes create movieSearchIndex \
+          atlas deployments search indexes create \
             --deploymentName myLocalRs1 \
-            --db sample_mflix \
-            --collection movies \
             --file search_index.json
 
           # ---------------------------------------------------------
-          # 2. Prepare the Vector Index Definition 
+          # 4. Prepare the Vector Index Definition
           # ---------------------------------------------------------
           echo '{
+            "name": "vector_index",
+            "database": "sample_mflix",
+            "collectionName": "embedded_movies",
+            "type": "vectorSearch",
             "fields": [
               {
                 "type": "vector",
@@ -78,12 +85,9 @@ jobs:
             ]
           }' > vector_index.json
 
-          # 4. Create the Vector Index
-          atlas deployments search indexes create vector_index \
+          # 5. Create the Vector Index
+          atlas deployments search indexes create \
             --deploymentName myLocalRs1 \
-            --db sample_mflix \
-            --collection embedded_movies \
-            --type vectorSearch \
             --file vector_index.json
 
           # ---------------------------------------------------------
