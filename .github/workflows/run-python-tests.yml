@@ -41,6 +41,59 @@ jobs:
       - name: Add sample data to database
         run: mongorestore --archive=sampledata.archive --port=27017
 
+      - name: Setup Database (Data & Indexes)
+        run: |
+          # ---------------------------------------------------------
+          # 1. Prepare the Search Index Definition 
+          # ---------------------------------------------------------
+          echo '{
+            "mappings": {
+              "dynamic": false,
+              "fields": {
+                "plot": {"type": "string", "analyzer": "lucene.standard"},
+                "fullplot": {"type": "string", "analyzer": "lucene.standard"},
+                "directors": {"type": "string", "analyzer": "lucene.standard"},
+                "writers": {"type": "string", "analyzer": "lucene.standard"},
+                "cast": {"type": "string", "analyzer": "lucene.standard"}
+              }
+            }
+          }' > search_index.json
+
+          # 3. Create the Search Index
+          atlas deployments search indexes create movieSearchIndex \
+            --deploymentName myLocalRs1 \
+            --db sample_mflix \
+            --collection movies \
+            --file search_index.json
+
+          # ---------------------------------------------------------
+          # 2. Prepare the Vector Index Definition 
+          # ---------------------------------------------------------
+          echo '{
+            "fields": [
+              {
+                "type": "vector",
+                "path": "plot_embedding_voyage_3_large",
+                "numDimensions": 2048,
+                "similarity": "cosine"
+              }
+            ]
+          }' > vector_index.json
+
+          # 4. Create the Vector Index
+          atlas deployments search indexes create vector_index \
+            --deploymentName myLocalRs1 \
+            --db sample_mflix \
+            --collection embedded_movies \
+            --type vectorSearch \
+            --file vector_index.json
+
+          # ---------------------------------------------------------
+          # 6. Wait for indexes to build
+          # ---------------------------------------------------------
+          echo "Waiting for indexes to build..."
+          sleep 20
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
