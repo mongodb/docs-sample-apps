@@ -66,11 +66,7 @@ jobs:
         run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
         env:
           MONGO_URI: mongodb://localhost:27017
-          MONGO_DB: sample_mflix
-
-      - name: Setup tmate session
-        if: failure()
-        uses: mxschmitt/action-tmate@v3    
+          MONGO_DB: sample_mflix   
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
