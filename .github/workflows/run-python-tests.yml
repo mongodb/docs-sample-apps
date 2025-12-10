@@ -43,6 +43,7 @@ jobs:
 
       - name: Setup Database (Data & Indexes)
         run: |
+          mongorestore --archive=sampledata.archive --port=27017
           # ---------------------------------------------------------
           # 1. Prepare the Search Index Definition 
           # ---------------------------------------------------------
