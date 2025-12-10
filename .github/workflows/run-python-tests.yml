@@ -43,9 +43,7 @@ jobs:
           # 1. Restore the data
           mongorestore --archive=sampledata.archive --port=27017
 
-          # ---------------------------------------------------------
           # 2. Prepare the Search Index Definition
-          # ---------------------------------------------------------
           echo '{
             "name": "movieSearchIndex",
             "database": "sample_mflix",
@@ -67,9 +65,7 @@ jobs:
             --deploymentName myLocalRs1 \
             --file search_index.json
 
-          # ---------------------------------------------------------
           # 4. Prepare the Vector Index Definition
-          # ---------------------------------------------------------
           echo '{
             "name": "vector_index",
             "database": "sample_mflix",
@@ -90,9 +86,7 @@ jobs:
             --deploymentName myLocalRs1 \
             --file vector_index.json
 
-          # ---------------------------------------------------------
           # 6. Wait for indexes to build
-          # ---------------------------------------------------------
           echo "Waiting for indexes to build..."
           sleep 20
           
@@ -118,7 +112,7 @@ jobs:
 
       - name: Run integration tests
         working-directory: mflix/server/python-fastapi
-        run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
+        run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml
         env:
           MONGO_URI: mongodb://localhost:27017/?directConnection=true
           MONGO_DB: sample_mflix   
