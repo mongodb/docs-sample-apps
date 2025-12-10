@@ -38,9 +38,6 @@ jobs:
       - name: Download sample data
         run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
 
-      - name: Add sample data to database
-        run: mongorestore --archive=sampledata.archive --port=27017
-
       - name: Setup Database (Data & Indexes)
         run: |
           mongorestore --archive=sampledata.archive --port=27017
