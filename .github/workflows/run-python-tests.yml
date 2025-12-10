@@ -65,7 +65,7 @@ jobs:
         working-directory: mflix/server/python-fastapi
         run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
         env:
-          MONGO_URI: mongodb://localhost:27017
+          MONGO_URI: mongodb://localhost:27017/?directConnection=true
           MONGO_DB: sample_mflix   
 
       - name: Upload test results
