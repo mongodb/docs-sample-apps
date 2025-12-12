@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Query, Path, Body, HTTPException
+from fastapi.responses import JSONResponse
 from src.database.mongo_client import get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse
 from typing import Any, List, Optional
 from src.utils.successResponse import create_success_response
+from src.utils.errorResponse import create_error_response
+from src.utils.exceptions import VoyageAuthError, VoyageAPIError
 from bson import ObjectId, errors
 import re
 from bson.errors import InvalidId
 import voyageai
+import os
 
 
 '''
@@ -316,11 +320,16 @@ async def vector_search_movies(
     Returns:
         SuccessResponse containing a list of movies with similarity scores
     """
+    # Check if Voyage AI API key is configured
     if not voyage_ai_available():
-        raise HTTPException(
-            status_code = 503,
-            detail="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to your .env file."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the .env file",
+                code="SERVICE_UNAVAILABLE"
+            )
         )
+
     try:
         # Initialize the client here to avoid import-time errors
         vo = voyageai.Client()
@@ -390,10 +399,20 @@ async def vector_search_movies(
             f"Found {len(results)} similar movies for query: '{q}'"
         )
 
+    except VoyageAuthError:
+        # Re-raise custom exceptions to be handled by the exception handlers
+        raise
+    except VoyageAPIError:
+        # Re-raise custom exceptions to be handled by the exception handlers
+        raise
     except Exception as e:
+        # Log the error for debugging
+        print(f"Vector search error: {str(e)}")
+
+        # Handle generic errors
         raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred during vector search: {str(e)}"
+            status_code=500,
+            detail=f"Error performing vector search: {str(e)}"
         )
 
 """
@@ -1348,12 +1367,30 @@ def get_embedding(data, input_type = "document", client=None):
 
     Returns:
         Vector embeddings for the given input
+
+    Raises:
+        VoyageAuthError: If the API key is invalid (401)
+        VoyageAPIError: For other API errors
     """
     if client is None:
         client = voyageai.Client()
 
-    embeddings = client.embed(
-        data, model = model, output_dimension = outputDimension, input_type = input_type
-    ).embeddings
-    return embeddings[0]
+    try:
+        embeddings = client.embed(
+            data, model = model, output_dimension = outputDimension, input_type = input_type
+        ).embeddings
+        return embeddings[0]
+    except Exception as e:
+        error_message = str(e).lower()
+
+        # Check for authentication errors
+        if "401" in error_message or "unauthorized" in error_message or "invalid api key" in error_message:
+            raise VoyageAuthError("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file")
+
+        # Check for other API errors
+        if "api" in error_message or "voyage" in error_message:
+            raise VoyageAPIError(f"Voyage AI API error: {str(e)}", 503)
+
+        # Re-raise other exceptions
+        raise VoyageAPIError(f"Failed to generate embedding: {str(e)}", 500)
 

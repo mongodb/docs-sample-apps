@@ -6,7 +6,10 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.samplemflix.exception.DatabaseOperationException;
 import com.mongodb.samplemflix.exception.ResourceNotFoundException;
+import com.mongodb.samplemflix.exception.ServiceUnavailableException;
 import com.mongodb.samplemflix.exception.ValidationException;
+import com.mongodb.samplemflix.exception.VoyageAPIException;
+import com.mongodb.samplemflix.exception.VoyageAuthException;
 import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.*;
 import com.mongodb.samplemflix.repository.MovieRepository;
@@ -821,8 +824,8 @@ public class MovieServiceImpl implements MovieService {
         // Check if Voyage API key is configured
         if (voyageApiKey == null || voyageApiKey.trim().isEmpty() ||
             voyageApiKey.equals("your_voyage_api_key")) {
-            throw new ValidationException(
-                "Vector search unavailable: VOYAGE_API_KEY not configured. Please add your Voyage AI API key to the .env file"
+            throw new ServiceUnavailableException(
+                "Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the .env file"
             );
         }
 
@@ -929,10 +932,16 @@ public class MovieServiceImpl implements MovieService {
 
             return results;
 
+        } catch (VoyageAuthException e) {
+            // Re-raise Voyage AI authentication errors to be handled by GlobalExceptionHandler
+            throw e;
+        } catch (VoyageAPIException e) {
+            // Re-raise Voyage AI API errors to be handled by GlobalExceptionHandler
+            throw e;
         } catch (IOException e) {
-            // Handle Voyage AI API errors
+            // Handle network errors calling Voyage AI API
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Network error calling Voyage AI API";
-            throw new DatabaseOperationException("Error performing vector search: " + errorMsg);
+            throw new VoyageAPIException("Error performing vector search: " + errorMsg);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new DatabaseOperationException("Vector search was interrupted");
@@ -981,9 +990,12 @@ public class MovieServiceImpl implements MovieService {
         if (response.statusCode() != 200) {
             // Handle authentication errors specifically
             if (response.statusCode() == 401) {
-                throw new IOException("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file");
+                throw new VoyageAuthException("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file");
             }
-            throw new IOException("Voyage AI API returned status code " + response.statusCode() + ": " + response.body());
+            throw new VoyageAPIException(
+                "Voyage AI API returned status code " + response.statusCode() + ": " + response.body(),
+                response.statusCode()
+            );
         }
 
         // Parse the JSON response to extract the embedding

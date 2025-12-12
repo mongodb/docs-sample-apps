@@ -763,12 +763,20 @@ class TestVectorSearchMovies:
 
         # Call the route handler
         from src.routers.movies import vector_search_movies
-        with pytest.raises(HTTPException) as e:
-            await vector_search_movies(q="action movie")
+        from fastapi.responses import JSONResponse
+
+        response = await vector_search_movies(q="action movie")
 
         # Assertions
-        assert e.value.status_code == 503
-        assert str("VOYAGE_API_KEY not configured").lower() in str(e.value.detail).lower()
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 400
+
+        # Parse the response body
+        import json
+        body = json.loads(response.body.decode())
+        assert body["success"] is False
+        assert body["error"]["code"] == "SERVICE_UNAVAILABLE"
+        assert "VOYAGE_API_KEY not configured" in body["message"]
         
 
     @patch('src.routers.movies.voyage_ai_available')

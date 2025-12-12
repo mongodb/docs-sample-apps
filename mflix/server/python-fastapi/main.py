@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from src.routers import movies
 from src.database.mongo_client import db, get_collection
+from src.utils.exceptions import VoyageAuthError, VoyageAPIError
+from src.utils.errorResponse import create_error_response
 
 import os
 from dotenv import load_dotenv
@@ -135,6 +138,31 @@ async def ensure_standard_index():
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Add custom exception handlers
+@app.exception_handler(VoyageAuthError)
+async def voyage_auth_error_handler(request: Request, exc: VoyageAuthError):
+    """Handle Voyage AI authentication errors with 401 status."""
+    return JSONResponse(
+        status_code=401,
+        content=create_error_response(
+            message=exc.message,
+            code="VOYAGE_AUTH_ERROR",
+            details="Please verify your VOYAGE_API_KEY is correct in the .env file"
+        )
+    )
+
+@app.exception_handler(VoyageAPIError)
+async def voyage_api_error_handler(request: Request, exc: VoyageAPIError):
+    """Handle Voyage AI API errors with 503 status."""
+    return JSONResponse(
+        status_code=503,
+        content=create_error_response(
+            message="Vector search service unavailable",
+            code="VOYAGE_API_ERROR",
+            details=exc.message
+        )
+    )
 
 # Add CORS middleware
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
