@@ -17,58 +17,66 @@ jobs:
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "--- TEST MODE ACTIVE (Fetching open alerts) ---"
+          echo "--- CHECKING FOR ALERTS ---"
 
           # 1. Fetch ALL open alerts
           RAW_DATA=$(gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open")
 
-          # 2. Filter locally (Select ANY open alert for testing)
+          # 2. Filter: (Currently set to ALL open alerts for testing)
+          # To go live, uncomment the time filter later: | select(.created_at > $TIME_THRESHOLD)
           ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
 
-          # 3. Check results
+          # 3. Check count
           LENGTH=$(echo "$ALERTS" | jq 'length')
           if [ "$LENGTH" -eq 0 ]; then
-             echo "::error:: No alerts found."
-             exit 1
+             echo "::notice:: No alerts found."
+             exit 0
           fi
 
-          echo "Found alerts. Extracting details..."
-
-          # 4. Extract details
-          # NEW: Extract the 'summary' (The description of the vulnerability)
-          SUMMARY=$(echo "$ALERTS" | jq -r '.[0].security_advisory.summary // "Security Vulnerability"')
-          PACKAGE=$(echo "$ALERTS" | jq -r '.[0].dependency.package.name // "Unknown Package"')
-          SEVERITY=$(echo "$ALERTS" | jq -r '.[0].security_advisory.severity // "Unknown"')
-          ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0].html_url // .[0].url // "https://github.com"')
-          
+          echo "Found $LENGTH alerts. Sending notifications..."
           REPO_NAME="${{ github.repository }}"
           ISSUE_USER="Dependabot"
 
-          # 5. Format the Title
-          # OLD: next (high)
-          # NEW: Cross-site Scripting - next (high)
-          ISSUE_TITLE="${SUMMARY} - ${PACKAGE} (${SEVERITY})"
+          # 4. LOOP through each alert found
+          # 'jq -c .[]' prints each alert object on a new line so we can loop over them
+          echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
+            
+            # Extract details for THIS specific alert
+            SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary // "Security Vulnerability"')
+            PACKAGE=$(echo "$alert" | jq -r '.dependency.package.name // "Unknown Package"')
+            SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity // "Unknown"')
+            ISSUE_URL=$(echo "$alert" | jq -r '.html_url // .url // "https://github.com"')
 
-          # 6. Build Slack Message
-          MESSAGE_TEXT=$(jq -n \
-            --arg repo "$REPO_NAME" \
-            --arg title "$ISSUE_TITLE" \
-            --arg user "$ISSUE_USER" \
-            --arg url "$ISSUE_URL" \
-            --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
-            '$template')
+            # Format Title
+            ISSUE_TITLE="${SUMMARY} - ${PACKAGE} (${SEVERITY})"
 
-          # 7. Build Payload & Send
-          SLACK_PAYLOAD=$(jq -n \
-            --arg text "$MESSAGE_TEXT" \
-            '{
-              "channel": "#docs-devdocs-notifications",
-              "username": "Security Vulnerability Slack Notification",
-              "icon_emoji": ":rotating_light:",
-              "text": $text
-            }')
+            echo "Sending alert for: $PACKAGE"
 
-          curl -X POST \
-               -H 'Content-type: application/json' \
-               --data "$SLACK_PAYLOAD" \
-               "$SLACK_WEBHOOK_URL"
+            # Build Slack Message
+            MESSAGE_TEXT=$(jq -n \
+              --arg repo "$REPO_NAME" \
+              --arg title "$ISSUE_TITLE" \
+              --arg user "$ISSUE_USER" \
+              --arg url "$ISSUE_URL" \
+              --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
+              '$template')
+
+            # Build Payload
+            SLACK_PAYLOAD=$(jq -n \
+              --arg text "$MESSAGE_TEXT" \
+              '{
+                "channel": "#docs-devdocs-notifications",
+                "username": "Security Vulnerability Slack Notification",
+                "icon_emoji": ":rotating_light:",
+                "text": $text
+              }')
+
+            # Send to Slack
+            curl -s -X POST \
+                 -H 'Content-type: application/json' \
+                 --data "$SLACK_PAYLOAD" \
+                 "$SLACK_WEBHOOK_URL"
+            
+            # Small sleep to prevent rate limiting if there are many alerts
+            sleep 1
+          done
