@@ -38,9 +38,58 @@ jobs:
       - name: Download sample data
         run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
 
-      - name: Add sample data to database
-        run: mongorestore --archive=sampledata.archive --port=27017
+      - name: Setup Database (Data & Indexes)
+        run: |
+          # 1. Restore the data
+          mongorestore --archive=sampledata.archive --port=27017
 
+          # 2. Prepare the Search Index Definition
+          echo '{
+            "name": "movieSearchIndex",
+            "database": "sample_mflix",
+            "collectionName": "movies",
+            "mappings": {
+              "dynamic": false,
+              "fields": {
+                "plot": {"type": "string", "analyzer": "lucene.standard"},
+                "fullplot": {"type": "string", "analyzer": "lucene.standard"},
+                "directors": {"type": "string", "analyzer": "lucene.standard"},
+                "writers": {"type": "string", "analyzer": "lucene.standard"},
+                "cast": {"type": "string", "analyzer": "lucene.standard"}
+              }
+            }
+          }' > search_index.json
+
+          # 3. Create the Search Index
+          atlas deployments search indexes create \
+            --deploymentName myLocalRs1 \
+            --file search_index.json
+
+          # 4. Prepare the Vector Index Definition
+          echo '{
+            "name": "vector_index",
+            "database": "sample_mflix",
+            "collectionName": "embedded_movies",
+            "type": "vectorSearch",
+            "fields": [
+              {
+                "type": "vector",
+                "path": "plot_embedding_voyage_3_large",
+                "numDimensions": 2048,
+                "similarity": "cosine"
+              }
+            ]
+          }' > vector_index.json
+
+          # 5. Create the Vector Index
+          atlas deployments search indexes create \
+            --deploymentName myLocalRs1 \
+            --file vector_index.json
+
+          # 6. Wait for indexes to build
+          echo "Waiting for indexes to build..."
+          sleep 20
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -63,10 +112,10 @@ jobs:
 
       - name: Run integration tests
         working-directory: mflix/server/python-fastapi
-        run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml || true
+        run: pytest -m integration --verbose --tb=short --junit-xml=test-results-integration.xml
         env:
-          MONGO_URI: mongodb://localhost:27017
-          MONGO_DB: sample_mflix
+          MONGO_URI: mongodb://localhost:27017/?directConnection=true
+          MONGO_DB: sample_mflix   
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
