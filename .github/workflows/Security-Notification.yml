@@ -2,7 +2,7 @@ name: Security Vulnerability Slack Notification
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs every hour
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -19,27 +19,45 @@ jobs:
         run: |
           # 1. Calculate time 65 minutes ago
           TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
-          
           echo "Checking for alerts created after: $TIME_THRESHOLD"
 
-          # 2. Fetch alerts using GitHub CLI
-          ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
-            --jq "[ .[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\") ]")
+          # 2. Fetch ALL open alerts (Raw JSON)
+          # We fetch raw data first to ensure we don't lose structure in complex filtering
+          RAW_DATA=$(gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open")
 
-          # 3. Check if any alerts were found
+          # 3. Filter locally using jq
+          # Note: If you want to force a test on OLD alerts, remove '| select(.created_at > $TIME)' below
+          ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
+            '[ .[] | select(.created_at > $TIME) | select(.security_advisory.severity == "critical" or .security_advisory.severity == "high") ]')
+
+          # 4. Check results (COMMENTED OUT FOR TESTING)
+          # LENGTH=$(echo "$ALERTS" | jq 'length')
+          # if [ "$LENGTH" -eq 0 ]; then
+          #   echo "No new alerts found in the last hour."
+          #   exit 0
+          # fi
+
+          echo "New alerts detected! Debugging structure..."
           
+          # --- DEBUG: Print the first alert keys to logs ---
+          echo "Top-level keys found in first alert:"
+          echo "$ALERTS" | jq '.[0] | keys'
+          # -----------------------------------------------
+
+          # 5. Extract details (Using Try/Catch defaults to prevent crash)
+          # We use // to provide fallback text if the field is null
+          PACKAGE=$(echo "$ALERTS" | jq -r '.[0].dependency.package.name // "Unknown Package"')
+          SEVERITY=$(echo "$ALERTS" | jq -r '.[0].security_advisory.severity // "Unknown Severity"')
           
-          # 4. Extract details from the first alert found
-          # Now valid because ALERTS is an array, so .[0] exists
-          PACKAGE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name')
-          SEVERITY=$(echo "$ALERTS" | jq -r '.[0] | .security_advisory.severity')
+          # Try standard html_url, fallback to url, fallback to generic string
+          ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0].html_url // .[0].url // "https://github.com"')
           
+          # Prepare text
           REPO_NAME="${{ github.repository }}"
           ISSUE_TITLE="${PACKAGE} (${SEVERITY})"
           ISSUE_USER="Dependabot"
-          ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0] | .html_url')
-          
-          # 5. Build Message
+
+          # 6. Build Slack Message
           MESSAGE_TEXT=$(jq -n \
             --arg repo "$REPO_NAME" \
             --arg title "$ISSUE_TITLE" \
@@ -48,7 +66,7 @@ jobs:
             --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
             '$template')
 
-          # 6. Build Payload
+          # 7. Build Payload & Send
           SLACK_PAYLOAD=$(jq -n \
             --arg text "$MESSAGE_TEXT" \
             '{
@@ -58,7 +76,6 @@ jobs:
               "text": $text
             }')
 
-          # 7. Send to Slack
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
