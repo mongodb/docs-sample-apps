@@ -28,11 +28,11 @@ jobs:
 
           # 3. Filter for NEW items only
           # Open alerts created > 65 mins ago
-           ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
-            '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
+          # ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
+           # '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
 
           # --- FOR TESTING ONLY ---
-          # ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
+           ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
           # ---------------------------------------------------------------
 
           # 4. Check count
@@ -55,21 +55,23 @@ jobs:
             SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity // "Unknown"')
             ISSUE_URL=$(echo "$alert" | jq -r '.html_url // .url // "https://github.com"')
 
-            # Format Title (e.g., "Cross-site Scripting - next (high)")
+            # Format Title
             ISSUE_TITLE="${SUMMARY} - ${PACKAGE} (${SEVERITY})"
 
             echo "Sending alert for: $PACKAGE"
 
-            # Build Slack Message
-            MESSAGE_TEXT=$(jq -n \
+            # Build Slack Message Text
+            # FIX: We construct the string INSIDE jq using "\(...)" interpolation.
+            # FIX: We use -r (raw output) so the variable stores actual newlines, not escaped \n
+            MESSAGE_TEXT=$(jq -nr \
               --arg repo "$REPO_NAME" \
               --arg title "$ISSUE_TITLE" \
               --arg user "$ISSUE_USER" \
               --arg url "$ISSUE_URL" \
-              --arg template "*🚨 New Dependabot Alert ($REPO_NAME) 🚨*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
-              '$template')
+              '"*🚨 New Dependabot Alert (\($repo)) 🚨*\n\n*Issue Title:* \($title)\n*Opened By:* \($user)\n\n*View Issue:* \($url)"')
 
-            # Build Payload
+            # Build JSON Payload
+            # We pass the raw MESSAGE_TEXT into this new jq command, which handles the escaping correctly for JSON.
             SLACK_PAYLOAD=$(jq -n \
               --arg text "$MESSAGE_TEXT" \
               '{
