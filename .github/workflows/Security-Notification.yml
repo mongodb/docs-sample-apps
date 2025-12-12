@@ -23,20 +23,11 @@ jobs:
           echo "Checking for alerts created after: $TIME_THRESHOLD"
 
           # 2. Fetch alerts using GitHub CLI
-          # FIX: Added [ ] wrapping to force output as an Array [{...}]
           ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
             --jq "[ .[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\") ]")
 
           # 3. Check if any alerts were found
-          # Now valid because ALERTS is definitely an array
-          LENGTH=$(echo "$ALERTS" | jq 'length')
           
-          if [ "$LENGTH" -eq 0 ]; then
-            echo "No new alerts found in the last hour."
-            exit 0
-          fi
-
-          echo "New alerts detected! Sending notification..."
           
           # 4. Extract details from the first alert found
           # Now valid because ALERTS is an array, so .[0] exists
