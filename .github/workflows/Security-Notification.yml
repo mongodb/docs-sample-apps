@@ -29,11 +29,11 @@ jobs:
 
           # 3. Filter for NEW items only
           # We look for Open alerts created > 65 mins ago
-          # ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
-          #  '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
+           ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
+            '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
 
           # --- FOR TESTING ONLY: UNCOMMENT BELOW TO IGNORE TIME FILTER ---
-           ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
+          # ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
           # ---------------------------------------------------------------
 
           # 4. Check count
