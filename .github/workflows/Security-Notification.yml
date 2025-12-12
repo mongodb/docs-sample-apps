@@ -2,7 +2,9 @@ name: Security Vulnerability Slack Notification
 
 on:
   schedule:
+    # Runs every hour at minute 0
     - cron: '0 * * * *'
+  # Allows you to test manually
   workflow_dispatch:
 
 jobs:
@@ -12,42 +14,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Check for Recent Alerts
+      - name: Check for New Alerts
         env:
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "--- CHECKING FOR ALERTS ---"
+          # 1. Calculate time 65 minutes ago
+          # This ensures we only notify about alerts created since the last run
+          TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
+          echo "Checking for alerts created after: $TIME_THRESHOLD"
 
-          # 1. Fetch ALL open alerts
+          # 2. Fetch Open Alerts
           RAW_DATA=$(gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open")
 
-          # 2. Filter: (Currently set to ALL open alerts for testing)
-          # To go live, uncomment the time filter later: | select(.created_at > $TIME_THRESHOLD)
-          ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
+          # 3. Filter for NEW items only
+          # We look for Open alerts created > 65 mins ago
+          ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
+            '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
 
-          # 3. Check count
+          # --- FOR TESTING ONLY: UNCOMMENT BELOW TO IGNORE TIME FILTER ---
+          # ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
+          # ---------------------------------------------------------------
+
+          # 4. Check count
           LENGTH=$(echo "$ALERTS" | jq 'length')
           if [ "$LENGTH" -eq 0 ]; then
-             echo "::notice:: No alerts found."
+             echo "::notice:: No new alerts found in the last hour."
              exit 0
           fi
 
-          echo "Found $LENGTH alerts. Sending notifications..."
+          echo "Found $LENGTH new alert(s). Sending notifications..."
           REPO_NAME="${{ github.repository }}"
           ISSUE_USER="Dependabot"
 
-          # 4. LOOP through each alert found
-          # 'jq -c .[]' prints each alert object on a new line so we can loop over them
+          # 5. LOOP through each alert
           echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
             
-            # Extract details for THIS specific alert
+            # Extract details
             SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary // "Security Vulnerability"')
             PACKAGE=$(echo "$alert" | jq -r '.dependency.package.name // "Unknown Package"')
             SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity // "Unknown"')
             ISSUE_URL=$(echo "$alert" | jq -r '.html_url // .url // "https://github.com"')
 
-            # Format Title
+            # Format Title (e.g., "Cross-site Scripting - next (high)")
             ISSUE_TITLE="${SUMMARY} - ${PACKAGE} (${SEVERITY})"
 
             echo "Sending alert for: $PACKAGE"
@@ -58,7 +67,7 @@ jobs:
               --arg title "$ISSUE_TITLE" \
               --arg user "$ISSUE_USER" \
               --arg url "$ISSUE_URL" \
-              --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
+              --arg template "*🚨 New Dependabot Alert ($REPO_NAME) 🚨*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
               '$template')
 
             # Build Payload
@@ -77,6 +86,5 @@ jobs:
                  --data "$SLACK_PAYLOAD" \
                  "$SLACK_WEBHOOK_URL"
             
-            # Small sleep to prevent rate limiting if there are many alerts
             sleep 1
           done
