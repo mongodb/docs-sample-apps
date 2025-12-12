@@ -5,7 +5,7 @@ This module provides functions to create consistent error response structures
 that match the Express backend's error format.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
 
 
@@ -33,6 +33,6 @@ def create_error_response(
             "code": code,
             "details": details
         },
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
     }
 
