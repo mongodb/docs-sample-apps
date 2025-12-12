@@ -17,39 +17,38 @@ jobs:
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          # 1. Calculate time 65 minutes ago
-          TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
-          echo "Checking for alerts created after: $TIME_THRESHOLD"
+          echo "--- TEST MODE ACTIVE (Ignoring Time Threshold) ---"
 
-          # 2. Fetch ALL open alerts (Raw JSON)
-          # We fetch raw data first to ensure we don't lose structure in complex filtering
+          # 1. Fetch ALL open alerts (Raw JSON)
           RAW_DATA=$(gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open")
 
-          # 3. Filter locally using jq
-          # Note: If you want to force a test on OLD alerts, remove '| select(.created_at > $TIME)' below
-          ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
-            '[ .[] | select(.created_at > $TIME) | select(.security_advisory.severity == "critical" or .security_advisory.severity == "high") ]')
+          # 2. Filter locally using jq
+          # --- CHANGE IS HERE ---
+          # I removed "| select(.created_at > $TIME)" so it finds OLD alerts too.
+          # I also removed the Severity check so it finds ANY open alert (Low/Med/High).
+          ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
 
-          # 4. Check results (COMMENTED OUT FOR TESTING)
-          # LENGTH=$(echo "$ALERTS" | jq 'length')
-          # if [ "$LENGTH" -eq 0 ]; then
-          #   echo "No new alerts found in the last hour."
-          #   exit 0
-          # fi
-
+          # 3. Debugging structure
           echo "New alerts detected! Debugging structure..."
           
-          # --- DEBUG: Print the first alert keys to logs ---
+          # Check if we actually have data now
+          LENGTH=$(echo "$ALERTS" | jq 'length')
+          if [ "$LENGTH" -eq 0 ]; then
+             echo "::error:: Still no alerts found! check if your PAT has 'repo' or 'security_events' scope."
+             exit 1
+          fi
+
+          # Print keys to confirm we can read the data
           echo "Top-level keys found in first alert:"
           echo "$ALERTS" | jq '.[0] | keys'
-          # -----------------------------------------------
 
-          # 5. Extract details (Using Try/Catch defaults to prevent crash)
-          # We use // to provide fallback text if the field is null
+          # 4. Extract details
+          # We use the raw data keys. 
+          # Note: If keys output shows 'security_vulnerability' instead of 'security_advisory', we might need to adjust below.
           PACKAGE=$(echo "$ALERTS" | jq -r '.[0].dependency.package.name // "Unknown Package"')
           SEVERITY=$(echo "$ALERTS" | jq -r '.[0].security_advisory.severity // "Unknown Severity"')
           
-          # Try standard html_url, fallback to url, fallback to generic string
+          # Fallback URL logic
           ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0].html_url // .[0].url // "https://github.com"')
           
           # Prepare text
@@ -57,7 +56,7 @@ jobs:
           ISSUE_TITLE="${PACKAGE} (${SEVERITY})"
           ISSUE_USER="Dependabot"
 
-          # 6. Build Slack Message
+          # 5. Build Slack Message
           MESSAGE_TEXT=$(jq -n \
             --arg repo "$REPO_NAME" \
             --arg title "$ISSUE_TITLE" \
@@ -66,7 +65,7 @@ jobs:
             --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
             '$template')
 
-          # 7. Build Payload & Send
+          # 6. Build Payload & Send
           SLACK_PAYLOAD=$(jq -n \
             --arg text "$MESSAGE_TEXT" \
             '{
