@@ -20,7 +20,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           # 1. Calculate time 65 minutes ago
-          # This ensures we only notify about alerts created since the last run
           TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
           echo "Checking for alerts created after: $TIME_THRESHOLD"
 
@@ -28,11 +27,11 @@ jobs:
           RAW_DATA=$(gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open")
 
           # 3. Filter for NEW items only
-          # We look for Open alerts created > 65 mins ago
+          # Open alerts created > 65 mins ago
            ALERTS=$(echo "$RAW_DATA" | jq --arg TIME "$TIME_THRESHOLD" \
             '[ .[] | select(.state == "open") | select(.created_at > $TIME) ]')
 
-          # --- FOR TESTING ONLY: UNCOMMENT BELOW TO IGNORE TIME FILTER ---
+          # --- FOR TESTING ONLY ---
           # ALERTS=$(echo "$RAW_DATA" | jq '[ .[] | select(.state == "open") ]')
           # ---------------------------------------------------------------
 
