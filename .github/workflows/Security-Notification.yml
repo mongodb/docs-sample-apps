@@ -1,4 +1,5 @@
 name: Security Vulnerability Slack Notification
+
 on:
   schedule:
     - cron: '0 * * * *' # Runs every hour
@@ -13,21 +14,24 @@ jobs:
 
       - name: Check for Recent Alerts
         env:
-          # Use a PAT instead of the default token
           GH_TOKEN: ${{ secrets.DEPENDABOT_PAT }} 
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK}}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-         # 1. Calculate time 65 minutes ago
+          # 1. Calculate time 65 minutes ago
           TIME_THRESHOLD=$(date -u -d '65 minutes ago' +'%Y-%m-%dT%H:%M:%SZ')
           
           echo "Checking for alerts created after: $TIME_THRESHOLD"
 
           # 2. Fetch alerts using GitHub CLI
+          # FIX: Added [ ] wrapping to force output as an Array [{...}]
           ALERTS=$(gh api "/repos/${{ github.repository }}/dependabot/alerts" \
-            --jq ".[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\")")
+            --jq "[ .[] | select(.state == \"open\") | select(.created_at > \"$TIME_THRESHOLD\") | select(.security_advisory.severity == \"critical\" or .security_advisory.severity == \"high\") ]")
 
           # 3. Check if any alerts were found
-          if [ -z "$ALERTS" ]; then
+          # Now valid because ALERTS is definitely an array
+          LENGTH=$(echo "$ALERTS" | jq 'length')
+          
+          if [ "$LENGTH" -eq 0 ]; then
             echo "No new alerts found in the last hour."
             exit 0
           fi
@@ -35,16 +39,16 @@ jobs:
           echo "New alerts detected! Sending notification..."
           
           # 4. Extract details from the first alert found
+          # Now valid because ALERTS is an array, so .[0] exists
           PACKAGE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name')
           SEVERITY=$(echo "$ALERTS" | jq -r '.[0] | .security_advisory.severity')
-          STATE=$(echo "$ALERTS" | jq -r '.[0] | .state')
-
-          REPO_NAME="${{ github.repository }}"
           
-          ISSUE_TITLE=$(echo "$ALERTS" | jq -r '.[0] | .dependency.package.name + " (" + .security_advisory.severity + ")"')
+          REPO_NAME="${{ github.repository }}"
+          ISSUE_TITLE="${PACKAGE} (${SEVERITY})"
           ISSUE_USER="Dependabot"
           ISSUE_URL=$(echo "$ALERTS" | jq -r '.[0] | .html_url')
           
+          # 5. Build Message
           MESSAGE_TEXT=$(jq -n \
             --arg repo "$REPO_NAME" \
             --arg title "$ISSUE_TITLE" \
@@ -53,7 +57,7 @@ jobs:
             --arg template "*📢 New Dependabot Alert ($REPO_NAME) 📢*\n\n*Issue Title:* $ISSUE_TITLE\n*Opened By:* $ISSUE_USER\n\n*View Issue:* $ISSUE_URL" \
             '$template')
 
-          # Build Slack payload
+          # 6. Build Payload
           SLACK_PAYLOAD=$(jq -n \
             --arg text "$MESSAGE_TEXT" \
             '{
@@ -63,7 +67,7 @@ jobs:
               "text": $text
             }')
 
-          # Send to Slack
+          # 7. Send to Slack
           curl -X POST \
                -H 'Content-type: application/json' \
                --data "$SLACK_PAYLOAD" \
