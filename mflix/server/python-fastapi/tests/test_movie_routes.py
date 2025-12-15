@@ -12,6 +12,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from src.models.models import CreateMovieRequest, UpdateMovieRequest
+from src.utils.exceptions import VoyageAuthError, VoyageAPIError
 
 
 # Test constants

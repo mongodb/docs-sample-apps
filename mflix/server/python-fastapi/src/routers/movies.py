@@ -10,6 +10,7 @@ from bson import ObjectId, errors
 import re
 from bson.errors import InvalidId
 import voyageai
+import voyageai.error as voyage_error
 import os
 
 
@@ -1380,17 +1381,22 @@ def get_embedding(data, input_type = "document", client=None):
             data, model = model, output_dimension = outputDimension, input_type = input_type
         ).embeddings
         return embeddings[0]
+    except voyage_error.AuthenticationError as e:
+        # Handle authentication errors (401) from Voyage AI SDK
+        raise VoyageAuthError("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file")
+    except voyage_error.InvalidRequestError as e:
+        # Handle invalid request errors (400) - often due to malformed API key
+        raise VoyageAPIError(f"Invalid request to Voyage AI API: {str(e)}", 400)
+    except voyage_error.RateLimitError as e:
+        # Handle rate limiting errors (429)
+        raise VoyageAPIError(f"Voyage AI API rate limit exceeded: {str(e)}", 429)
+    except voyage_error.ServiceUnavailableError as e:
+        # Handle service unavailable errors (502, 503, 504)
+        raise VoyageAPIError(f"Voyage AI service unavailable: {str(e)}", 503)
+    except voyage_error.VoyageError as e:
+        # Handle any other Voyage AI SDK errors
+        raise VoyageAPIError(f"Voyage AI API error: {str(e)}", getattr(e, 'http_status', 500) or 500)
     except Exception as e:
-        error_message = str(e).lower()
-
-        # Check for authentication errors
-        if "401" in error_message or "unauthorized" in error_message or "invalid api key" in error_message:
-            raise VoyageAuthError("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file")
-
-        # Check for other API errors
-        if "api" in error_message or "voyage" in error_message:
-            raise VoyageAPIError(f"Voyage AI API error: {str(e)}", 503)
-
-        # Re-raise other exceptions
+        # Handle unexpected errors
         raise VoyageAPIError(f"Failed to generate embedding: {str(e)}", 500)
 
