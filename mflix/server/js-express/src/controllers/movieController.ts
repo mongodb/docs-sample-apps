@@ -578,34 +578,85 @@ export async function searchMovies(req: Request, res: Response): Promise<void> {
     });
   }
 
-  // The phrase operator performs an exact phrase match on the specified field.
-  // This ensures that searching for "james cameron" only matches documents where
-  // "James Cameron" appears as an exact phrase, not documents containing "James" OR "Cameron".
+  // Split multi-word queries into individual terms and require ALL terms to match (AND logic).
+  // This prevents "james cameron" from matching any director with "James" OR "Cameron",
+  // while still allowing fuzzy matching for typo tolerance.
+  // Fuzzy settings: maxEdits=2 allows up to 2 character edits, prefixLength=2 requires
+  // only the first 2 characters to match exactly before fuzzy matching kicks in.
   if (directors) {
-    searchPhrases.push({
-      phrase: {
-        query: directors,
-        path: "directors",
-      },
-    });
+    const directorTerms = directors.split(/\s+/).filter((t) => t.length > 0);
+    if (directorTerms.length === 1) {
+      searchPhrases.push({
+        text: {
+          query: directors,
+          path: "directors",
+          fuzzy: { maxEdits: 1, prefixLength: 2 },
+        },
+      });
+    } else {
+      // Use compound must clause to require all terms match (AND logic)
+      searchPhrases.push({
+        compound: {
+          must: directorTerms.map((term) => ({
+            text: {
+              query: term,
+              path: "directors",
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          })),
+        },
+      });
+    }
   }
 
   if (writers) {
-    searchPhrases.push({
-      phrase: {
-        query: writers,
-        path: "writers",
-      },
-    });
+    const writerTerms = writers.split(/\s+/).filter((t) => t.length > 0);
+    if (writerTerms.length === 1) {
+      searchPhrases.push({
+        text: {
+          query: writers,
+          path: "writers",
+          fuzzy: { maxEdits: 1, prefixLength: 2 },
+        },
+      });
+    } else {
+      searchPhrases.push({
+        compound: {
+          must: writerTerms.map((term) => ({
+            text: {
+              query: term,
+              path: "writers",
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          })),
+        },
+      });
+    }
   }
 
   if (cast) {
-    searchPhrases.push({
-      phrase: {
-        query: cast,
-        path: "cast",
-      },
-    });
+    const castTerms = cast.split(/\s+/).filter((t) => t.length > 0);
+    if (castTerms.length === 1) {
+      searchPhrases.push({
+        text: {
+          query: cast,
+          path: "cast",
+          fuzzy: { maxEdits: 1, prefixLength: 2 },
+        },
+      });
+    } else {
+      searchPhrases.push({
+        compound: {
+          must: castTerms.map((term) => ({
+            text: {
+              query: term,
+              path: "cast",
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          })),
+        },
+      });
+    }
   }
 
   if (searchPhrases.length === 0) {

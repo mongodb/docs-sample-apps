@@ -154,31 +154,93 @@ async def search_movies(
             }
         })
     if directors is not None:
-        # The phrase operator performs an exact phrase match on the specified field.
-        # This ensures that searching for "james cameron" only matches documents where
-        # "James Cameron" appears as an exact phrase, not documents containing "James" OR "Cameron".
-        search_phrases.append({
-            "phrase": {
-                "query": directors,
-                "path": "directors",
-            }
-        })
+        # Split multi-word queries into individual terms and require ALL terms to match (AND logic).
+        # This prevents "james cameron" from matching any director with "James" OR "Cameron".
+        # The "fuzzy" option enables typo-tolerant search within MongoDB Search.
+        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
+        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
+        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
+        #             (Lower values allow typos earlier in the word but may be slower.)
+        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
+        director_terms = directors.split()
+        if len(director_terms) == 1:
+            search_phrases.append({
+                "text": {
+                    "query": directors,
+                    "path": "directors",
+                    "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                }
+            })
+        else:
+            # Use compound must clause to require all terms match (AND logic)
+            search_phrases.append({
+                "compound": {
+                    "must": [
+                        {
+                            "text": {
+                                "query": term,
+                                "path": "directors",
+                                "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                            }
+                        }
+                        for term in director_terms
+                    ]
+                }
+            })
+
     if writers is not None:
-        # The phrase operator performs an exact phrase match on the specified field.
-        search_phrases.append({
-            "phrase": {
-                "query": writers,
-                "path": "writers",
-            }
-        })
+        # See comments above regarding fuzzy search and AND logic for multi-word queries.
+        writer_terms = writers.split()
+        if len(writer_terms) == 1:
+            search_phrases.append({
+                "text": {
+                    "query": writers,
+                    "path": "writers",
+                    "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                }
+            })
+        else:
+            search_phrases.append({
+                "compound": {
+                    "must": [
+                        {
+                            "text": {
+                                "query": term,
+                                "path": "writers",
+                                "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                            }
+                        }
+                        for term in writer_terms
+                    ]
+                }
+            })
+
     if cast is not None:
-        # The phrase operator performs an exact phrase match on the specified field.
-        search_phrases.append({
-            "phrase": {
-                "query": cast,
-                "path": "cast",
-            }
-        })
+        # See comments above regarding fuzzy search and AND logic for multi-word queries.
+        cast_terms = cast.split()
+        if len(cast_terms) == 1:
+            search_phrases.append({
+                "text": {
+                    "query": cast,
+                    "path": "cast",
+                    "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                }
+            })
+        else:
+            search_phrases.append({
+                "compound": {
+                    "must": [
+                        {
+                            "text": {
+                                "query": term,
+                                "path": "cast",
+                                "fuzzy": {"maxEdits": 1, "prefixLength": 2}
+                            }
+                        }
+                        for term in cast_terms
+                    ]
+                }
+            })
 
     if not search_phrases:
         raise HTTPException(

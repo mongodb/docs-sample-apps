@@ -298,6 +298,15 @@ export interface SearchPhrase {
     path: string;
     fuzzy?: { maxEdits: number; prefixLength: number };
   };
+  compound?: {
+    must?: Array<{
+      text: {
+        query: string;
+        path: string;
+        fuzzy?: { maxEdits: number; prefixLength: number };
+      };
+    }>;
+  };
 }
 
 /**
