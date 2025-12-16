@@ -332,12 +332,9 @@ async def vector_search_movies(
         )
 
     try:
-        # Initialize the client here to avoid import-time errors
-        vo = voyageai.Client()
-
         # The vector search index was already created at startup time
-        # Generate embedding for the search query
-        query_embedding = get_embedding(q, input_type="query", client=vo)
+        # Generate embedding for the search query (client is created inside get_embedding)
+        query_embedding = get_embedding(q, input_type="query")
 
         # Get the embedded movies collection
         embedded_movies_collection = get_collection("embedded_movies")
@@ -1373,10 +1370,10 @@ def get_embedding(data, input_type = "document", client=None):
         VoyageAuthError: If the API key is invalid (401)
         VoyageAPIError: For other API errors
     """
-    if client is None:
-        client = voyageai.Client()
-
     try:
+        if client is None:
+            client = voyageai.Client()
+
         embeddings = client.embed(
             data, model = model, output_dimension = outputDimension, input_type = input_type
         ).embeddings
