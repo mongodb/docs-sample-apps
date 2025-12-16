@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Query, Path, Body, HTTPException
+from fastapi.responses import JSONResponse
 from src.database.mongo_client import get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse
 from typing import Any, List, Optional
 from src.utils.successResponse import create_success_response
+from src.utils.errorResponse import create_error_response
+from src.utils.exceptions import VoyageAuthError, VoyageAPIError
 from bson import ObjectId, errors
 import re
 from bson.errors import InvalidId
 import voyageai
+import voyageai.error as voyage_error
+import os
 
 
 '''
@@ -316,18 +321,20 @@ async def vector_search_movies(
     Returns:
         SuccessResponse containing a list of movies with similarity scores
     """
+    # Check if Voyage AI API key is configured
     if not voyage_ai_available():
-        raise HTTPException(
-            status_code = 503,
-            detail="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to your .env file."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the .env file",
+                code="SERVICE_UNAVAILABLE"
+            )
         )
-    try:
-        # Initialize the client here to avoid import-time errors
-        vo = voyageai.Client()
 
+    try:
         # The vector search index was already created at startup time
-        # Generate embedding for the search query
-        query_embedding = get_embedding(q, input_type="query", client=vo)
+        # Generate embedding for the search query (client is created inside get_embedding)
+        query_embedding = get_embedding(q, input_type="query")
 
         # Get the embedded movies collection
         embedded_movies_collection = get_collection("embedded_movies")
@@ -390,10 +397,20 @@ async def vector_search_movies(
             f"Found {len(results)} similar movies for query: '{q}'"
         )
 
+    except VoyageAuthError:
+        # Re-raise custom exceptions to be handled by the exception handlers
+        raise
+    except VoyageAPIError:
+        # Re-raise custom exceptions to be handled by the exception handlers
+        raise
     except Exception as e:
+        # Log the error for debugging
+        print(f"Vector search error: {str(e)}")
+
+        # Handle generic errors
         raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred during vector search: {str(e)}"
+            status_code=500,
+            detail=f"Error performing vector search: {str(e)}"
         )
 
 """
@@ -1348,12 +1365,35 @@ def get_embedding(data, input_type = "document", client=None):
 
     Returns:
         Vector embeddings for the given input
-    """
-    if client is None:
-        client = voyageai.Client()
 
-    embeddings = client.embed(
-        data, model = model, output_dimension = outputDimension, input_type = input_type
-    ).embeddings
-    return embeddings[0]
+    Raises:
+        VoyageAuthError: If the API key is invalid (401)
+        VoyageAPIError: For other API errors
+    """
+    try:
+        if client is None:
+            client = voyageai.Client()
+
+        embeddings = client.embed(
+            data, model = model, output_dimension = outputDimension, input_type = input_type
+        ).embeddings
+        return embeddings[0]
+    except voyage_error.AuthenticationError as e:
+        # Handle authentication errors (401) from Voyage AI SDK
+        raise VoyageAuthError("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file")
+    except voyage_error.InvalidRequestError as e:
+        # Handle invalid request errors (400) - often due to malformed API key
+        raise VoyageAPIError(f"Invalid request to Voyage AI API: {str(e)}", 400)
+    except voyage_error.RateLimitError as e:
+        # Handle rate limiting errors (429)
+        raise VoyageAPIError(f"Voyage AI API rate limit exceeded: {str(e)}", 429)
+    except voyage_error.ServiceUnavailableError as e:
+        # Handle service unavailable errors (502, 503, 504)
+        raise VoyageAPIError(f"Voyage AI service unavailable: {str(e)}", 503)
+    except voyage_error.VoyageError as e:
+        # Handle any other Voyage AI SDK errors
+        raise VoyageAPIError(f"Voyage AI API error: {str(e)}", getattr(e, 'http_status', 500) or 500)
+    except Exception as e:
+        # Handle unexpected errors
+        raise VoyageAPIError(f"Failed to generate embedding: {str(e)}", 500)
 
