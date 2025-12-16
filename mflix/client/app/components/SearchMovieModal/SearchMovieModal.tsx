@@ -256,9 +256,12 @@ export default function SearchMovieModal({
                   onChange={(e) => handleInputChange('directors', e.target.value)}
                   className={`${styles.input} ${errors.directors ? styles.inputError : ''}`}
                   disabled={isLoading}
-                  placeholder="Director names"
+                  placeholder="e.g. James Cameron"
                 />
                 {errors.directors && <span className={styles.error}>{errors.directors}</span>}
+                <small className={styles.searchOperatorDescription}>
+                  Fuzzy matching enabled – tolerates minor typos
+                </small>
               </div>
 
               {/* Writers Search */}
@@ -273,9 +276,12 @@ export default function SearchMovieModal({
                   onChange={(e) => handleInputChange('writers', e.target.value)}
                   className={`${styles.input} ${errors.writers ? styles.inputError : ''}`}
                   disabled={isLoading}
-                  placeholder="Writer names"
+                  placeholder="e.g. Aaron Sorkin"
                 />
                 {errors.writers && <span className={styles.error}>{errors.writers}</span>}
+                <small className={styles.searchOperatorDescription}>
+                  Fuzzy matching enabled – tolerates minor typos
+                </small>
               </div>
 
               {/* Cast Search */}
@@ -290,9 +296,12 @@ export default function SearchMovieModal({
                   onChange={(e) => handleInputChange('cast', e.target.value)}
                   className={`${styles.input} ${errors.cast ? styles.inputError : ''}`}
                   disabled={isLoading}
-                  placeholder="Actor names"
+                  placeholder="e.g. Tom Hanks"
                 />
                 {errors.cast && <span className={styles.error}>{errors.cast}</span>}
+                <small className={styles.searchOperatorDescription}>
+                  Fuzzy matching enabled – tolerates minor typos
+                </small>
               </div>
 
               {/* Limit */}
