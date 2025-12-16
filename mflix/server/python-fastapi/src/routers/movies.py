@@ -154,37 +154,29 @@ async def search_movies(
             }
         })
     if directors is not None:
-        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
-        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
-        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
-        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
-        #             (Higher values make the search stricter and faster.)
-        # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
-
+        # The phrase operator performs an exact phrase match on the specified field.
+        # This ensures that searching for "james cameron" only matches documents where
+        # "James Cameron" appears as an exact phrase, not documents containing "James" OR "Cameron".
         search_phrases.append({
-            "text": {
+            "phrase": {
                 "query": directors,
                 "path": "directors",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-
             }
         })
     if writers is not None:
-        # See comments above regarding fuzzy search options.
+        # The phrase operator performs an exact phrase match on the specified field.
         search_phrases.append({
-            "text": {
+            "phrase": {
                 "query": writers,
                 "path": "writers",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
             }
         })
     if cast is not None:
-        # See comments above regarding fuzzy search options.
+        # The phrase operator performs an exact phrase match on the specified field.
         search_phrases.append({
-            "text": {
+            "phrase": {
                 "query": cast,
                 "path": "cast",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
             }
         })
 

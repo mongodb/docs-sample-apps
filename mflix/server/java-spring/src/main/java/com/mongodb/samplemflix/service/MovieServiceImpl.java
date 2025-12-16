@@ -634,39 +634,29 @@ public class MovieServiceImpl implements MovieService {
             ));
         }
 
-        // Add directors search if provided (using text operator with fuzzy matching)
+        // Add directors search if provided (using phrase operator for exact phrase matching)
+        // This ensures that searching for "james cameron" only matches documents where
+        // "James Cameron" appears as an exact phrase, not documents containing "James" OR "Cameron".
         if (searchRequest.getDirectors() != null && !searchRequest.getDirectors().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
+            searchPhrases.add(new Document("phrase", new Document()
                     .append("query", searchRequest.getDirectors().trim())
                     .append("path", Movie.Fields.DIRECTORS)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
             ));
         }
 
-        // Add writers search if provided (using text operator with fuzzy matching)
+        // Add writers search if provided (using phrase operator for exact phrase matching)
         if (searchRequest.getWriters() != null && !searchRequest.getWriters().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
+            searchPhrases.add(new Document("phrase", new Document()
                     .append("query", searchRequest.getWriters().trim())
                     .append("path", Movie.Fields.WRITERS)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
             ));
         }
 
-        // Add cast search if provided (using text operator with fuzzy matching)
+        // Add cast search if provided (using phrase operator for exact phrase matching)
         if (searchRequest.getCast() != null && !searchRequest.getCast().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
+            searchPhrases.add(new Document("phrase", new Document()
                     .append("query", searchRequest.getCast().trim())
                     .append("path", Movie.Fields.CAST)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
             ));
         }
 

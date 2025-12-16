@@ -578,32 +578,32 @@ export async function searchMovies(req: Request, res: Response): Promise<void> {
     });
   }
 
+  // The phrase operator performs an exact phrase match on the specified field.
+  // This ensures that searching for "james cameron" only matches documents where
+  // "James Cameron" appears as an exact phrase, not documents containing "James" OR "Cameron".
   if (directors) {
     searchPhrases.push({
-      text: {
+      phrase: {
         query: directors,
         path: "directors",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
       },
     });
   }
 
   if (writers) {
     searchPhrases.push({
-      text: {
+      phrase: {
         query: writers,
         path: "writers",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
       },
     });
   }
 
   if (cast) {
     searchPhrases.push({
-      text: {
+      phrase: {
         query: cast,
         path: "cast",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
       },
     });
   }
