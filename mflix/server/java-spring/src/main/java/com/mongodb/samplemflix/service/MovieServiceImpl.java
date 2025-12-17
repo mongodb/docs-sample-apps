@@ -635,93 +635,48 @@ public class MovieServiceImpl implements MovieService {
         }
 
         // Add directors search if provided
-        // Split multi-word queries into individual terms and require ALL terms to match (AND logic).
+        // Use matchCriteria: "all" to require ALL terms in the query to match (AND logic).
         // This prevents "james cameron" from matching any director with "James" OR "Cameron",
         // while still allowing fuzzy matching for typo tolerance.
         // Fuzzy settings: maxEdits=1 allows up to 1 character edit, prefixLength=2 requires
         // only the first 2 characters to match exactly before fuzzy matching kicks in.
+        // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
         if (searchRequest.getDirectors() != null && !searchRequest.getDirectors().trim().isEmpty()) {
-            String[] directorTerms = searchRequest.getDirectors().trim().split("\\s+");
-            if (directorTerms.length == 1) {
-                searchPhrases.add(new Document("text", new Document()
-                        .append("query", searchRequest.getDirectors().trim())
-                        .append("path", Movie.Fields.DIRECTORS)
-                        .append("fuzzy", new Document()
-                                .append("maxEdits", 1)
-                                .append("prefixLength", 2)
-                        )
-                ));
-            } else {
-                // Use compound must clause to require all terms match (AND logic)
-                java.util.List<Document> mustClauses = java.util.Arrays.stream(directorTerms)
-                        .filter(term -> !term.isEmpty())
-                        .map(term -> new Document("text", new Document()
-                                .append("query", term)
-                                .append("path", Movie.Fields.DIRECTORS)
-                                .append("fuzzy", new Document()
-                                        .append("maxEdits", 1)
-                                        .append("prefixLength", 2)
-                                )
-                        ))
-                        .collect(java.util.stream.Collectors.toList());
-                searchPhrases.add(new Document("compound", new Document("must", mustClauses)));
-            }
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getDirectors().trim())
+                    .append("path", Movie.Fields.DIRECTORS)
+                    .append("matchCriteria", "all")
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 2)
+                    )
+            ));
         }
 
-        // Add writers search if provided (see directors comments for AND logic explanation)
+        // Add writers search if provided (see directors comments for matchCriteria explanation)
         if (searchRequest.getWriters() != null && !searchRequest.getWriters().trim().isEmpty()) {
-            String[] writerTerms = searchRequest.getWriters().trim().split("\\s+");
-            if (writerTerms.length == 1) {
-                searchPhrases.add(new Document("text", new Document()
-                        .append("query", searchRequest.getWriters().trim())
-                        .append("path", Movie.Fields.WRITERS)
-                        .append("fuzzy", new Document()
-                                .append("maxEdits", 1)
-                                .append("prefixLength", 2)
-                        )
-                ));
-            } else {
-                java.util.List<Document> mustClauses = java.util.Arrays.stream(writerTerms)
-                        .filter(term -> !term.isEmpty())
-                        .map(term -> new Document("text", new Document()
-                                .append("query", term)
-                                .append("path", Movie.Fields.WRITERS)
-                                .append("fuzzy", new Document()
-                                        .append("maxEdits", 1)
-                                        .append("prefixLength", 2)
-                                )
-                        ))
-                        .collect(java.util.stream.Collectors.toList());
-                searchPhrases.add(new Document("compound", new Document("must", mustClauses)));
-            }
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getWriters().trim())
+                    .append("path", Movie.Fields.WRITERS)
+                    .append("matchCriteria", "all")
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 2)
+                    )
+            ));
         }
 
-        // Add cast search if provided (see directors comments for AND logic explanation)
+        // Add cast search if provided (see directors comments for matchCriteria explanation)
         if (searchRequest.getCast() != null && !searchRequest.getCast().trim().isEmpty()) {
-            String[] castTerms = searchRequest.getCast().trim().split("\\s+");
-            if (castTerms.length == 1) {
-                searchPhrases.add(new Document("text", new Document()
-                        .append("query", searchRequest.getCast().trim())
-                        .append("path", Movie.Fields.CAST)
-                        .append("fuzzy", new Document()
-                                .append("maxEdits", 1)
-                                .append("prefixLength", 2)
-                        )
-                ));
-            } else {
-                java.util.List<Document> mustClauses = java.util.Arrays.stream(castTerms)
-                        .filter(term -> !term.isEmpty())
-                        .map(term -> new Document("text", new Document()
-                                .append("query", term)
-                                .append("path", Movie.Fields.CAST)
-                                .append("fuzzy", new Document()
-                                        .append("maxEdits", 1)
-                                        .append("prefixLength", 2)
-                                )
-                        ))
-                        .collect(java.util.stream.Collectors.toList());
-                searchPhrases.add(new Document("compound", new Document("must", mustClauses)));
-            }
+            searchPhrases.add(new Document("text", new Document()
+                    .append("query", searchRequest.getCast().trim())
+                    .append("path", Movie.Fields.CAST)
+                    .append("matchCriteria", "all")
+                    .append("fuzzy", new Document()
+                            .append("maxEdits", 1)
+                            .append("prefixLength", 2)
+                    )
+            ));
         }
 
         // Build the $search aggregation stage with compound operator

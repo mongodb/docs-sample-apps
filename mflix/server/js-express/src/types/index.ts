@@ -296,16 +296,8 @@ export interface SearchPhrase {
   text?: {
     query: string;
     path: string;
+    matchCriteria?: "any" | "all";
     fuzzy?: { maxEdits: number; prefixLength: number };
-  };
-  compound?: {
-    must?: Array<{
-      text: {
-        query: string;
-        path: string;
-        fuzzy?: { maxEdits: number; prefixLength: number };
-      };
-    }>;
   };
 }
 

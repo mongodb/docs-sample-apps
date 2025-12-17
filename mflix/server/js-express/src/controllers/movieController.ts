@@ -578,85 +578,44 @@ export async function searchMovies(req: Request, res: Response): Promise<void> {
     });
   }
 
-  // Split multi-word queries into individual terms and require ALL terms to match (AND logic).
-  // This prevents "james cameron" from matching any director with "James" OR "Cameron",
-  // while still allowing fuzzy matching for typo tolerance.
-  // Fuzzy settings: maxEdits=2 allows up to 2 character edits, prefixLength=2 requires
+  // For directors, writers, and cast fields, we use matchCriteria: "all" to require ALL terms
+  // in the query to match (AND logic). This prevents "james cameron" from matching any director
+  // with "James" OR "Cameron" (which would return too many results), while still allowing
+  // fuzzy matching for typo tolerance.
+  // Fuzzy settings: maxEdits=1 allows up to 1 character edit, prefixLength=2 requires
   // only the first 2 characters to match exactly before fuzzy matching kicks in.
+  // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
   if (directors) {
-    const directorTerms = directors.split(/\s+/).filter((t) => t.length > 0);
-    if (directorTerms.length === 1) {
-      searchPhrases.push({
-        text: {
-          query: directors,
-          path: "directors",
-          fuzzy: { maxEdits: 1, prefixLength: 2 },
-        },
-      });
-    } else {
-      // Use compound must clause to require all terms match (AND logic)
-      searchPhrases.push({
-        compound: {
-          must: directorTerms.map((term) => ({
-            text: {
-              query: term,
-              path: "directors",
-              fuzzy: { maxEdits: 1, prefixLength: 2 },
-            },
-          })),
-        },
-      });
-    }
+    searchPhrases.push({
+      text: {
+        query: directors,
+        path: "directors",
+        matchCriteria: "all",
+        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      },
+    });
   }
 
   if (writers) {
-    const writerTerms = writers.split(/\s+/).filter((t) => t.length > 0);
-    if (writerTerms.length === 1) {
-      searchPhrases.push({
-        text: {
-          query: writers,
-          path: "writers",
-          fuzzy: { maxEdits: 1, prefixLength: 2 },
-        },
-      });
-    } else {
-      searchPhrases.push({
-        compound: {
-          must: writerTerms.map((term) => ({
-            text: {
-              query: term,
-              path: "writers",
-              fuzzy: { maxEdits: 1, prefixLength: 2 },
-            },
-          })),
-        },
-      });
-    }
+    searchPhrases.push({
+      text: {
+        query: writers,
+        path: "writers",
+        matchCriteria: "all",
+        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      },
+    });
   }
 
   if (cast) {
-    const castTerms = cast.split(/\s+/).filter((t) => t.length > 0);
-    if (castTerms.length === 1) {
-      searchPhrases.push({
-        text: {
-          query: cast,
-          path: "cast",
-          fuzzy: { maxEdits: 1, prefixLength: 2 },
-        },
-      });
-    } else {
-      searchPhrases.push({
-        compound: {
-          must: castTerms.map((term) => ({
-            text: {
-              query: term,
-              path: "cast",
-              fuzzy: { maxEdits: 1, prefixLength: 2 },
-            },
-          })),
-        },
-      });
-    }
+    searchPhrases.push({
+      text: {
+        query: cast,
+        path: "cast",
+        matchCriteria: "all",
+        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      },
+    });
   }
 
   if (searchPhrases.length === 0) {
