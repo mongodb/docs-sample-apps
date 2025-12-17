@@ -63,7 +63,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
 
         // Apply connection string and custom settings
         builder.applyConnectionString(connectionString)
-                //set application name
+                // Set application name
                 .applicationName("sample-app-java-mflix")
                 // Configure connection pool for optimal performance
                 .applyToConnectionPoolSettings(poolBuilder ->
