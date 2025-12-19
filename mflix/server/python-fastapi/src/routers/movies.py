@@ -170,7 +170,7 @@ async def search_movies(
                     {"text": {"query": directors, "path": "directors", "matchCriteria": "all"}},
                     # Lower score: fuzzy match (typo tolerance)
                     {"text": {"query": directors, "path": "directors", "matchCriteria": "all",
-                              "fuzzy": {"maxEdits": 2, "prefixLength": 2}}}
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
                 ],
                 "minimumShouldMatch": 1
             }
@@ -184,7 +184,7 @@ async def search_movies(
                     {"phrase": {"query": writers, "path": "writers"}},
                     {"text": {"query": writers, "path": "writers", "matchCriteria": "all"}},
                     {"text": {"query": writers, "path": "writers", "matchCriteria": "all",
-                              "fuzzy": {"maxEdits": 2, "prefixLength": 2}}}
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
                 ],
                 "minimumShouldMatch": 1
             }
@@ -198,7 +198,7 @@ async def search_movies(
                     {"phrase": {"query": cast, "path": "cast"}},
                     {"text": {"query": cast, "path": "cast", "matchCriteria": "all"}},
                     {"text": {"query": cast, "path": "cast", "matchCriteria": "all",
-                              "fuzzy": {"maxEdits": 2, "prefixLength": 2}}}
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
                 ],
                 "minimumShouldMatch": 1
             }
