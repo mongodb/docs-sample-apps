@@ -578,42 +578,74 @@ export async function searchMovies(req: Request, res: Response): Promise<void> {
     });
   }
 
-  // For directors, writers, and cast fields, we use matchCriteria: "all" to require ALL terms
-  // in the query to match (AND logic). This prevents "james cameron" from matching any director
-  // with "James" OR "Cameron" (which would return too many results), while still allowing
-  // fuzzy matching for typo tolerance.
-  // Fuzzy settings: maxEdits=1 allows up to 1 character edit, prefixLength=2 requires
-  // only the first 2 characters to match exactly before fuzzy matching kicks in.
+  // Use compound operator with "should" clauses to create a scoring hierarchy:
+  // 1. phrase match (highest score) - exact phrase in same array element
+  // 2. text match without fuzzy (high score) - all terms present, exact spelling
+  // 3. text match with fuzzy (lower score) - typo-tolerant fallback
+  // This ensures "James Cameron" ranks higher than "James Mangold" + "Cameron Crowe"
+  // while still supporting typo tolerance.
   // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
   if (directors) {
     searchPhrases.push({
-      text: {
-        query: directors,
-        path: "directors",
-        matchCriteria: "all",
-        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      compound: {
+        should: [
+          // Highest score: exact phrase match
+          { phrase: { query: directors, path: "directors" } },
+          // High score: exact text match (all terms, no fuzzy)
+          { text: { query: directors, path: "directors", matchCriteria: "all" } },
+          // Lower score: fuzzy match (typo tolerance)
+          {
+            text: {
+              query: directors,
+              path: "directors",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 2, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }
 
   if (writers) {
+    // See comments above regarding compound should scoring hierarchy.
     searchPhrases.push({
-      text: {
-        query: writers,
-        path: "writers",
-        matchCriteria: "all",
-        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      compound: {
+        should: [
+          { phrase: { query: writers, path: "writers" } },
+          { text: { query: writers, path: "writers", matchCriteria: "all" } },
+          {
+            text: {
+              query: writers,
+              path: "writers",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 2, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }
 
   if (cast) {
+    // See comments above regarding compound should scoring hierarchy.
     searchPhrases.push({
-      text: {
-        query: cast,
-        path: "cast",
-        matchCriteria: "all",
-        fuzzy: { maxEdits: 1, prefixLength: 2 },
+      compound: {
+        should: [
+          { phrase: { query: cast, path: "cast" } },
+          { text: { query: cast, path: "cast", matchCriteria: "all" } },
+          {
+            text: {
+              query: cast,
+              path: "cast",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 2, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }

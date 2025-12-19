@@ -299,6 +299,18 @@ export interface SearchPhrase {
     matchCriteria?: "any" | "all";
     fuzzy?: { maxEdits: number; prefixLength: number };
   };
+  compound?: {
+    should?: Array<{
+      phrase?: { query: string; path: string };
+      text?: {
+        query: string;
+        path: string;
+        matchCriteria?: "any" | "all";
+        fuzzy?: { maxEdits: number; prefixLength: number };
+      };
+    }>;
+    minimumShouldMatch?: number;
+  };
 }
 
 /**
