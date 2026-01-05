@@ -157,9 +157,7 @@ async def search_movies(
         # Use compound operator with "should" clauses to create a scoring hierarchy:
         # 1. phrase match (highest score) - exact phrase in same array element
         # 2. text match without fuzzy (high score) - all terms present, exact spelling
-        # 3. text match with fuzzy (lower score) - typo-tolerant fallback
-        # This ensures "James Cameron" ranks higher than "James Mangold" + "Cameron Crowe"
-        # while still supporting typo tolerance.
+        # 3. text match with fuzzy (lower score) - typo-tolerant fallback; update fuzzy settings as needed
         # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
         search_phrases.append({
             "compound": {
@@ -170,14 +168,14 @@ async def search_movies(
                     {"text": {"query": directors, "path": "directors", "matchCriteria": "all"}},
                     # Lower score: fuzzy match (typo tolerance)
                     {"text": {"query": directors, "path": "directors", "matchCriteria": "all",
-                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}} # Allow up to 1 edit, require first 2 characters to match
                 ],
                 "minimumShouldMatch": 1
             }
         })
 
     if writers is not None:
-        # See comments above regarding compound should scoring hierarchy.
+        # See comments above regarding compound scoring hierarchy.
         search_phrases.append({
             "compound": {
                 "should": [
@@ -191,7 +189,7 @@ async def search_movies(
         })
 
     if cast is not None:
-        # See comments above regarding compound should scoring hierarchy.
+        # See comments above regarding compound scoring hierarchy.
         search_phrases.append({
             "compound": {
                 "should": [

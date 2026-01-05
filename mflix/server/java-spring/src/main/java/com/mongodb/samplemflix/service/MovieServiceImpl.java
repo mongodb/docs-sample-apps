@@ -638,9 +638,7 @@ public class MovieServiceImpl implements MovieService {
         // Use compound operator with "should" clauses to create a scoring hierarchy:
         // 1. phrase match (highest score) - exact phrase in same array element
         // 2. text match without fuzzy (high score) - all terms present, exact spelling
-        // 3. text match with fuzzy (lower score) - typo-tolerant fallback
-        // This ensures "James Cameron" ranks higher than "James Mangold" + "Cameron Crowe"
-        // while still supporting typo tolerance.
+        // 3. text match with fuzzy (lower score) - typo-tolerant fallback; update fuzzy settings as needed
         // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
         if (searchRequest.getDirectors() != null && !searchRequest.getDirectors().trim().isEmpty()) {
             String directorsQuery = searchRequest.getDirectors().trim();
@@ -660,6 +658,7 @@ public class MovieServiceImpl implements MovieService {
                                     .append("query", directorsQuery)
                                     .append("path", Movie.Fields.DIRECTORS)
                                     .append("matchCriteria", "all")
+                                    // Fuzzy settings: allow up to 1 edit, require first 2 characters to match
                                     .append("fuzzy", new Document()
                                             .append("maxEdits", 1)
                                             .append("prefixLength", 2)))
@@ -668,7 +667,7 @@ public class MovieServiceImpl implements MovieService {
             ));
         }
 
-        // Add writers search if provided (see directors comments for compound should scoring hierarchy)
+        // Add writers search if provided (see directors comments for compound scoring hierarchy)
         if (searchRequest.getWriters() != null && !searchRequest.getWriters().trim().isEmpty()) {
             String writersQuery = searchRequest.getWriters().trim();
             searchPhrases.add(new Document("compound", new Document()
@@ -692,7 +691,7 @@ public class MovieServiceImpl implements MovieService {
             ));
         }
 
-        // Add cast search if provided (see directors comments for compound should scoring hierarchy)
+        // Add cast search if provided (see directors comments for compound scoring hierarchy)
         if (searchRequest.getCast() != null && !searchRequest.getCast().trim().isEmpty()) {
             String castQuery = searchRequest.getCast().trim();
             searchPhrases.add(new Document("compound", new Document()
