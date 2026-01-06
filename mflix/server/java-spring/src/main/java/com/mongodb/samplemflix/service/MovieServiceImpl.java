@@ -634,39 +634,84 @@ public class MovieServiceImpl implements MovieService {
             ));
         }
 
-        // Add directors search if provided (using text operator with fuzzy matching)
+        // Add directors search if provided
+        // Use compound operator with "should" clauses to create a scoring hierarchy:
+        // 1. phrase match (highest score) - exact phrase in same array element
+        // 2. text match without fuzzy (high score) - all terms present, exact spelling
+        // 3. text match with fuzzy (lower score) - typo-tolerant fallback; update fuzzy settings as needed
+        // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
         if (searchRequest.getDirectors() != null && !searchRequest.getDirectors().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
-                    .append("query", searchRequest.getDirectors().trim())
-                    .append("path", Movie.Fields.DIRECTORS)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
+            String directorsQuery = searchRequest.getDirectors().trim();
+            searchPhrases.add(new Document("compound", new Document()
+                    .append("should", java.util.Arrays.asList(
+                            // Highest score: exact phrase match
+                            new Document("phrase", new Document()
+                                    .append("query", directorsQuery)
+                                    .append("path", Movie.Fields.DIRECTORS)),
+                            // High score: exact text match (all terms, no fuzzy)
+                            new Document("text", new Document()
+                                    .append("query", directorsQuery)
+                                    .append("path", Movie.Fields.DIRECTORS)
+                                    .append("matchCriteria", "all")),
+                            // Lower score: fuzzy match (typo tolerance)
+                            new Document("text", new Document()
+                                    .append("query", directorsQuery)
+                                    .append("path", Movie.Fields.DIRECTORS)
+                                    .append("matchCriteria", "all")
+                                    // Fuzzy settings: allow up to 1 edit, require first 2 characters to match
+                                    .append("fuzzy", new Document()
+                                            .append("maxEdits", 1)
+                                            .append("prefixLength", 2)))
+                    ))
+                    .append("minimumShouldMatch", 1)
             ));
         }
 
-        // Add writers search if provided (using text operator with fuzzy matching)
+        // Add writers search if provided (see directors comments for compound scoring hierarchy)
         if (searchRequest.getWriters() != null && !searchRequest.getWriters().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
-                    .append("query", searchRequest.getWriters().trim())
-                    .append("path", Movie.Fields.WRITERS)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
+            String writersQuery = searchRequest.getWriters().trim();
+            searchPhrases.add(new Document("compound", new Document()
+                    .append("should", java.util.Arrays.asList(
+                            new Document("phrase", new Document()
+                                    .append("query", writersQuery)
+                                    .append("path", Movie.Fields.WRITERS)),
+                            new Document("text", new Document()
+                                    .append("query", writersQuery)
+                                    .append("path", Movie.Fields.WRITERS)
+                                    .append("matchCriteria", "all")),
+                            new Document("text", new Document()
+                                    .append("query", writersQuery)
+                                    .append("path", Movie.Fields.WRITERS)
+                                    .append("matchCriteria", "all")
+                                    .append("fuzzy", new Document()
+                                            .append("maxEdits", 1)
+                                            .append("prefixLength", 2)))
+                    ))
+                    .append("minimumShouldMatch", 1)
             ));
         }
 
-        // Add cast search if provided (using text operator with fuzzy matching)
+        // Add cast search if provided (see directors comments for compound scoring hierarchy)
         if (searchRequest.getCast() != null && !searchRequest.getCast().trim().isEmpty()) {
-            searchPhrases.add(new Document("text", new Document()
-                    .append("query", searchRequest.getCast().trim())
-                    .append("path", Movie.Fields.CAST)
-                    .append("fuzzy", new Document()
-                            .append("maxEdits", 1)
-                            .append("prefixLength", 5)
-                    )
+            String castQuery = searchRequest.getCast().trim();
+            searchPhrases.add(new Document("compound", new Document()
+                    .append("should", java.util.Arrays.asList(
+                            new Document("phrase", new Document()
+                                    .append("query", castQuery)
+                                    .append("path", Movie.Fields.CAST)),
+                            new Document("text", new Document()
+                                    .append("query", castQuery)
+                                    .append("path", Movie.Fields.CAST)
+                                    .append("matchCriteria", "all")),
+                            new Document("text", new Document()
+                                    .append("query", castQuery)
+                                    .append("path", Movie.Fields.CAST)
+                                    .append("matchCriteria", "all")
+                                    .append("fuzzy", new Document()
+                                            .append("maxEdits", 1)
+                                            .append("prefixLength", 2)))
+                    ))
+                    .append("minimumShouldMatch", 1)
             ));
         }
 

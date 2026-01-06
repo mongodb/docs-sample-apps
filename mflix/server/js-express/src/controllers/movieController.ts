@@ -578,32 +578,72 @@ export async function searchMovies(req: Request, res: Response): Promise<void> {
     });
   }
 
+  // Use compound operator with "should" clauses to create a scoring hierarchy:
+  // 1. phrase match (highest score) - exact phrase in same array element
+  // 2. text match without fuzzy (high score) - all terms present, exact spelling
+  // 3. text match with fuzzy (lower score) - typo-tolerant fallback; update fuzzy settings as needed
+  // For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
   if (directors) {
     searchPhrases.push({
-      text: {
-        query: directors,
-        path: "directors",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
+      compound: {
+        should: [
+          // Highest score: exact phrase match
+          { phrase: { query: directors, path: "directors" } },
+          // High score: exact text match (all terms, no fuzzy)
+          { text: { query: directors, path: "directors", matchCriteria: "all" } },
+          // Lower score: fuzzy match (typo tolerance)
+          {
+            text: {
+              query: directors,
+              path: "directors",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 1, prefixLength: 2 }, // Allow up to 1 edit, require first 2 characters to match
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }
 
   if (writers) {
+    // See comments above regarding compound scoring hierarchy.
     searchPhrases.push({
-      text: {
-        query: writers,
-        path: "writers",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
+      compound: {
+        should: [
+          { phrase: { query: writers, path: "writers" } },
+          { text: { query: writers, path: "writers", matchCriteria: "all" } },
+          {
+            text: {
+              query: writers,
+              path: "writers",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }
 
   if (cast) {
+    // See comments above regarding compound scoring hierarchy.
     searchPhrases.push({
-      text: {
-        query: cast,
-        path: "cast",
-        fuzzy: { maxEdits: 1, prefixLength: 5 },
+      compound: {
+        should: [
+          { phrase: { query: cast, path: "cast" } },
+          { text: { query: cast, path: "cast", matchCriteria: "all" } },
+          {
+            text: {
+              query: cast,
+              path: "cast",
+              matchCriteria: "all",
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
       },
     });
   }

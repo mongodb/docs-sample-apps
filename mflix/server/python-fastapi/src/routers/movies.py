@@ -154,37 +154,51 @@ async def search_movies(
             }
         })
     if directors is not None:
-        # The "fuzzy" option enables typo-tolerant (fuzzy) search within MongoDB Search.
-        # - maxEdits: The maximum number of single-character edits (insertions, deletions, or substitutions)
-        #             allowed when matching the search term to indexed terms. (Range: 1-2; higher = more tolerant)
-        # - prefixLength: The number of initial characters that must exactly match before fuzzy matching is applied.
-        #             (Higher values make the search stricter and faster.)
+        # Use compound operator with "should" clauses to create a scoring hierarchy:
+        # 1. phrase match (highest score) - exact phrase in same array element
+        # 2. text match without fuzzy (high score) - all terms present, exact spelling
+        # 3. text match with fuzzy (lower score) - typo-tolerant fallback; update fuzzy settings as needed
         # For more details, see: https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/text/
-
         search_phrases.append({
-            "text": {
-                "query": directors,
-                "path": "directors",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
-
+            "compound": {
+                "should": [
+                    # Highest score: exact phrase match
+                    {"phrase": {"query": directors, "path": "directors"}},
+                    # High score: exact text match (all terms, no fuzzy)
+                    {"text": {"query": directors, "path": "directors", "matchCriteria": "all"}},
+                    # Lower score: fuzzy match (typo tolerance)
+                    {"text": {"query": directors, "path": "directors", "matchCriteria": "all",
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}} # Allow up to 1 edit, require first 2 characters to match
+                ],
+                "minimumShouldMatch": 1
             }
         })
+
     if writers is not None:
-        # See comments above regarding fuzzy search options.
+        # See comments above regarding compound scoring hierarchy.
         search_phrases.append({
-            "text": {
-                "query": writers,
-                "path": "writers",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            "compound": {
+                "should": [
+                    {"phrase": {"query": writers, "path": "writers"}},
+                    {"text": {"query": writers, "path": "writers", "matchCriteria": "all"}},
+                    {"text": {"query": writers, "path": "writers", "matchCriteria": "all",
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
+                ],
+                "minimumShouldMatch": 1
             }
         })
+
     if cast is not None:
-        # See comments above regarding fuzzy search options.
+        # See comments above regarding compound scoring hierarchy.
         search_phrases.append({
-            "text": {
-                "query": cast,
-                "path": "cast",
-                "fuzzy":{"maxEdits":1, "prefixLength":5}
+            "compound": {
+                "should": [
+                    {"phrase": {"query": cast, "path": "cast"}},
+                    {"text": {"query": cast, "path": "cast", "matchCriteria": "all"}},
+                    {"text": {"query": cast, "path": "cast", "matchCriteria": "all",
+                              "fuzzy": {"maxEdits": 1, "prefixLength": 2}}}
+                ],
+                "minimumShouldMatch": 1
             }
         })
 
