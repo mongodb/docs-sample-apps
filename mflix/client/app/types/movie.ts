@@ -51,6 +51,8 @@ export interface Movie {
   };
   metacritic?: number;
   type?: string;
+  /** Vector search score (only present in vector search results) */
+  score?: number;
 }
 
 /**
