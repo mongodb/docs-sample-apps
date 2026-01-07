@@ -24,6 +24,7 @@ import {
   createSuccessResponse,
   validateRequiredFields,
 } from "../utils/errorHandler";
+import logger from "../utils/logger";
 import {
   CreateMovieRequest,
   UpdateMovieRequest,
@@ -874,7 +875,7 @@ export async function vectorSearchMovies(req: Request, res: Response): Promise<v
       )
     );
   } catch (error) {
-    console.error("Vector search error:", error);
+    logger.error("Vector search error:", error);
 
     // Handle Voyage AI authentication errors
     if (error instanceof VoyageAuthError) {
