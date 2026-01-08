@@ -725,6 +725,7 @@ export async function vectorSearchMovies(searchParams: {
         genres: item.genres || [],
         directors: item.directors || [],
         cast: item.cast || [],
+        score: item.score,
         // Add default values for fields not included in VectorSearchResult
         fullplot: undefined,
         released: undefined,
