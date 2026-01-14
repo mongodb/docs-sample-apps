@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './FilterBar.module.css';
 import { fetchGenres, type MovieFilterParams } from '@/lib/api';
 
@@ -16,6 +16,21 @@ interface FilterBarProps {
   initialFilters?: MovieFilterParams;
 }
 
+/**
+ * Compares two MovieFilterParams objects for equality.
+ * Returns true if all filter values match.
+ */
+function areFiltersEqual(a: MovieFilterParams, b: MovieFilterParams): boolean {
+  return (
+    a.genre === b.genre &&
+    a.year === b.year &&
+    a.minRating === b.minRating &&
+    a.maxRating === b.maxRating &&
+    a.sortBy === b.sortBy &&
+    a.sortOrder === b.sortOrder
+  );
+}
+
 export default function FilterBar({
   onFilterChange,
   isLoading = false,
@@ -24,6 +39,9 @@ export default function FilterBar({
   const [filters, setFilters] = useState<MovieFilterParams>(initialFilters);
   const [genres, setGenres] = useState<string[]>([]);
   const [isLoadingGenres, setIsLoadingGenres] = useState(true);
+
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<MovieFilterParams>(initialFilters);
 
   // Fetch genres from the API on mount
   useEffect(() => {
@@ -38,8 +56,11 @@ export default function FilterBar({
 
   // Sync internal state when initialFilters changes (e.g. from URL navigation)
   useEffect(() => {
-    setFilters(initialFilters);
-  }, [JSON.stringify(initialFilters)]); // Use JSON.stringify for deep comparison
+    if (!areFiltersEqual(prevInitialFiltersRef.current, initialFilters)) {
+      setFilters(initialFilters);
+      prevInitialFiltersRef.current = initialFilters;
+    }
+  }, [initialFilters]);
 
   const handleFilterChange = useCallback((key: keyof MovieFilterParams, value: string | number | undefined) => {
     setFilters(prev => {
