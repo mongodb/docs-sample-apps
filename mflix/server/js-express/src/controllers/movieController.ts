@@ -135,6 +135,34 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * GET /api/movies/genres
+ *
+ * Retrieves all unique genres from the movies collection.
+ * Demonstrates the distinct() operation.
+ *
+ * Returns an array of unique genre strings, sorted alphabetically.
+ */
+export async function getDistinctGenres(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const moviesCollection = getCollection("movies");
+
+  // Use distinct() to get all unique values from the genres array field
+  // MongoDB automatically flattens array fields when using distinct()
+  const genres = await moviesCollection.distinct("genres");
+
+  // Filter out null/empty values and sort alphabetically
+  const validGenres = genres
+    .filter((genre): genre is string => typeof genre === "string" && genre.length > 0)
+    .sort((a, b) => a.localeCompare(b));
+
+  res.json(
+    createSuccessResponse(validGenres, `Found ${validGenres.length} distinct genres`)
+  );
+}
+
+/**
  * GET /api/movies/:id
  *
  * Retrieves a single movie by its ObjectId.

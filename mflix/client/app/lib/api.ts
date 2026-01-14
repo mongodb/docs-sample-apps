@@ -20,8 +20,8 @@ export interface MovieFilterParams {
 }
 
 /**
- * Fetches movies from the backend API with pagination and filtering support.
- * Demonstrates using MongoDB find() with query filters.
+ * Fetches movies from the backend API with pagination and filtering support
+ * using MongoDB find() with query filters.
  */
 export async function fetchMovies(
   limit: number = 20,
@@ -96,6 +96,34 @@ export async function fetchMovies(
       hasNextPage: false,
       hasPrevPage: false
     };
+  }
+}
+
+/**
+ * Fetches all unique genres from the backend API
+ * using MongoDB's distinct() operation.
+ */
+export async function fetchGenres(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/movies/genres`, {
+      next: { revalidate: 3600 }, // Cache genres for 1 hour since they rarely change
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch genres: ${response.status}`);
+    }
+
+    const result: { success: boolean; data: string[]; message: string } = await response.json();
+
+    if (!result.success) {
+      throw new Error('API returned error response');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+    // Return empty array on error - FilterBar will handle gracefully
+    return [];
   }
 }
 

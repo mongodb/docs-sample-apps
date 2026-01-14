@@ -2,14 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import styles from './FilterBar.module.css';
-import type { MovieFilterParams } from '@/lib/api';
-
-const GENRES = [
-  'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime',
-  'Documentary', 'Drama', 'Family', 'Fantasy', 'Film-Noir', 'History',
-  'Horror', 'Music', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
-  'Short', 'Sport', 'Thriller', 'War', 'Western'
-];
+import { fetchGenres, type MovieFilterParams } from '@/lib/api';
 
 const SORT_OPTIONS = [
   { value: 'title', label: 'Title' },
@@ -29,6 +22,19 @@ export default function FilterBar({
   initialFilters = {}
 }: FilterBarProps) {
   const [filters, setFilters] = useState<MovieFilterParams>(initialFilters);
+  const [genres, setGenres] = useState<string[]>([]);
+  const [isLoadingGenres, setIsLoadingGenres] = useState(true);
+
+  // Fetch genres from the API on mount
+  useEffect(() => {
+    async function loadGenres() {
+      setIsLoadingGenres(true);
+      const fetchedGenres = await fetchGenres();
+      setGenres(fetchedGenres);
+      setIsLoadingGenres(false);
+    }
+    loadGenres();
+  }, []);
 
   // Sync internal state when initialFilters changes (e.g. from URL navigation)
   useEffect(() => {
@@ -97,10 +103,10 @@ export default function FilterBar({
             className={styles.filterSelect}
             value={filters.genre || ''}
             onChange={(e) => handleFilterChange('genre', e.target.value)}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingGenres}
           >
-            <option value="">All Genres</option>
-            {GENRES.map(genre => (
+            <option value="">{isLoadingGenres ? 'Loading...' : 'All Genres'}</option>
+            {genres.map(genre => (
               <option key={genre} value={genre}>{genre}</option>
             ))}
           </select>
