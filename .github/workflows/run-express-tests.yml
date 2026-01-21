@@ -5,12 +5,12 @@ on:
     branches:
       - development
     paths:
-      - 'server/js-express/**'
+      - 'mflix/server/js-express/**'
   push:
     branches:
       - development
     paths:
-      - 'server/js-express/**'
+      - 'mflix/server/js-express/**'
 
 jobs:
   test:
@@ -47,17 +47,17 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: server/js-express
+        working-directory: mflix/server/js-express
         run: npm install
 
       - name: Run unit tests
-        working-directory: server/js-express
+        working-directory: mflix/server/js-express
         run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
         env:
           MONGODB_URI: mongodb://localhost:27017/sample_mflix
 
       - name: Run integration tests
-        working-directory: server/js-express
+        working-directory: mflix/server/js-express
         run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
         env:
           MONGODB_URI: mongodb://localhost:27017/sample_mflix
@@ -71,9 +71,9 @@ jobs:
         with:
           name: test-results
           path: |
-            server/js-express/coverage/
-            server/js-express/test-results-unit.json
-            server/js-express/test-results-integration.json
+            mflix/server/js-express/coverage/
+            mflix/server/js-express/test-results-unit.json
+            mflix/server/js-express/test-results-integration.json
           retention-days: 30
 
       - name: Generate Test Summary
@@ -81,5 +81,5 @@ jobs:
         run: |
           chmod +x .github/scripts/generate-test-summary-jest.sh
           .github/scripts/generate-test-summary-jest.sh \
-            server/js-express/test-results-unit.json \
-            server/js-express/test-results-integration.json
+            mflix/server/js-express/test-results-unit.json \
+            mflix/server/js-express/test-results-integration.json
