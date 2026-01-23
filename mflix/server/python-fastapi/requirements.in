@@ -63,3 +63,4 @@ rich-toolkit~=0.15.0    # Extensions for the 'rich' library
 # ------------------------------------------------------------------------------
 filelock>=3.20.3        # Transitive dep via huggingface-hub
 aiohttp>=3.13.3         # Transitive dep via voyageai
+orjson>=3.11.5          # Transitive dep via langsmith (CVE fix)

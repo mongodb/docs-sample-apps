@@ -111,8 +111,10 @@ multidict==6.7.0
     #   yarl
 numpy==2.3.4
     # via voyageai
-orjson==3.11.4
-    # via langsmith
+orjson==3.11.5
+    # via
+    #   -r requirements.in
+    #   langsmith
 packaging==25.0
     # via
     #   huggingface-hub
