@@ -93,6 +93,21 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
+.inputWarning {
+  border-color: #f59e0b;
+}
+
+.inputWarning:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.yearWarning {
+  font-size: 0.7rem;
+  color: #b45309;
+  margin-top: 0.25rem;
+}
+
 .ratingGroup {
   display: flex;
   align-items: center;

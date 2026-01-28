@@ -14,6 +14,15 @@ import React from "react";
  * such as image error handling and selection checkbox.
  */
 
+/**
+ * Validates that a poster URL is valid for Next.js Image component.
+ * Must be an absolute URL (http/https) or a relative path starting with /
+ */
+const isValidPosterUrl = (url: string | undefined): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+};
+
 interface MovieCardProps {
   movie: Movie;
   isSelected?: boolean;
@@ -48,9 +57,9 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
       )}
       
       <div className={movieStyles.moviePoster}>
-        {movie.poster ? (
+        {isValidPosterUrl(movie.poster) ? (
           <Image
-            src={movie.poster}
+            src={movie.poster!}
             alt={`${movie.title} poster`}
             fill
             sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, 280px"

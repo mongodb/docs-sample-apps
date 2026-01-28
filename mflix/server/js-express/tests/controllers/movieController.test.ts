@@ -183,7 +183,7 @@ describe("Movie Controller Tests", () => {
       const testMovies = [{ _id: TEST_MOVIE_ID, title: "Action Movie" }];
       mockRequest.query = {
         genre: "Action",
-        year: "2024",
+        year: "2010",
         minRating: "7.0",
         limit: "10",
         sortBy: "year",
@@ -195,9 +195,48 @@ describe("Movie Controller Tests", () => {
 
       expect(mockFind).toHaveBeenCalledWith({
         genres: { $regex: new RegExp("Action", "i") },
-        year: 2024,
+        year: 2010,
         "imdb.rating": { $gte: 7.0 },
       });
+      expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
+        testMovies,
+        "Found 1 movies"
+      );
+    });
+
+    it("should return 400 for year before 1800", async () => {
+      mockRequest.query = { year: "1700" };
+
+      await getAllMovies(mockRequest as Request, mockResponse as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockCreateErrorResponse).toHaveBeenCalledWith(
+        "Invalid year: 1700. Year must be 1800 or later.",
+        "INVALID_YEAR"
+      );
+    });
+
+    it("should include warning message for year after 2015", async () => {
+      mockRequest.query = { year: "2020" };
+      mockToArray.mockResolvedValue([]);
+
+      await getAllMovies(mockRequest as Request, mockResponse as Response);
+
+      expect(mockFind).toHaveBeenCalledWith({ year: 2020 });
+      expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
+        [],
+        "Found 0 movies. Note: The sample_mflix dataset only contains movies up to 2015. Your search for year 2020 may return no results."
+      );
+    });
+
+    it("should not include warning message for year 2015 or earlier", async () => {
+      const testMovies = [{ _id: TEST_MOVIE_ID, title: "Old Movie" }];
+      mockRequest.query = { year: "2015" };
+      mockToArray.mockResolvedValue(testMovies);
+
+      await getAllMovies(mockRequest as Request, mockResponse as Response);
+
+      expect(mockFind).toHaveBeenCalledWith({ year: 2015 });
       expect(mockCreateSuccessResponse).toHaveBeenCalledWith(
         testMovies,
         "Found 1 movies"

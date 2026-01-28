@@ -87,9 +87,32 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
     filter.genres = { $regex: new RegExp(genre, "i") };
   }
 
-  // Year filtering
+  // Year filtering and validation
+  // The sample_mflix dataset only contains movies up to 2015
+  const MAX_DATASET_YEAR = 2015;
+  const MIN_VALID_YEAR = 1800;
+  let yearWarning: string | undefined;
+
   if (year) {
-    filter.year = parseInt(year);
+    const yearNum = parseInt(year);
+
+    // Validate year is within reasonable bounds
+    if (yearNum < MIN_VALID_YEAR) {
+      res.status(400).json(
+        createErrorResponse(
+          `Invalid year: ${yearNum}. Year must be ${MIN_VALID_YEAR} or later.`,
+          "INVALID_YEAR"
+        )
+      );
+      return;
+    }
+
+    // Warn if searching for years beyond the dataset's range
+    if (yearNum > MAX_DATASET_YEAR) {
+      yearWarning = `Note: The sample_mflix dataset only contains movies up to ${MAX_DATASET_YEAR}. Your search for year ${yearNum} may return no results.`;
+    }
+
+    filter.year = yearNum;
   }
 
   // Rating range filtering
@@ -131,8 +154,14 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
     .skip(skipNum)
     .toArray();
 
+  // Build response message, including year warning if applicable
+  let message = `Found ${movies.length} movies`;
+  if (yearWarning) {
+    message = `${message}. ${yearWarning}`;
+  }
+
   // Return successful response
-  res.json(createSuccessResponse(movies, `Found ${movies.length} movies`));
+  res.json(createSuccessResponse(movies, message));
 }
 
 /**

@@ -10,6 +10,9 @@ const SORT_OPTIONS = [
   { value: 'imdb.rating', label: 'IMDB Rating' },
 ];
 
+// The sample_mflix dataset only contains movies up to 2015
+const MAX_DATASET_YEAR = 2015;
+
 interface FilterBarProps {
   onFilterChange: (filters: MovieFilterParams) => void;
   isLoading?: boolean;
@@ -137,14 +140,19 @@ export default function FilterBar({
           <label className={styles.filterLabel}>Year</label>
           <input
             type="number"
-            className={styles.filterInput}
-            placeholder="e.g. 2020"
+            className={`${styles.filterInput} ${filters.year && filters.year > MAX_DATASET_YEAR ? styles.inputWarning : ''}`}
+            placeholder="e.g. 2010"
             value={filters.year || ''}
             onChange={(e) => handleFilterChange('year', e.target.value ? parseInt(e.target.value) : undefined)}
             disabled={isLoading}
             min={1900}
             max={2030}
           />
+          {filters.year && filters.year > MAX_DATASET_YEAR && (
+            <span className={styles.yearWarning}>
+              Dataset only contains movies up to {MAX_DATASET_YEAR}
+            </span>
+          )}
         </div>
 
         <div className={styles.filterGroup}>

@@ -125,6 +125,47 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.data").isArray());
     }
 
+    @Test
+    @DisplayName("GET /api/movies - Should return 400 for year before 1800")
+    void testGetAllMovies_InvalidYearBefore1800() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/movies")
+                        .param("year", "1700"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies - Should include warning for year after 2015")
+    void testGetAllMovies_YearAfter2015IncludesWarning() throws Exception {
+        // Arrange
+        List<Movie> movies = Arrays.asList();
+        when(movieService.getAllMovies(any(MovieSearchQuery.class))).thenReturn(movies);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies")
+                        .param("year", "2020"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message", containsString("2015")));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies - Should not include warning for year 2015 or earlier")
+    void testGetAllMovies_Year2015NoWarning() throws Exception {
+        // Arrange
+        List<Movie> movies = Arrays.asList(testMovie);
+        when(movieService.getAllMovies(any(MovieSearchQuery.class))).thenReturn(movies);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/movies")
+                        .param("year", "2015"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message", not(containsString("sample_mflix"))));
+    }
+
     // ==================== GET MOVIE BY ID TESTS ====================
 
     @Test

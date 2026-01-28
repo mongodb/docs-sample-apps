@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.controller;
 
+import com.mongodb.samplemflix.exception.ValidationException;
 import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.model.dto.BatchInsertResponse;
 import com.mongodb.samplemflix.model.dto.BatchUpdateResponse;
@@ -85,7 +86,27 @@ public class MovieControllerImpl {
             @RequestParam(defaultValue = "title") String sortBy,
             @Parameter(description = "Sort order: 'asc' or 'desc' (default: asc)")
             @RequestParam(defaultValue = "asc") String sortOrder) {
-        
+
+        // The sample_mflix dataset only contains movies up to 2015
+        final int MAX_DATASET_YEAR = 2015;
+        final int MIN_VALID_YEAR = 1800;
+        String yearWarning = null;
+
+        // Validate year if provided
+        if (year != null) {
+            if (year < MIN_VALID_YEAR) {
+                throw new ValidationException(
+                    String.format("Invalid year: %d. Year must be %d or later.", year, MIN_VALID_YEAR)
+                );
+            }
+            if (year > MAX_DATASET_YEAR) {
+                yearWarning = String.format(
+                    "Note: The sample_mflix dataset only contains movies up to %d. Your search for year %d may return no results.",
+                    MAX_DATASET_YEAR, year
+                );
+            }
+        }
+
         MovieSearchQuery query = MovieSearchQuery.builder()
                 .q(q)
                 .genre(genre)
@@ -97,16 +118,22 @@ public class MovieControllerImpl {
                 .sortBy(sortBy)
                 .sortOrder(sortOrder)
                 .build();
-        
+
         List<Movie> movies = movieService.getAllMovies(query);
-        
+
+        // Build response message, including year warning if applicable
+        String message = "Found " + movies.size() + " movies";
+        if (yearWarning != null) {
+            message = message + ". " + yearWarning;
+        }
+
         SuccessResponse<List<Movie>> response = SuccessResponse.<List<Movie>>builder()
                 .success(true)
-                .message("Found " + movies.size() + " movies")
+                .message(message)
                 .data(movies)
                 .timestamp(Instant.now().toString())
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 
