@@ -41,6 +41,10 @@ jobs:
       - name: Add sample data to database
         run: mongorestore --archive=sampledata.archive --port=27017
 
+      - name: Create indexes for aggregation performance
+        run: |
+          mongosh "mongodb://localhost:27017/sample_mflix?directConnection=true" --eval "db.comments.createIndex({ movie_id: 1 })"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
