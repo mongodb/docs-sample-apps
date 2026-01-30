@@ -41,6 +41,16 @@ jobs:
       - name: Add sample data to database
         run: mongorestore --archive=sampledata.archive --port=27017
 
+      - name: Install MongoDB Shell (mongosh)
+        run: |
+          curl https://downloads.mongodb.com/compass/mongosh-2.3.8-linux-x64.tgz -o mongosh.tgz
+          tar -xzf mongosh.tgz
+          sudo cp mongosh-2.3.8-linux-x64/bin/* /usr/local/bin/
+
+      - name: Create indexes for aggregation performance
+        run: |
+          mongosh "mongodb://localhost:27017/sample_mflix?directConnection=true" --eval "db.comments.createIndex({ movie_id: 1 })"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,13 +64,13 @@ jobs:
         working-directory: mflix/server/js-express
         run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
         env:
-          MONGODB_URI: mongodb://localhost:27017/sample_mflix
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
 
       - name: Run integration tests
         working-directory: mflix/server/js-express
         run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
         env:
-          MONGODB_URI: mongodb://localhost:27017/sample_mflix
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
           ENABLE_SEARCH_TESTS: true
           # Note: Vector search tests will be skipped without VOYAGE_API_KEY
           # Run these tests locally with a valid API key

@@ -967,7 +967,7 @@ export async function getMoviesWithMostRecentComments(
     // the collection
     {
       $match: {
-        year: { $type: "number", $gte: 1800, $lte: 2030 },
+        year: { $type: "number" },
       },
     },
   ];
@@ -1105,7 +1105,7 @@ export async function getMoviesByYearWithStats(
     // STAGE 1: Data quality filter
     {
       $match: {
-        year: { $type: "number", $gte: 1800, $lte: 2030 },
+        year: { $type: "number" },
       },
     },
     // STAGE 2: Group by year and calculate statistics
@@ -1209,7 +1209,7 @@ export async function getDirectorsWithMostMovies(
     {
       $match: {
         directors: { $exists: true, $ne: null, $not: { $eq: [] } },
-        year: { $type: "number", $gte: 1800, $lte: 2030 },
+        year: { $type: "number" },
       },
     },
     // STAGE 2: Unwind directors array
