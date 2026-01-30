@@ -16,7 +16,7 @@ This is a full-stack movie browsing application built with Java Spring Boot and 
 
 ## Data Limitations
 
-The `sample_mflix` dataset contains movies released up to **2015**. Searching for movies from 2016 or later will return no results. This is a limitation of the sample dataset, not the application.
+The `sample_mflix` dataset contains movies released up to **2016**. Searching for movies from 2017 or later will return no results. This is a limitation of the sample dataset, not the application.
 
 ## Prerequisites
 
