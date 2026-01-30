@@ -5,11 +5,17 @@ set -e
 # Shows breakdown by test type (unit vs integration)
 # Usage: ./generate-test-summary-jest.sh <unit-json> <integration-json>
 
+# Guard: skip if GITHUB_STEP_SUMMARY is not set
+if [ -z "$GITHUB_STEP_SUMMARY" ]; then
+  echo "Warning: GITHUB_STEP_SUMMARY not set, skipping summary generation"
+  exit 0
+fi
+
 UNIT_JSON="${1:-}"
 INTEGRATION_JSON="${2:-}"
 
-echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
+echo "## Test Results" >> "$GITHUB_STEP_SUMMARY"
+echo "" >> "$GITHUB_STEP_SUMMARY"
 
 # Function to parse Jest JSON file
 parse_json() {
@@ -55,37 +61,37 @@ total_failed=$((unit_failed + int_failed))
 total_skipped=$((unit_skipped + int_skipped))
 
 # Display detailed breakdown
-echo "### Summary by Test Type" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "| Test Type | Passed | Failed | Skipped | Total |" >> $GITHUB_STEP_SUMMARY
-echo "|-----------|--------|--------|---------|-------|" >> $GITHUB_STEP_SUMMARY
+echo "### Summary by Test Type" >> "$GITHUB_STEP_SUMMARY"
+echo "" >> "$GITHUB_STEP_SUMMARY"
+echo "| Test Type | Passed | Failed | Skipped | Total |" >> "$GITHUB_STEP_SUMMARY"
+echo "|-----------|--------|--------|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
 
 if [ -f "$UNIT_JSON" ]; then
-  echo "| 🔧 Unit Tests | $unit_passed | $unit_failed | $unit_skipped | $unit_tests |" >> $GITHUB_STEP_SUMMARY
+  echo "| 🔧 Unit Tests | $unit_passed | $unit_failed | $unit_skipped | $unit_tests |" >> "$GITHUB_STEP_SUMMARY"
 fi
 
 if [ -f "$INTEGRATION_JSON" ]; then
-  echo "| 🔗 Integration Tests | $int_passed | $int_failed | $int_skipped | $int_tests |" >> $GITHUB_STEP_SUMMARY
+  echo "| 🔗 Integration Tests | $int_passed | $int_failed | $int_skipped | $int_tests |" >> "$GITHUB_STEP_SUMMARY"
 fi
 
-echo "| **Total** | **$total_passed** | **$total_failed** | **$total_skipped** | **$total_tests** |" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
+echo "| **Total** | **$total_passed** | **$total_failed** | **$total_skipped** | **$total_tests** |" >> "$GITHUB_STEP_SUMMARY"
+echo "" >> "$GITHUB_STEP_SUMMARY"
 
 # Overall status
-echo "### Overall Status" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "| Status | Count |" >> $GITHUB_STEP_SUMMARY
-echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-echo "| ✅ Passed | $total_passed |" >> $GITHUB_STEP_SUMMARY
-echo "| ❌ Failed | $total_failed |" >> $GITHUB_STEP_SUMMARY
-echo "| ⏭️ Skipped | $total_skipped |" >> $GITHUB_STEP_SUMMARY
-echo "| **Total** | **$total_tests** |" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
+echo "### Overall Status" >> "$GITHUB_STEP_SUMMARY"
+echo "" >> "$GITHUB_STEP_SUMMARY"
+echo "| Status | Count |" >> "$GITHUB_STEP_SUMMARY"
+echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+echo "| ✅ Passed | $total_passed |" >> "$GITHUB_STEP_SUMMARY"
+echo "| ❌ Failed | $total_failed |" >> "$GITHUB_STEP_SUMMARY"
+echo "| ⏭️ Skipped | $total_skipped |" >> "$GITHUB_STEP_SUMMARY"
+echo "| **Total** | **$total_tests** |" >> "$GITHUB_STEP_SUMMARY"
+echo "" >> "$GITHUB_STEP_SUMMARY"
 
 # List failed tests if any
 if [ $total_failed -gt 0 ]; then
-  echo "### ❌ Failed Tests" >> $GITHUB_STEP_SUMMARY
-  echo "" >> $GITHUB_STEP_SUMMARY
+  echo "### ❌ Failed Tests" >> "$GITHUB_STEP_SUMMARY"
+  echo "" >> "$GITHUB_STEP_SUMMARY"
 
   failed_tests_file=$(mktemp)
 
@@ -107,16 +113,16 @@ if [ $total_failed -gt 0 ]; then
 
   if [ -s "$failed_tests_file" ]; then
     while IFS= read -r test; do
-      echo "- \`$test\`" >> $GITHUB_STEP_SUMMARY
+      echo "- \`$test\`" >> "$GITHUB_STEP_SUMMARY"
     done < "$failed_tests_file"
   else
-    echo "_Unable to parse individual test names_" >> $GITHUB_STEP_SUMMARY
+    echo "_Unable to parse individual test names_" >> "$GITHUB_STEP_SUMMARY"
   fi
 
-  echo "" >> $GITHUB_STEP_SUMMARY
-  echo "❌ **Tests failed!**" >> $GITHUB_STEP_SUMMARY
+  echo "" >> "$GITHUB_STEP_SUMMARY"
+  echo "❌ **Tests failed!**" >> "$GITHUB_STEP_SUMMARY"
   rm -f "$failed_tests_file"
   exit 1
 else
-  echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+  echo "✅ **All tests passed!**" >> "$GITHUB_STEP_SUMMARY"
 fi
