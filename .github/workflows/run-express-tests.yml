@@ -54,13 +54,13 @@ jobs:
         working-directory: mflix/server/js-express
         run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
         env:
-          MONGODB_URI: mongodb://localhost:27017/sample_mflix
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
 
       - name: Run integration tests
         working-directory: mflix/server/js-express
         run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
         env:
-          MONGODB_URI: mongodb://localhost:27017/sample_mflix
+          MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
           ENABLE_SEARCH_TESTS: true
           # Note: Vector search tests will be skipped without VOYAGE_API_KEY
           # Run these tests locally with a valid API key
