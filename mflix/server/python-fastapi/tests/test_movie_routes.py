@@ -401,66 +401,6 @@ class TestGetAllMovies:
         assert e.value.status_code == 500
         assert "error" in str(e.value.detail.lower())
 
-    async def test_get_all_movies_invalid_year_before_1800(self):
-        """Should return 400 error when year is before 1800."""
-        from src.routers.movies import get_all_movies
-
-        with pytest.raises(HTTPException) as e:
-            await get_all_movies(year=1700)
-
-        assert e.value.status_code == 400
-        assert "1800" in str(e.value.detail)
-        assert "1700" in str(e.value.detail)
-
-    @patch('src.routers.movies.get_collection')
-    async def test_get_all_movies_year_after_2015_includes_warning(self, mock_get_collection):
-        """Should include warning message when searching for year after 2015."""
-        # Setup mock with proper cursor chaining
-        mock_collection = MagicMock()
-        mock_cursor = MagicMock()
-
-        mock_cursor.sort.return_value = mock_cursor
-        mock_cursor.skip.return_value = mock_cursor
-        mock_cursor.limit.return_value = mock_cursor
-        mock_cursor.__aiter__.return_value = iter([])
-
-        mock_collection.find.return_value = mock_cursor
-        mock_get_collection.return_value = mock_collection
-
-        from src.routers.movies import get_all_movies
-        result = await get_all_movies(year=2020)
-
-        # Assertions
-        assert result.success is True
-        assert "2015" in result.message
-        assert "2020" in result.message
-        assert "sample_mflix" in result.message.lower()
-
-    @patch('src.routers.movies.get_collection')
-    async def test_get_all_movies_year_2015_no_warning(self, mock_get_collection):
-        """Should not include warning message when searching for year 2015 or earlier."""
-        # Setup mock with proper cursor chaining
-        mock_collection = MagicMock()
-        mock_cursor = MagicMock()
-
-        mock_cursor.sort.return_value = mock_cursor
-        mock_cursor.skip.return_value = mock_cursor
-        mock_cursor.limit.return_value = mock_cursor
-        mock_cursor.__aiter__.return_value = iter([
-            {"_id": ObjectId(TEST_MOVIE_ID), "title": "Old Movie", "year": 2015}
-        ])
-
-        mock_collection.find.return_value = mock_cursor
-        mock_get_collection.return_value = mock_collection
-
-        from src.routers.movies import get_all_movies
-        result = await get_all_movies(year=2015)
-
-        # Assertions
-        assert result.success is True
-        assert "sample_mflix" not in result.message.lower()
-        assert "Found 1 movies" in result.message
-
 
 @pytest.mark.unit
 @pytest.mark.asyncio

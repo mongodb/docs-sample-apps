@@ -546,11 +546,6 @@ async def get_all_movies(
     sort_by:str = Query(default="title", alias="sortBy"),
     sort_order:str = Query(default="asc", alias="sortOrder")
 ):
-    # The sample_mflix dataset only contains movies up to 2015
-    MAX_DATASET_YEAR = 2015
-    MIN_VALID_YEAR = 1800
-    year_warning = None
-
     movies_collection = get_collection("movies")
     filter_dict = {}
     if q:
@@ -560,15 +555,6 @@ async def get_all_movies(
     if genre:
         filter_dict["genres"] = {"$regex": genre, "$options": "i"}
     if isinstance(year, int):
-        # Validate year is within reasonable bounds
-        if year < MIN_VALID_YEAR:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid year: {year}. Year must be {MIN_VALID_YEAR} or later."
-            )
-        # Warn if searching for years beyond the dataset's range
-        if year > MAX_DATASET_YEAR:
-            year_warning = f"Note: The sample_mflix dataset only contains movies up to {MAX_DATASET_YEAR}. Your search for year {year} may return no results."
         filter_dict["year"] = year
     if min_rating is not None or max_rating is not None:
         rating_filter = {}
@@ -608,12 +594,8 @@ async def get_all_movies(
             
             movies.append(movie)
 
-    # Build response message, including year warning if applicable
-    message = f"Found {len(movies)} movies."
-    if year_warning:
-        message = f"{message} {year_warning}"
-
     # Return the results wrapped in a SuccessResponse
+    message = f"Found {len(movies)} movies."
     return create_success_response(movies, message)
 
 """
@@ -1034,7 +1016,7 @@ async def aggregate_movies_recent_commented(
         # Filter movies to only those with valid year data
         {
             "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+                "year": {"$type": "number"}
             }
         }
     ]
@@ -1180,7 +1162,7 @@ async def aggregate_movies_by_year():
         # Tip: Filter early to reduce dataset size and improve performance
         {
             "$match": {
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}
+                "year": {"$type": "number"}
             }
         },
 
@@ -1309,7 +1291,7 @@ async def aggregate_directors_most_movies(
         {
             "$match": {
                 "directors": {"$exists": True, "$ne": None, "$ne": []},  # Has directors array
-                "year": {"$type": "number", "$gte": 1800, "$lte": 2030}  # Valid year range
+                "year": {"$type": "number"}  # Valid year (numeric)
             }
         },
 

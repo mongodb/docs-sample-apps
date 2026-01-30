@@ -2,16 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './FilterBar.module.css';
-import { fetchGenres, type MovieFilterParams } from '@/lib/api';
+import { fetchGenres, fetchYearBounds, type MovieFilterParams } from '@/lib/api';
 
 const SORT_OPTIONS = [
   { value: 'title', label: 'Title' },
   { value: 'year', label: 'Year' },
   { value: 'imdb.rating', label: 'IMDB Rating' },
 ];
-
-// The sample_mflix dataset only contains movies up to 2015
-const MAX_DATASET_YEAR = 2015;
 
 interface FilterBarProps {
   onFilterChange: (filters: MovieFilterParams) => void;
@@ -42,6 +39,8 @@ export default function FilterBar({
   const [filters, setFilters] = useState<MovieFilterParams>(initialFilters);
   const [genres, setGenres] = useState<string[]>([]);
   const [isLoadingGenres, setIsLoadingGenres] = useState(true);
+  const [maxDatasetYear, setMaxDatasetYear] = useState<number | null>(null);
+  const [minDatasetYear, setMinDatasetYear] = useState<number | null>(null);
 
   // Track previous initialFilters to detect changes
   const prevInitialFiltersRef = useRef<MovieFilterParams>(initialFilters);
@@ -55,6 +54,28 @@ export default function FilterBar({
       setIsLoadingGenres(false);
     }
     loadGenres();
+  }, []);
+
+  // Fetch year bounds from the API on mount
+  useEffect(() => {
+    async function loadYearBounds() {
+      console.log('FilterBar: Fetching year bounds...');
+      const result = await fetchYearBounds();
+      console.log('FilterBar: Year bounds result:', result);
+      if (result.success) {
+        if (result.maxYear) {
+          console.log('FilterBar: Setting maxDatasetYear to', result.maxYear);
+          setMaxDatasetYear(result.maxYear);
+        }
+        if (result.minYear) {
+          console.log('FilterBar: Setting minDatasetYear to', result.minYear);
+          setMinDatasetYear(result.minYear);
+        }
+      } else {
+        console.warn('FilterBar: Failed to fetch year bounds:', result.error);
+      }
+    }
+    loadYearBounds();
   }, []);
 
   // Sync internal state when initialFilters changes (e.g. from URL navigation)
@@ -137,22 +158,27 @@ export default function FilterBar({
         </div>
 
         <div className={styles.filterGroup}>
+          {maxDatasetYear && filters.year && filters.year > maxDatasetYear && (
+            <span className={styles.yearWarning}>
+              Dataset only contains movies up to {maxDatasetYear}
+            </span>
+          )}
+          {minDatasetYear && filters.year && filters.year < minDatasetYear && (
+            <span className={styles.yearWarning}>
+              Dataset only contains movies from {minDatasetYear} onwards
+            </span>
+          )}
           <label className={styles.filterLabel}>Year</label>
           <input
             type="number"
-            className={`${styles.filterInput} ${filters.year && filters.year > MAX_DATASET_YEAR ? styles.inputWarning : ''}`}
+            className={`${styles.filterInput} ${(maxDatasetYear && filters.year && filters.year > maxDatasetYear) || (minDatasetYear && filters.year && filters.year < minDatasetYear) ? styles.inputWarning : ''}`}
             placeholder="e.g. 2010"
             value={filters.year || ''}
             onChange={(e) => handleFilterChange('year', e.target.value ? parseInt(e.target.value) : undefined)}
             disabled={isLoading}
-            min={1900}
-            max={2030}
+            min={minDatasetYear || undefined}
+            max={maxDatasetYear || undefined}
           />
-          {filters.year && filters.year > MAX_DATASET_YEAR && (
-            <span className={styles.yearWarning}>
-              Dataset only contains movies up to {MAX_DATASET_YEAR}
-            </span>
-          )}
         </div>
 
         <div className={styles.filterGroup}>
