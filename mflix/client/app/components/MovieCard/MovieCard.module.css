@@ -51,27 +51,6 @@
   background: var(--mongodb-mint);
 }
 
-.selectionCheckbox {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  /* Toned down styling - less prominent */
-  opacity: 0.7;
-  transition: opacity var(--transition-base);
-}
-
-.selectable:hover .selectionCheckbox {
-  opacity: 1;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--mongodb-forest);
-}
-
 .moviePoster {
   position: relative;
   width: 100%;

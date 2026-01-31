@@ -27,17 +27,11 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
     console.warn(`Failed to load poster for: ${movie.title}`);
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onSelectionChange) {
-      onSelectionChange(movie._id, e.target.checked);
-    }
-  };
-
   // Handle card click for selection (when checkbox is shown)
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Don't toggle selection if clicking on the "Get Details" link or checkbox
+    // Don't toggle selection if clicking on the "Get Details" link
     const target = e.target as HTMLElement;
-    if (target.closest('a') || target.closest('input[type="checkbox"]')) {
+    if (target.closest('a')) {
       return;
     }
 
@@ -51,19 +45,6 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
       className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''} ${showCheckbox ? movieStyles.selectable : ''}`}
       onClick={handleCardClick}
     >
-      {showCheckbox && (
-        <div className={movieStyles.selectionCheckbox}>
-          <input
-            type="checkbox"
-            id={`select-${movie._id}`}
-            checked={isSelected}
-            onChange={handleCheckboxChange}
-            className={movieStyles.checkbox}
-            aria-label={`Select ${movie.title}`}
-          />
-        </div>
-      )}
-      
       <div className={movieStyles.moviePoster}>
         {movie.poster ? (
           <Image
