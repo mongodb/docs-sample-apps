@@ -1,0 +1,110 @@
+﻿2026-01-30T15:28:20.4518835Z ##[group]Run mongorestore --archive=sampledata.archive --port=27017
+2026-01-30T15:28:20.4519356Z [36;1mmongorestore --archive=sampledata.archive --port=27017[0m
+2026-01-30T15:28:20.4550546Z shell: /usr/bin/bash -e {0}
+2026-01-30T15:28:20.4550789Z ##[endgroup]
+2026-01-30T15:28:20.4745790Z 2026-01-30T15:28:20.474+0000	preparing collections to restore from
+2026-01-30T15:28:20.4771957Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.companies from archive 'sampledata.archive'
+2026-01-30T15:28:20.4773514Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.embedded_movies from archive 'sampledata.archive'
+2026-01-30T15:28:20.4774809Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_weatherdata.data from archive 'sampledata.archive'
+2026-01-30T15:28:20.4776075Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.inspections from archive 'sampledata.archive'
+2026-01-30T15:28:20.4777356Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.grades from archive 'sampledata.archive'
+2026-01-30T15:28:20.4778663Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.routes from archive 'sampledata.archive'
+2026-01-30T15:28:20.4779955Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_airbnb.listingsAndReviews from archive 'sampledata.archive'
+2026-01-30T15:28:20.4781193Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.theaters from archive 'sampledata.archive'
+2026-01-30T15:28:20.4782433Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_guides.planets from archive 'sampledata.archive'
+2026-01-30T15:28:20.4783531Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_supplies.sales from archive 'sampledata.archive'
+2026-01-30T15:28:20.4784521Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.zips from archive 'sampledata.archive'
+2026-01-30T15:28:20.4785550Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.movies from archive 'sampledata.archive'
+2026-01-30T15:28:20.4786626Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.users from archive 'sampledata.archive'
+2026-01-30T15:28:20.4787845Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_restaurants.neighborhoods from archive 'sampledata.archive'
+2026-01-30T15:28:20.4789020Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_analytics.transactions from archive 'sampledata.archive'
+2026-01-30T15:28:20.4790127Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_analytics.accounts from archive 'sampledata.archive'
+2026-01-30T15:28:20.4791262Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_analytics.customers from archive 'sampledata.archive'
+2026-01-30T15:28:20.4792535Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.trips from archive 'sampledata.archive'
+2026-01-30T15:28:20.4793428Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_training.posts from archive 'sampledata.archive'
+2026-01-30T15:28:20.4794130Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_geospatial.shipwrecks from archive 'sampledata.archive'
+2026-01-30T15:28:20.4794815Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.comments from archive 'sampledata.archive'
+2026-01-30T15:28:20.4795475Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_mflix.sessions from archive 'sampledata.archive'
+2026-01-30T15:28:20.4796147Z 2026-01-30T15:28:20.477+0000	reading metadata for sample_restaurants.restaurants from archive 'sampledata.archive'
+2026-01-30T15:28:20.4856517Z 2026-01-30T15:28:20.485+0000	restoring sample_airbnb.listingsAndReviews from archive 'sampledata.archive'
+2026-01-30T15:28:21.1878912Z 2026-01-30T15:28:21.187+0000	finished restoring sample_airbnb.listingsAndReviews (5555 documents, 0 failures)
+2026-01-30T15:28:21.1956572Z 2026-01-30T15:28:21.195+0000	restoring sample_analytics.transactions from archive 'sampledata.archive'
+2026-01-30T15:28:21.3165927Z 2026-01-30T15:28:21.316+0000	finished restoring sample_analytics.transactions (1746 documents, 0 failures)
+2026-01-30T15:28:21.3270057Z 2026-01-30T15:28:21.326+0000	restoring sample_analytics.customers from archive 'sampledata.archive'
+2026-01-30T15:28:21.3397670Z 2026-01-30T15:28:21.339+0000	finished restoring sample_analytics.customers (500 documents, 0 failures)
+2026-01-30T15:28:21.3477446Z 2026-01-30T15:28:21.347+0000	restoring sample_analytics.accounts from archive 'sampledata.archive'
+2026-01-30T15:28:21.3672032Z 2026-01-30T15:28:21.367+0000	finished restoring sample_analytics.accounts (1746 documents, 0 failures)
+2026-01-30T15:28:21.3756564Z 2026-01-30T15:28:21.375+0000	restoring sample_geospatial.shipwrecks from archive 'sampledata.archive'
+2026-01-30T15:28:21.5239733Z 2026-01-30T15:28:21.523+0000	finished restoring sample_geospatial.shipwrecks (11095 documents, 0 failures)
+2026-01-30T15:28:21.5316509Z 2026-01-30T15:28:21.531+0000	restoring sample_guides.planets from archive 'sampledata.archive'
+2026-01-30T15:28:21.5437881Z 2026-01-30T15:28:21.543+0000	finished restoring sample_guides.planets (8 documents, 0 failures)
+2026-01-30T15:28:21.5528546Z 2026-01-30T15:28:21.552+0000	restoring sample_mflix.theaters from archive 'sampledata.archive'
+2026-01-30T15:28:21.5771181Z 2026-01-30T15:28:21.576+0000	finished restoring sample_mflix.theaters (1564 documents, 0 failures)
+2026-01-30T15:28:21.5856950Z 2026-01-30T15:28:21.585+0000	restoring sample_mflix.comments from archive 'sampledata.archive'
+2026-01-30T15:28:22.1558531Z 2026-01-30T15:28:22.155+0000	finished restoring sample_mflix.comments (41079 documents, 0 failures)
+2026-01-30T15:28:22.1615846Z 2026-01-30T15:28:22.161+0000	restoring sample_mflix.embedded_movies from archive 'sampledata.archive'
+2026-01-30T15:28:22.4586053Z 2026-01-30T15:28:22.458+0000	finished restoring sample_mflix.embedded_movies (3483 documents, 0 failures)
+2026-01-30T15:28:22.4647447Z 2026-01-30T15:28:22.464+0000	restoring sample_mflix.movies from archive 'sampledata.archive'
+2026-01-30T15:28:23.0024199Z 2026-01-30T15:28:23.002+0000	finished restoring sample_mflix.movies (21349 documents, 0 failures)
+2026-01-30T15:28:23.0092346Z 2026-01-30T15:28:23.009+0000	restoring sample_mflix.sessions from archive 'sampledata.archive'
+2026-01-30T15:28:23.0211928Z 2026-01-30T15:28:23.020+0000	finished restoring sample_mflix.sessions (1 document, 0 failures)
+2026-01-30T15:28:23.0297503Z 2026-01-30T15:28:23.029+0000	restoring sample_mflix.users from archive 'sampledata.archive'
+2026-01-30T15:28:23.0402519Z 2026-01-30T15:28:23.039+0000	finished restoring sample_mflix.users (185 documents, 0 failures)
+2026-01-30T15:28:23.0488159Z 2026-01-30T15:28:23.048+0000	restoring sample_restaurants.neighborhoods from archive 'sampledata.archive'
+2026-01-30T15:28:23.0782534Z 2026-01-30T15:28:23.078+0000	finished restoring sample_restaurants.neighborhoods (195 documents, 0 failures)
+2026-01-30T15:28:23.0867488Z 2026-01-30T15:28:23.086+0000	restoring sample_restaurants.restaurants from archive 'sampledata.archive'
+2026-01-30T15:28:23.4686968Z 2026-01-30T15:28:23.468+0000	sample_restaurants.restaurants  10.1MB
+2026-01-30T15:28:23.4720236Z 2026-01-30T15:28:23.471+0000	sample_restaurants.restaurants  10.1MB
+2026-01-30T15:28:23.4721345Z 2026-01-30T15:28:23.471+0000	finished restoring sample_restaurants.restaurants (25359 documents, 0 failures)
+2026-01-30T15:28:23.4786213Z 2026-01-30T15:28:23.478+0000	restoring sample_supplies.sales from archive 'sampledata.archive'
+2026-01-30T15:28:23.5635407Z 2026-01-30T15:28:23.563+0000	finished restoring sample_supplies.sales (5000 documents, 0 failures)
+2026-01-30T15:28:23.5706540Z 2026-01-30T15:28:23.570+0000	restoring sample_training.routes from archive 'sampledata.archive'
+2026-01-30T15:28:24.3381933Z 2026-01-30T15:28:24.337+0000	finished restoring sample_training.routes (66985 documents, 0 failures)
+2026-01-30T15:28:24.3437307Z 2026-01-30T15:28:24.343+0000	restoring sample_training.trips from archive 'sampledata.archive'
+2026-01-30T15:28:24.4834197Z 2026-01-30T15:28:24.483+0000	finished restoring sample_training.trips (10000 documents, 0 failures)
+2026-01-30T15:28:24.4895669Z 2026-01-30T15:28:24.489+0000	restoring sample_training.posts from archive 'sampledata.archive'
+2026-01-30T15:28:24.5911592Z 2026-01-30T15:28:24.590+0000	finished restoring sample_training.posts (500 documents, 0 failures)
+2026-01-30T15:28:24.5966032Z 2026-01-30T15:28:24.596+0000	restoring sample_training.companies from archive 'sampledata.archive'
+2026-01-30T15:28:24.9876956Z 2026-01-30T15:28:24.987+0000	finished restoring sample_training.companies (9500 documents, 0 failures)
+2026-01-30T15:28:24.9936872Z 2026-01-30T15:28:24.993+0000	restoring sample_training.inspections from archive 'sampledata.archive'
+2026-01-30T15:28:26.0450175Z 2026-01-30T15:28:26.044+0000	finished restoring sample_training.inspections (80047 documents, 0 failures)
+2026-01-30T15:28:26.0508930Z 2026-01-30T15:28:26.050+0000	restoring sample_training.zips from archive 'sampledata.archive'
+2026-01-30T15:28:26.3560787Z 2026-01-30T15:28:26.355+0000	finished restoring sample_training.zips (29470 documents, 0 failures)
+2026-01-30T15:28:26.3697611Z 2026-01-30T15:28:26.369+0000	restoring sample_training.grades from archive 'sampledata.archive'
+2026-01-30T15:28:26.4682847Z 2026-01-30T15:28:26.468+0000	sample_training.grades  1.96MB
+2026-01-30T15:28:27.5184507Z 2026-01-30T15:28:27.518+0000	sample_training.grades  22.2MB
+2026-01-30T15:28:27.5185494Z 2026-01-30T15:28:27.518+0000	finished restoring sample_training.grades (100000 documents, 0 failures)
+2026-01-30T15:28:27.5264673Z 2026-01-30T15:28:27.526+0000	restoring sample_weatherdata.data from archive 'sampledata.archive'
+2026-01-30T15:28:27.7636485Z 2026-01-30T15:28:27.763+0000	finished restoring sample_weatherdata.data (10000 documents, 0 failures)
+2026-01-30T15:28:27.7637625Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_guides.planets
+2026-01-30T15:28:27.7643157Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_analytics.transactions
+2026-01-30T15:28:27.7644114Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_analytics.accounts
+2026-01-30T15:28:27.7645087Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_analytics.customers
+2026-01-30T15:28:27.7646165Z 2026-01-30T15:28:27.763+0000	restoring indexes for collection sample_geospatial.shipwrecks from metadata
+2026-01-30T15:28:27.7648366Z 2026-01-30T15:28:27.763+0000	index: &idx.IndexDocument{Options:primitive.M{"2dsphereIndexVersion":3, "background":true, "name":"coordinates_2dsphere", "v":2}, Key:primitive.D{primitive.E{Key:"coordinates", Value:"2dsphere"}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.7650427Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_supplies.sales
+2026-01-30T15:28:27.7651347Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.trips
+2026-01-30T15:28:27.7652422Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.posts
+2026-01-30T15:28:27.7653538Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.companies
+2026-01-30T15:28:27.7654510Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.inspections
+2026-01-30T15:28:27.7655462Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.grades
+2026-01-30T15:28:27.7656377Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.routes
+2026-01-30T15:28:27.7657256Z 2026-01-30T15:28:27.763+0000	no indexes to restore for collection sample_training.zips
+2026-01-30T15:28:27.7658215Z 2026-01-30T15:28:27.763+0000	restoring indexes for collection sample_mflix.theaters from metadata
+2026-01-30T15:28:27.7660069Z 2026-01-30T15:28:27.763+0000	index: &idx.IndexDocument{Options:primitive.M{"2dsphereIndexVersion":3, "name":"geo index", "v":2}, Key:primitive.D{primitive.E{Key:"location.geo", Value:"2dsphere"}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.7661999Z 2026-01-30T15:28:27.763+0000	restoring indexes for collection sample_mflix.movies from metadata
+2026-01-30T15:28:27.7665412Z 2026-01-30T15:28:27.763+0000	index: &idx.IndexDocument{Options:primitive.M{"default_language":"english", "language_override":"language", "name":"cast_text_fullplot_text_genres_text_title_text", "textIndexVersion":3, "v":2, "weights":primitive.M{"cast":1, "fullplot":1, "genres":1, "title":1}}, Key:primitive.D{primitive.E{Key:"_fts", Value:"text"}, primitive.E{Key:"_ftsx", Value:1}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.7675527Z 2026-01-30T15:28:27.764+0000	restoring indexes for collection sample_mflix.users from metadata
+2026-01-30T15:28:27.7677444Z 2026-01-30T15:28:27.764+0000	index: &idx.IndexDocument{Options:primitive.M{"name":"email_1", "unique":true, "v":2}, Key:primitive.D{primitive.E{Key:"email", Value:1}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.8810257Z 2026-01-30T15:28:27.880+0000	no indexes to restore for collection sample_mflix.comments
+2026-01-30T15:28:27.8812578Z 2026-01-30T15:28:27.880+0000	restoring indexes for collection sample_mflix.sessions from metadata
+2026-01-30T15:28:27.8814433Z 2026-01-30T15:28:27.880+0000	index: &idx.IndexDocument{Options:primitive.M{"name":"user_id_1", "unique":true, "v":2}, Key:primitive.D{primitive.E{Key:"user_id", Value:1}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.9074638Z 2026-01-30T15:28:27.907+0000	no indexes to restore for collection sample_mflix.embedded_movies
+2026-01-30T15:28:27.9075924Z 2026-01-30T15:28:27.907+0000	no indexes to restore for collection sample_weatherdata.data
+2026-01-30T15:28:27.9077173Z 2026-01-30T15:28:27.907+0000	restoring indexes for collection sample_airbnb.listingsAndReviews from metadata
+2026-01-30T15:28:27.9079465Z 2026-01-30T15:28:27.907+0000	index: &idx.IndexDocument{Options:primitive.M{"2dsphereIndexVersion":3, "background":true, "name":"address.location_2dsphere", "v":2}, Key:primitive.D{primitive.E{Key:"address.location", Value:"2dsphere"}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.9083222Z 2026-01-30T15:28:27.907+0000	index: &idx.IndexDocument{Options:primitive.M{"background":true, "name":"property_type_1_room_type_1_beds_1", "v":2}, Key:primitive.D{primitive.E{Key:"property_type", Value:1}, primitive.E{Key:"room_type", Value:1}, primitive.E{Key:"beds", Value:1}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.9086303Z 2026-01-30T15:28:27.907+0000	index: &idx.IndexDocument{Options:primitive.M{"background":true, "name":"name_1", "v":2}, Key:primitive.D{primitive.E{Key:"name", Value:1}}, PartialFilterExpression:primitive.D(nil)}
+2026-01-30T15:28:27.9162068Z 2026-01-30T15:28:27.915+0000	no indexes to restore for collection sample_restaurants.neighborhoods
+2026-01-30T15:28:27.9163253Z 2026-01-30T15:28:27.916+0000	no indexes to restore for collection sample_restaurants.restaurants
+2026-01-30T15:28:30.0014322Z 2026-01-30T15:28:30.001+0000	425367 document(s) restored successfully. 0 document(s) failed to restore.

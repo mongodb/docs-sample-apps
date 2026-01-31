@@ -48,7 +48,6 @@
   margin: 0;
   padding: 1.5rem 2rem;
   background: var(--mongodb-forest);
-  border-bottom: 3px solid var(--mongodb-spring);
 }
 
 .tableContainer {
@@ -81,7 +80,7 @@
 }
 
 .table tr:hover {
-  background: var(--mongodb-mint);
+  background: #F7FAFC;
 }
 
 .movieTitle {
@@ -111,9 +110,9 @@
 .comment {
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  background: var(--mongodb-mint);
+  background: #F7FAFC;
   border-radius: var(--radius-md);
-  border-left: 3px solid var(--mongodb-forest);
+  border-left: 2px solid var(--color-border);
 }
 
 .comment:last-child {

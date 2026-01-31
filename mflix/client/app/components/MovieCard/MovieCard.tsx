@@ -33,8 +33,24 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
     }
   };
 
+  // Handle card click for selection (when checkbox is shown)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't toggle selection if clicking on the "Get Details" link or checkbox
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('input[type="checkbox"]')) {
+      return;
+    }
+
+    if (showCheckbox && onSelectionChange) {
+      onSelectionChange(movie._id, !isSelected);
+    }
+  };
+
   return (
-    <div className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''}`}>
+    <div
+      className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''} ${showCheckbox ? movieStyles.selectable : ''}`}
+      onClick={handleCardClick}
+    >
       {showCheckbox && (
         <div className={movieStyles.selectionCheckbox}>
           <input
@@ -43,6 +59,7 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
             checked={isSelected}
             onChange={handleCheckboxChange}
             className={movieStyles.checkbox}
+            aria-label={`Select ${movie.title}`}
           />
         </div>
       )}

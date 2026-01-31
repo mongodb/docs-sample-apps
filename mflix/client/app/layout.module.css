@@ -4,7 +4,6 @@
 
 .navigation {
   background: var(--mongodb-slate);
-  border-bottom: 2px solid var(--mongodb-forest);
   padding: 1rem 2rem;
   position: sticky;
   top: 0;
@@ -66,22 +65,7 @@
   border-radius: var(--radius-sm);
 }
 
-/* Active link indicator */
-.navLink::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(0);
-  width: 80%;
-  height: 2px;
-  background: var(--mongodb-spring);
-  transition: transform var(--transition-base);
-}
 
-.navLink:hover::after {
-  transform: translateX(-50%) scaleX(1);
-}
 
 /* Responsive design */
 @media (max-width: 768px) {

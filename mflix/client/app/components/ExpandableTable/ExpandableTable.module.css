@@ -38,38 +38,22 @@
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.875rem 2rem;
+  padding: 0.625rem 1.25rem;
   background: transparent;
-  color: var(--mongodb-forest);
+  color: var(--color-text-secondary);
   border: none;
-  border-radius: 50px;
+  border-radius: 4px;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
-}
-
-.expandButton::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--mongodb-mint);
-  border-radius: 50px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: -1;
 }
 
 .expandButton:hover {
-  color: var(--mongodb-white);
-  transform: translateY(-1px);
-}
-
-.expandButton:hover::before {
-  background: var(--mongodb-forest);
-  box-shadow: 0 8px 16px rgba(0, 104, 74, 0.2);
+  color: var(--mongodb-forest);
+  background: #F7FAFC;
 }
 
 .expandButton:active {
