@@ -20,7 +20,7 @@
 
 .select {
   padding: 0.625rem 1rem;
-  border: 2px solid var(--mongodb-forest);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--mongodb-white);
   color: var(--mongodb-slate);
@@ -31,14 +31,13 @@
 }
 
 .select:hover {
-  border-color: var(--mongodb-evergreen);
-  background: var(--mongodb-mint);
+  border-color: var(--color-text-secondary);
 }
 
 .select:focus {
   outline: none;
-  border-color: var(--mongodb-forest);
-  box-shadow: 0 0 0 3px rgba(0, 104, 74, 0.1);
+  border-color: var(--color-text-secondary);
+  box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
 }
 
 /* Responsive Design */
