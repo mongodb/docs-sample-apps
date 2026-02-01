@@ -465,7 +465,8 @@
 }
 
 .editSelectedButton:hover:not(:disabled) {
-  background: var(--mongodb-mint);
+  background: var(--mongodb-forest);
+  color: var(--mongodb-white);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
