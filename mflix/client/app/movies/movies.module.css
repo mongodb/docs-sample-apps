@@ -37,9 +37,9 @@
 
 .searchButton {
   padding: 0.875rem 1.75rem;
-  background: var(--mongodb-forest);
-  color: var(--mongodb-white);
-  border: none;
+  background: var(--mongodb-white);
+  color: var(--mongodb-forest);
+  border: 2px solid var(--mongodb-forest);
   border-radius: var(--radius-lg);
   font-size: 1rem;
   font-weight: 600;
@@ -53,7 +53,8 @@
 }
 
 .searchButton:hover:not(:disabled) {
-  background: var(--mongodb-evergreen);
+  background: var(--mongodb-forest);
+  color: var(--mongodb-white);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 104, 74, 0.4);
 }
