@@ -28,6 +28,16 @@ The `sample_mflix` dataset contains movies released up to **2016**. Searching fo
 - **Voyage AI API key** (For MongoDB Vector Search)
   - [Get a Voyage AI API key](https://www.voyageai.com/)
 
+## Verify Requirements
+
+Before getting started, you can run the verification script to check if you have all the necessary requirements:
+
+```bash
+./check-requirements-java.sh
+```
+
+This script checks for required tools (Java, Maven, Node.js), validates your environment configuration, and verifies dependencies. Run with `--help` for more options.
+
 ## Getting Started
 
 ### 1. Configure the Backend
@@ -48,28 +58,19 @@ Edit the `.env` file and set your MongoDB connection string:
 
 ```env
 # MongoDB Connection
-# Replace with your MongoDB Atlas connection string or local MongoDB URI
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/sample_mflix?retryWrites=true&w=majority
 
-# Voyage AI Configuration
-# API key for Voyage AI embedding model (required for Vector Search)
+# Voyage AI Configuration (optional - required for Vector Search)
 VOYAGE_API_KEY=your_voyage_api_key
 
 # Server Configuration
-# Port on which the Spring Boot application will run
 PORT=3001
 
 # CORS Configuration
-# Allowed origin for cross-origin requests (frontend URL)
-# For multiple origins, separate with commas
-CORS_ORIGIN=http://localhost:3000
-
-# Optional: Enable MongoDB Search tests
-# Uncomment the following line to enable Search tests
-# ENABLE_SEARCH_TESTS=true
+CORS_ORIGINS=http://localhost:3000
 ```
 
-**Note:** Replace `username`, `password`, and `cluster` with your
+**Note:** Replace `<username>`, `<password>`, and `<cluster>` with your
 actual MongoDB Atlas credentials. Replace `your_voyage_api_key` with
 your key.
 
