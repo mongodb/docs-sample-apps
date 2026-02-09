@@ -36,26 +36,24 @@ export default function MovieCard({ movie, isSelected = false, onSelectionChange
     console.warn(`Failed to load poster for: ${movie.title}`);
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onSelectionChange) {
-      onSelectionChange(movie._id, e.target.checked);
+  // Handle card click for selection (when checkbox is shown)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't toggle selection if clicking on the "Get Details" link
+    const target = e.target as HTMLElement;
+    if (target.closest('a')) {
+      return;
+    }
+
+    if (showCheckbox && onSelectionChange) {
+      onSelectionChange(movie._id, !isSelected);
     }
   };
 
   return (
-    <div className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''}`}>
-      {showCheckbox && (
-        <div className={movieStyles.selectionCheckbox}>
-          <input
-            type="checkbox"
-            id={`select-${movie._id}`}
-            checked={isSelected}
-            onChange={handleCheckboxChange}
-            className={movieStyles.checkbox}
-          />
-        </div>
-      )}
-      
+    <div
+      className={`${movieStyles.movieCard} ${isSelected ? movieStyles.selected : ''} ${showCheckbox ? movieStyles.selectable : ''}`}
+      onClick={handleCardClick}
+    >
       <div className={movieStyles.moviePoster}>
         {isValidPosterUrl(movie.poster) ? (
           <Image

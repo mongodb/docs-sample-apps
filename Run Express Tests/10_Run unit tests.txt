@@ -1,0 +1,91 @@
+﻿2026-01-30T15:28:43.3388355Z ##[group]Run npm run test:unit -- --json --outputFile=test-results-unit.json || true
+2026-01-30T15:28:43.3388958Z [36;1mnpm run test:unit -- --json --outputFile=test-results-unit.json || true[0m
+2026-01-30T15:28:43.3421470Z shell: /usr/bin/bash -e {0}
+2026-01-30T15:28:43.3421709Z env:
+2026-01-30T15:28:43.3422023Z   MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
+2026-01-30T15:28:43.3422566Z ##[endgroup]
+2026-01-30T15:28:43.4503823Z 
+2026-01-30T15:28:43.4504518Z > sample-mflix-express-backend@1.0.0 test:unit
+2026-01-30T15:28:43.4505456Z > jest tests/controllers --json --outputFile=test-results-unit.json
+2026-01-30T15:28:43.4506000Z 
+2026-01-30T15:28:46.3899393Z PASS tests/controllers/movieController.test.ts
+2026-01-30T15:28:46.3904375Z   Movie Controller Tests
+2026-01-30T15:28:46.3904778Z     getAllMovies
+2026-01-30T15:28:46.3907666Z       ✓ should successfully retrieve movies (3 ms)
+2026-01-30T15:28:46.3908387Z       ✓ should handle empty results (1 ms)
+2026-01-30T15:28:46.3909090Z       ✓ should handle database errors (20 ms)
+2026-01-30T15:28:46.3909795Z       ✓ should handle query parameters for filtering (1 ms)
+2026-01-30T15:28:46.3910313Z     getMovieById
+2026-01-30T15:28:46.3910949Z       ✓ should successfully retrieve a movie by valid ID (1 ms)
+2026-01-30T15:28:46.3911762Z       ✓ should return 400 for invalid ObjectId format (1 ms)
+2026-01-30T15:28:46.3912668Z       ✓ should return 404 when movie not found (1 ms)
+2026-01-30T15:28:46.3913371Z       ✓ should handle database errors (1 ms)
+2026-01-30T15:28:46.3913838Z     createMovie
+2026-01-30T15:28:46.3914344Z       ✓ should successfully create a movie (1 ms)
+2026-01-30T15:28:46.3914969Z       ✓ should handle validation errors
+2026-01-30T15:28:46.3915684Z       ✓ should handle insert acknowledgment failure (14 ms)
+2026-01-30T15:28:46.3916207Z     createMoviesBatch
+2026-01-30T15:28:46.3916796Z       ✓ should successfully create multiple movies (1 ms)
+2026-01-30T15:28:46.3917585Z       ✓ should return 400 for invalid input (not an array) (1 ms)
+2026-01-30T15:28:46.3918281Z       ✓ should return 400 for empty array
+2026-01-30T15:28:46.3918766Z     updateMovie
+2026-01-30T15:28:46.3919271Z       ✓ should successfully update a movie (2 ms)
+2026-01-30T15:28:46.3919954Z       ✓ should return 400 for invalid ObjectId (1 ms)
+2026-01-30T15:28:46.3920598Z       ✓ should return 400 for empty update data
+2026-01-30T15:28:46.3921208Z       ✓ should return 404 when movie not found
+2026-01-30T15:28:46.3921660Z     deleteMovie
+2026-01-30T15:28:46.3922148Z       ✓ should successfully delete a movie (1 ms)
+2026-01-30T15:28:46.3922938Z       ✓ should return 400 for invalid ObjectId
+2026-01-30T15:28:46.3923542Z       ✓ should return 404 when movie not found
+2026-01-30T15:28:46.3924137Z       ✓ should handle database errors (1 ms)
+2026-01-30T15:28:46.3924585Z     updateMoviesBatch
+2026-01-30T15:28:46.3925121Z       ✓ should successfully update multiple movies
+2026-01-30T15:28:46.3925810Z       ✓ should return 400 when filter is missing (1 ms)
+2026-01-30T15:28:46.3926460Z       ✓ should return 400 when update is empty
+2026-01-30T15:28:46.3926914Z     deleteMoviesBatch
+2026-01-30T15:28:46.3927472Z       ✓ should successfully delete multiple movies (1 ms)
+2026-01-30T15:28:46.3928576Z       ✓ should return 400 when filter is missing
+2026-01-30T15:28:46.3929238Z       ✓ should return 400 when filter is empty (1 ms)
+2026-01-30T15:28:46.3929736Z     findAndDeleteMovie
+2026-01-30T15:28:46.3930314Z       ✓ should successfully find and delete a movie
+2026-01-30T15:28:46.3931004Z       ✓ should return 400 for invalid ObjectId (1 ms)
+2026-01-30T15:28:46.3931673Z       ✓ should return 404 when movie not found
+2026-01-30T15:28:46.3932442Z       ✓ should handle database errors (1 ms)
+2026-01-30T15:28:46.3932913Z     searchMovies
+2026-01-30T15:28:46.3933294Z       ✓ should successfully search movies by plot (1 ms)
+2026-01-30T15:28:46.3933721Z       ✓ should handle search with multiple fields
+2026-01-30T15:28:46.3934165Z       ✓ should return 400 when no search parameters provided
+2026-01-30T15:28:46.3934899Z       ✓ should return 400 for invalid search operator
+2026-01-30T15:28:46.3935287Z       ✓ should handle pagination parameters
+2026-01-30T15:28:46.3935694Z       ✓ should return empty results when no matches found
+2026-01-30T15:28:46.3936000Z     vectorSearchMovies
+2026-01-30T15:28:46.3936340Z       ✓ should successfully perform vector search (2 ms)
+2026-01-30T15:28:46.3936739Z       ✓ should return 400 when query is missing (1 ms)
+2026-01-30T15:28:46.3937137Z       ✓ should return 400 when query is empty
+2026-01-30T15:28:46.3937571Z       ✓ should return 400 when VOYAGE_API_KEY is not configured (1 ms)
+2026-01-30T15:28:46.3938111Z       ✓ should handle Voyage AI authentication errors with 401 status (1 ms)
+2026-01-30T15:28:46.3938628Z       ✓ should handle other Voyage AI API errors with 503 status
+2026-01-30T15:28:46.3939065Z       ✓ should use default limit when not provided (1 ms)
+2026-01-30T15:28:46.3939420Z     getMoviesWithMostRecentComments
+2026-01-30T15:28:46.3939829Z       ✓ should successfully get movies with comments (1 ms)
+2026-01-30T15:28:46.3940257Z       ✓ should filter by specific movieId when provided
+2026-01-30T15:28:46.3940665Z       ✓ should return 400 for invalid movieId format
+2026-01-30T15:28:46.3941013Z       ✓ should handle empty results
+2026-01-30T15:28:46.3941377Z       ✓ should use default limit when not provided (1 ms)
+2026-01-30T15:28:46.3941687Z     getMoviesByYearWithStats
+2026-01-30T15:28:46.3942419Z       ✓ should successfully get movies statistics by year
+2026-01-30T15:28:46.3942957Z       ✓ should handle empty results (1 ms)
+2026-01-30T15:28:46.3943311Z       ✓ should handle database errors (1 ms)
+2026-01-30T15:28:46.3943608Z     getDirectorsWithMostMovies
+2026-01-30T15:28:46.3943949Z       ✓ should successfully get directors statistics
+2026-01-30T15:28:46.3944314Z       ✓ should handle custom limit parameter
+2026-01-30T15:28:46.3944674Z       ✓ should use default limit when not provided
+2026-01-30T15:28:46.3945011Z       ✓ should handle empty results
+2026-01-30T15:28:46.3945345Z       ✓ should handle database errors (4 ms)
+2026-01-30T15:28:46.3945521Z 
+2026-01-30T15:28:46.3953954Z Test Suites: 1 passed, 1 total
+2026-01-30T15:28:46.3954983Z Tests:       58 passed, 58 total
+2026-01-30T15:28:46.3955468Z Snapshots:   0 total
+2026-01-30T15:28:46.3955828Z Time:        2.529 s
+2026-01-30T15:28:46.3956324Z Ran all test suites matching /tests\/controllers/i.
+2026-01-30T15:28:46.3972456Z Test results written to: test-results-unit.json
