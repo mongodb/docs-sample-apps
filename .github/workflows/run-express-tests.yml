@@ -62,13 +62,14 @@ jobs:
 
       - name: Run unit tests
         working-directory: mflix/server/js-express
-        run: npm run test:unit -- --json --outputFile=test-results-unit.json || true
+        run: npm run test:unit -- --json --outputFile=test-results-unit.json
         env:
           MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
 
       - name: Run integration tests
         working-directory: mflix/server/js-express
-        run: npm run test:integration -- --json --outputFile=test-results-integration.json || true
+        continue-on-error: true
+        run: npm run test:integration -- --json --outputFile=test-results-integration.json
         env:
           MONGODB_URI: mongodb://localhost:27017/sample_mflix?directConnection=true
           ENABLE_SEARCH_TESTS: true
