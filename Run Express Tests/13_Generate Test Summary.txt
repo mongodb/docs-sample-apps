@@ -1,8 +1,0 @@
-﻿2026-01-30T15:34:59.7626378Z ##[group]Run chmod +x .github/scripts/generate-test-summary-jest.sh
-2026-01-30T15:34:59.7627089Z [36;1mchmod +x .github/scripts/generate-test-summary-jest.sh[0m
-2026-01-30T15:34:59.7627588Z [36;1m.github/scripts/generate-test-summary-jest.sh \[0m
-2026-01-30T15:34:59.7628125Z [36;1m  mflix/server/js-express/test-results-unit.json \[0m
-2026-01-30T15:34:59.7628594Z [36;1m  mflix/server/js-express/test-results-integration.json[0m
-2026-01-30T15:34:59.7661898Z shell: /usr/bin/bash -e {0}
-2026-01-30T15:34:59.7662460Z ##[endgroup]
-2026-01-30T15:34:59.8107658Z ##[error]Process completed with exit code 1.
