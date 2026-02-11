@@ -33,7 +33,7 @@ The `sample_mflix` dataset contains movies released up to **2016**. Searching fo
 Before getting started, you can run the verification script to check if you have all the necessary requirements:
 
 ```bash
-./check-requirements-java.sh
+./check-requirements.sh
 ```
 
 This script checks for required tools (Java, Maven, Node.js), validates your environment configuration, and verifies dependencies. Run with `--help` for more options.
