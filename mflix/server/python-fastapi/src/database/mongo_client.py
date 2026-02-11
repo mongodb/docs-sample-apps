@@ -5,7 +5,6 @@ import voyageai
 
 load_dotenv()
 
-# Database name is hardcoded to sample_mflix for consistency across all backends
 DATABASE_NAME = "sample_mflix"
 
 client = AsyncMongoClient(os.getenv("MONGODB_URI"),
