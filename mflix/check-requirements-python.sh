@@ -7,7 +7,7 @@
 # This script checks that all necessary requirements are installed to run
 # the mflix sample application with the Python/FastAPI backend.
 #
-# Usage: ./check-requirements-python.sh [options]
+# Usage: ./check-requirements.sh [options]
 #   --setup    Attempt to set up missing requirements
 #   --help     Show this help message
 # =============================================================================
@@ -80,15 +80,15 @@ command_exists() {
 # =============================================================================
 
 show_help() {
-    echo "Usage: ./check-requirements-python.sh [options]"
+    echo "Usage: ./check-requirements.sh [options]"
     echo ""
     echo "Options:"
     echo "  --setup    Attempt to set up missing requirements"
     echo "  --help     Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./check-requirements-python.sh           # Check all requirements"
-    echo "  ./check-requirements-python.sh --setup   # Check and set up missing items"
+    echo "  ./check-requirements.sh           # Check all requirements"
+    echo "  ./check-requirements.sh --setup   # Check and set up missing items"
 }
 
 while [[ $# -gt 0 ]]; do

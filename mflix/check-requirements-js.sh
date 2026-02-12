@@ -7,9 +7,9 @@
 # mflix sample application with the JavaScript/Express backend.
 #
 # Usage:
-#   ./check-requirements-js.sh           # Check all requirements
-#   ./check-requirements-js.sh --setup   # Check and auto-setup missing items
-#   ./check-requirements-js.sh --help    # Show help message
+#   ./check-requirements.sh           # Check all requirements
+#   ./check-requirements.sh --setup   # Check and auto-setup missing items
+#   ./check-requirements.sh --help    # Show help message
 #
 
 set -e

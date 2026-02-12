@@ -8,8 +8,8 @@
 # environment configuration.
 #
 # Usage:
-#   ./check-requirements-java.sh           # Check all requirements
-#   ./check-requirements-java.sh --setup   # Check and auto-setup missing items
+#   ./check-requirements.sh           # Check all requirements
+#   ./check-requirements.sh --setup   # Check and auto-setup missing items
 # =============================================================================
 
 set -e
@@ -384,7 +384,7 @@ print_summary() {
 
     if [ "$CHECKS_FAILED" -gt 0 ]; then
         echo "Review the failed checks above and follow the instructions to resolve them."
-        echo "Run with --setup flag to automatically fix some issues: ./check-requirements-java.sh --setup"
+        echo "Run with --setup flag to automatically fix some issues: ./check-requirements.sh --setup"
         echo ""
     fi
 }
@@ -419,7 +419,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help|-h)
-            echo "Usage: ./check-requirements-java.sh [OPTIONS]"
+            echo "Usage: ./check-requirements.sh [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --setup    Automatically set up missing requirements where possible"
