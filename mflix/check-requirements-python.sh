@@ -1,36 +1,48 @@
 #!/bin/bash
-
 # =============================================================================
 # Requirements Verification Script for mflix Sample Application
 # Python/FastAPI Backend
 # =============================================================================
+#
 # This script checks that all necessary requirements are installed to run
 # the mflix sample application with the Python/FastAPI backend.
 #
-# Usage: ./check-requirements.sh [options]
-#   --setup    Attempt to set up missing requirements
-#   --help     Show this help message
+# Usage:
+#   ./check-requirements-python.sh           # Check all requirements
+#   ./check-requirements-python.sh --setup   # Check and auto-setup missing items
+#   ./check-requirements-python.sh --help    # Show help message
+#
 # =============================================================================
 
-# Colors for output
+# Exit on error (but handle arithmetic expressions carefully)
+set -e
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+SERVER_DIR="server"
+CLIENT_DIR="client"
+PYTHON_MIN_VERSION="3.11"
+NODE_MIN_VERSION="18"
+
+# =============================================================================
+# Colors
+# =============================================================================
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# =============================================================================
 # Counters
+# =============================================================================
+
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 CHECKS_WARNED=0
-
-# Options
-SETUP_MODE=false
-
-# Configuration
-PYTHON_MIN_VERSION="3.11"
-SERVER_DIR="server"
-CLIENT_DIR="client"
 
 # =============================================================================
 # Helper Functions
@@ -38,12 +50,12 @@ CLIENT_DIR="client"
 
 print_header() {
     echo ""
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BLUE}  $1${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-print_subheader() {
+print_section() {
     echo ""
     echo -e "${YELLOW}▸ $1${NC}"
 }
@@ -64,108 +76,55 @@ check_warn() {
 }
 
 check_info() {
-    echo -e "  ${BLUE}ℹ${NC} $1"
-}
-
-version_gte() {
-    [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
+    echo -e "    ${BLUE}→${NC} $1"
 }
 
 command_exists() {
-    command -v "$1" >/dev/null 2>&1
+    command -v "$1" &>/dev/null
 }
 
-# =============================================================================
-# Parse Arguments
-# =============================================================================
+version_gte() {
+    # Returns 0 (true) if $1 >= $2 using version sorting
+    [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
+}
 
 show_help() {
-    echo "Usage: ./check-requirements.sh [options]"
+    echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --setup    Attempt to set up missing requirements"
+    echo "  --setup    Attempt to automatically set up missing requirements"
     echo "  --help     Show this help message"
     echo ""
-    echo "Examples:"
-    echo "  ./check-requirements.sh           # Check all requirements"
-    echo "  ./check-requirements.sh --setup   # Check and set up missing items"
+    echo "This script checks that all necessary requirements are installed"
+    echo "to run the mflix sample application with the Python/FastAPI backend."
+    exit 0
 }
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --setup)
-            SETUP_MODE=true
-            shift
-            ;;
-        --help)
-            show_help
-            exit 0
-            ;;
-        *)
-            echo "Unknown option: $1"
-            show_help
-            exit 1
-            ;;
-    esac
-done
+
 
 # =============================================================================
-# Get Script Directory
+# Check Python/FastAPI Backend Requirements
 # =============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+check_backend_requirements() {
+    print_section "Python/FastAPI Backend Requirements"
 
-print_header "mflix Sample Application - Python/FastAPI Requirements Check"
-echo ""
-echo "Setup mode: $SETUP_MODE"
-echo "Working directory: $SCRIPT_DIR"
-
-# =============================================================================
-# Common Requirements
-# =============================================================================
-
-check_common_requirements() {
-    print_subheader "Common Requirements"
-
-    # Check Git
-    if command_exists git; then
-        local git_version
-        git_version=$(git --version | awk '{print $3}')
-        check_pass "Git installed (version $git_version)"
-    else
-        check_fail "Git not installed"
-        check_info "Install Git: https://git-scm.com/downloads"
-    fi
-
-    # Check curl
-    if command_exists curl; then
-        check_pass "curl installed"
-    else
-        check_fail "curl not installed"
-        check_info "Install curl using your package manager"
-    fi
-}
-
-# =============================================================================
-# Python Backend Requirements
-# =============================================================================
-
-check_python_requirements() {
-    print_subheader "Python/FastAPI Backend Requirements"
+    local server_dir="$SCRIPT_DIR/$SERVER_DIR"
 
     # Check Python version
     if command_exists python3; then
-        PYTHON_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-        if version_gte "$PYTHON_VERSION" "$PYTHON_MIN_VERSION"; then
-            check_pass "Python $PYTHON_VERSION installed (>= $PYTHON_MIN_VERSION required)"
+        local python_version
+        python_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+        if version_gte "$python_version" "$PYTHON_MIN_VERSION"; then
+            check_pass "Python $python_version installed (>= $PYTHON_MIN_VERSION required)"
         else
-            check_fail "Python $PYTHON_VERSION installed but >= $PYTHON_MIN_VERSION required"
+            check_fail "Python $python_version installed but >= $PYTHON_MIN_VERSION required"
             check_info "Install Python $PYTHON_MIN_VERSION+ from https://www.python.org/downloads/"
         fi
     else
         check_fail "Python 3 not installed"
         check_info "Install Python $PYTHON_MIN_VERSION+ from https://www.python.org/downloads/"
+        return
     fi
 
     # Check pip
@@ -177,11 +136,11 @@ check_python_requirements() {
     fi
 
     # Check virtual environment
-    local venv_dir="$SCRIPT_DIR/$SERVER_DIR/.venv"
+    local venv_dir="$server_dir/.venv"
     if [[ -d "$venv_dir" ]]; then
         check_pass "Python virtual environment exists at $SERVER_DIR/.venv"
 
-        # Check if venv is activated or can be used
+        # Check if venv activation script exists
         if [[ -f "$venv_dir/bin/activate" ]]; then
             check_pass "Virtual environment activation script exists"
         else
@@ -202,7 +161,7 @@ check_python_requirements() {
     fi
 
     # Check Python dependencies
-    local requirements_file="$SCRIPT_DIR/$SERVER_DIR/requirements.txt"
+    local requirements_file="$server_dir/requirements.txt"
     if [[ -f "$requirements_file" ]]; then
         check_pass "requirements.txt found"
 
@@ -241,160 +200,234 @@ check_python_requirements() {
 }
 
 # =============================================================================
-# Environment Configuration
+# Check Environment Configuration
 # =============================================================================
 
 check_env_configuration() {
-    print_subheader "Environment Configuration"
+    print_section "Environment Configuration"
 
-    local env_file="$SCRIPT_DIR/$SERVER_DIR/.env"
-    local env_example="$SCRIPT_DIR/$SERVER_DIR/.env.example"
+    local server_dir="$SCRIPT_DIR/$SERVER_DIR"
+    local env_file="$server_dir/.env"
+    local env_example="$server_dir/.env.example"
 
-    # Check .env file exists
+    # Check .env file
     if [[ -f "$env_file" ]]; then
-        check_pass ".env file exists at $SERVER_DIR/.env"
-    else
-        check_warn ".env file not found at $SERVER_DIR/.env"
-        if [[ "$SETUP_MODE" == true ]] && [[ -f "$env_example" ]]; then
-            check_info "Copying .env.example to .env..."
-            if cp "$env_example" "$env_file"; then
-                check_pass ".env file created from .env.example"
-                check_info "Please update the values in $SERVER_DIR/.env"
+        check_pass ".env file exists"
+
+        # Check MONGODB_URI
+        if grep -q "^MONGODB_URI=" "$env_file" 2>/dev/null; then
+            local mongo_uri
+            mongo_uri=$(grep "^MONGODB_URI=" "$env_file" | cut -d'=' -f2-)
+            if [[ -n "$mongo_uri" ]] && [[ "$mongo_uri" != *"<"*">"* ]]; then
+                check_pass "MONGODB_URI is configured"
             else
-                check_fail "Failed to create .env file"
+                check_fail "MONGODB_URI is not configured (still has placeholder value)"
+                check_info "Update MONGODB_URI in $SERVER_DIR/.env with your MongoDB connection string"
             fi
         else
-            check_info "Copy the example: cp $SERVER_DIR/.env.example $SERVER_DIR/.env"
+            check_fail "MONGODB_URI not found in .env"
+            check_info "Add MONGODB_URI to $SERVER_DIR/.env"
         fi
-        return
-    fi
 
-    # Check required environment variables
-    if grep -q "^MONGODB_URI=" "$env_file" 2>/dev/null; then
-        local mongo_uri=$(grep "^MONGODB_URI=" "$env_file" | cut -d'=' -f2-)
-        if [[ -n "$mongo_uri" && "$mongo_uri" != "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/" ]]; then
-            check_pass "MONGODB_URI is configured"
+        # Check VOYAGE_API_KEY (optional)
+        if grep -q "^VOYAGE_API_KEY=" "$env_file" 2>/dev/null; then
+            local voyage_key
+            voyage_key=$(grep "^VOYAGE_API_KEY=" "$env_file" | cut -d'=' -f2-)
+            if [[ -n "$voyage_key" ]] && [[ "$voyage_key" != "your_voyage_api_key" ]]; then
+                check_pass "VOYAGE_API_KEY is configured"
+            else
+                check_info "VOYAGE_API_KEY not configured (optional - needed for vector search)"
+            fi
         else
-            check_fail "MONGODB_URI is not configured (still has placeholder value)"
-            check_info "Update MONGODB_URI in $SERVER_DIR/.env with your MongoDB connection string"
+            check_info "VOYAGE_API_KEY not set (optional - needed for vector search)"
         fi
-    else
-        check_fail "MONGODB_URI not found in .env"
-        check_info "Add MONGODB_URI to $SERVER_DIR/.env"
-    fi
 
-    # Check optional environment variables
-    if grep -q "^VOYAGE_API_KEY=" "$env_file" 2>/dev/null; then
-        local voyage_key=$(grep "^VOYAGE_API_KEY=" "$env_file" | cut -d'=' -f2-)
-        if [[ -n "$voyage_key" && "$voyage_key" != "<your-voyage-api-key>" ]]; then
-            check_pass "VOYAGE_API_KEY is configured"
+        # Check CORS_ORIGINS (optional)
+        if grep -q "^CORS_ORIGINS=" "$env_file" 2>/dev/null; then
+            check_pass "CORS_ORIGINS is configured"
         else
-            check_info "VOYAGE_API_KEY not configured (optional - needed for vector search)"
+            check_info "CORS_ORIGINS not set (will use default: http://localhost:3000)"
+        fi
+
+        # Check PORT (optional)
+        if grep -q "^PORT=" "$env_file" 2>/dev/null; then
+            check_pass "PORT is configured"
+        else
+            check_info "PORT not set (will use default: 3001)"
         fi
     else
-        check_info "VOYAGE_API_KEY not set (optional - needed for vector search)"
-    fi
-
-    if grep -q "^CORS_ORIGINS=" "$env_file" 2>/dev/null; then
-        check_pass "CORS_ORIGINS is configured"
-    else
-        check_info "CORS_ORIGINS not set (will use default: http://localhost:3000)"
-    fi
-
-    if grep -q "^PORT=" "$env_file" 2>/dev/null; then
-        check_pass "PORT is configured"
-    else
-        check_info "PORT not set (will use default: 8000)"
+        check_warn ".env file not found"
+        if [[ -f "$env_example" ]]; then
+            if [[ "$SETUP_MODE" == true ]]; then
+                check_info "Creating .env from .env.example..."
+                if cp "$env_example" "$env_file"; then
+                    check_pass ".env file created from .env.example"
+                    check_warn "Please update the placeholder values in $SERVER_DIR/.env"
+                else
+                    check_fail "Failed to create .env file"
+                fi
+            else
+                check_info "Copy .env.example to .env: cp $SERVER_DIR/.env.example $SERVER_DIR/.env"
+            fi
+        else
+            check_fail "No .env.example found to use as template"
+        fi
     fi
 }
 
-
-
 # =============================================================================
-# Frontend Requirements (Next.js)
+# Check Frontend Requirements
 # =============================================================================
 
 check_frontend_requirements() {
-    print_subheader "Frontend Requirements (Next.js)"
+    print_section "Frontend Requirements (Next.js)"
 
-    # Check Node.js version
+    local client_dir="$SCRIPT_DIR/$CLIENT_DIR"
+
+    # Check Node.js
     if command_exists node; then
-        NODE_VERSION=$(node --version 2>&1 | grep -oE '[0-9]+' | head -1)
-        if version_gte "$NODE_VERSION" "$NODE_MIN_VERSION"; then
-            check_pass "Node.js v$NODE_VERSION installed (>= v$NODE_MIN_VERSION required)"
+        local node_version
+        node_version=$(node --version | sed 's/v//')
+        local node_major
+        node_major=$(echo "$node_version" | cut -d. -f1)
+        if [[ "$node_major" -ge "$NODE_MIN_VERSION" ]]; then
+            check_pass "Node.js installed (version $node_version, >= $NODE_MIN_VERSION required)"
         else
-            check_fail "Node.js v$NODE_VERSION installed but >= v$NODE_MIN_VERSION required"
+            check_fail "Node.js version $node_version is below minimum required ($NODE_MIN_VERSION+)"
+            check_info "Install Node.js $NODE_MIN_VERSION+: https://nodejs.org/"
         fi
     else
         check_fail "Node.js not installed"
-        check_info "Install Node.js $NODE_MIN_VERSION+ from https://nodejs.org/"
+        check_info "Install Node.js $NODE_MIN_VERSION+: https://nodejs.org/"
+        return
     fi
 
     # Check npm
     if command_exists npm; then
-        check_pass "npm installed"
+        local npm_version
+        npm_version=$(npm --version)
+        check_pass "npm installed (version $npm_version)"
     else
         check_fail "npm not installed"
+        check_info "npm should come with Node.js installation"
+        return
+    fi
+
+    # Check client directory
+    if [[ ! -d "$client_dir" ]]; then
+        check_warn "Client directory not found: $CLIENT_DIR"
+        check_info "Frontend may be in a separate repository"
+        return
     fi
 
     # Check client dependencies
-    local client_dir="$SCRIPT_DIR/$CLIENT_DIR"
-    if [[ -d "$client_dir" ]]; then
-        if [[ -d "$client_dir/node_modules" ]]; then
-            check_pass "Client dependencies installed"
+    if [[ -d "$client_dir/node_modules" ]]; then
+        check_pass "Frontend dependencies installed"
+
+        # Check Next.js
+        if [[ -d "$client_dir/node_modules/next" ]]; then
+            check_pass "Next.js dependency installed"
         else
-            check_warn "Client dependencies not installed"
-            if [[ "$SETUP_MODE" == true ]]; then
-                check_info "Installing client dependencies..."
-                if (cd "$client_dir" && npm install &>/dev/null); then
-                    check_pass "Client dependencies installed"
-                else
-                    check_fail "Failed to install client dependencies"
-                fi
+            check_warn "Next.js not found in dependencies"
+        fi
+
+        # Check React
+        if [[ -d "$client_dir/node_modules/react" ]]; then
+            check_pass "React dependency installed"
+        else
+            check_warn "React not found in dependencies"
+        fi
+    else
+        check_warn "Frontend dependencies not installed"
+        if [[ "$SETUP_MODE" == true ]]; then
+            check_info "Installing frontend dependencies..."
+            if (cd "$client_dir" && npm install &>/dev/null); then
+                check_pass "Frontend dependencies installed successfully"
             else
-                check_info "Install with: cd $CLIENT_DIR && npm install"
+                check_fail "Failed to install frontend dependencies"
             fi
+        else
+            check_info "Run: cd $CLIENT_DIR && npm install"
         fi
     fi
 }
 
 # =============================================================================
-# Summary
+# Print Summary
 # =============================================================================
 
 print_summary() {
-    echo ""
     print_header "Summary"
-    echo -e "${GREEN}Passed:${NC}  $CHECKS_PASSED"
-    echo -e "${RED}Failed:${NC}  $CHECKS_FAILED"
-    echo -e "${YELLOW}Warnings:${NC} $CHECKS_WARNED"
+    echo ""
+    echo -e "  ${GREEN}Passed:${NC}   $CHECKS_PASSED"
+    echo -e "  ${RED}Failed:${NC}   $CHECKS_FAILED"
+    echo -e "  ${YELLOW}Warnings:${NC} $CHECKS_WARNED"
     echo ""
 
-    if [[ $CHECKS_FAILED -gt 0 ]]; then
-        echo -e "${RED}Some checks failed. Please address the issues above.${NC}"
-        exit 1
-    elif [[ $CHECKS_WARNED -gt 0 ]]; then
-        echo -e "${YELLOW}All critical checks passed, but there are warnings to review.${NC}"
-        exit 0
+    if [[ $CHECKS_FAILED -eq 0 ]]; then
+        echo -e "${GREEN}All required checks passed!${NC}"
+        if [[ $CHECKS_WARNED -gt 0 ]]; then
+            echo -e "${YELLOW}There are some warnings to review.${NC}"
+        fi
     else
-        echo -e "${GREEN}All checks passed! You're ready to run the application.${NC}"
-        exit 0
+        echo -e "${RED}Some checks failed. Please address the issues above.${NC}"
+        if [[ "$SETUP_MODE" != true ]]; then
+            echo -e "${BLUE}Tip: Run with --setup flag to auto-fix some issues${NC}"
+        fi
     fi
+    echo ""
 }
 
 # =============================================================================
 # Main Execution
 # =============================================================================
 
-main() {
-    print_header "Python/FastAPI Sample App - Requirements Check"
+# Get script directory and change to it
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-    check_common_requirements
-    check_python_requirements
-    check_env_configuration
-    check_frontend_requirements
+# Default options
+SETUP_MODE=false
 
-    print_summary
-}
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --setup)
+            SETUP_MODE=true
+            shift
+            ;;
+        --help|-h)
+            show_help
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
-main
+# Print banner
+echo ""
+echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║  mflix Sample Application - Requirements Check               ║${NC}"
+echo -e "${BLUE}║  Python/FastAPI Backend                                      ║${NC}"
+echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
+
+if [[ "$SETUP_MODE" == true ]]; then
+    echo -e "${YELLOW}Running in setup mode - will attempt to fix issues${NC}"
+fi
+
+# Run all checks
+check_backend_requirements
+check_env_configuration
+check_frontend_requirements
+
+# Print summary
+print_summary
+
+# Exit with appropriate code
+if [[ $CHECKS_FAILED -gt 0 ]]; then
+    exit 1
+fi
+exit 0
