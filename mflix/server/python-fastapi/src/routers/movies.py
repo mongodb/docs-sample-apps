@@ -5,6 +5,15 @@ from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, Suc
 from typing import Any, List, Optional
 from src.utils.successResponse import create_success_response
 from src.utils.errorResponse import create_error_response
+from src.utils.response_docs import (
+    VECTOR_SEARCH_RESPONSES, 
+    OBJECTID_VALIDATION_RESPONSES, 
+    SEARCH_ENDPOINT_RESPONSES,
+    FASTAPI_400_MISSING_SEARCH_PARAMS,
+    DATABASE_OPERATION_RESPONSES,
+    CRUD_OPERATION_RESPONSES,
+    CRUD_WITH_OBJECTID_RESPONSES
+)
 from src.utils.exceptions import VoyageAuthError, VoyageAPIError
 from bson import ObjectId, errors
 import re
@@ -114,7 +123,11 @@ router = APIRouter()
     "/search",
     response_model=SuccessResponse[SearchMoviesResponse],
     status_code = 200,
-    summary="Search movies using MongoDB Search."
+    summary="Search movies using MongoDB Search.",
+    responses={
+        **SEARCH_ENDPOINT_RESPONSES,
+        400: FASTAPI_400_MISSING_SEARCH_PARAMS
+    }
 )
 async def search_movies(
     plot: Optional[str] = None,
@@ -324,7 +337,11 @@ model = "voyage-3-large"
 outputDimension = 2048 #Set to 2048 to match the dimensions of the collection's embeddings
 
 # Vector Search Endpoint
-@router.get("/vector-search", response_model=SuccessResponse[List[VectorSearchResult]])
+@router.get(
+    "/vector-search", 
+    response_model=SuccessResponse[List[VectorSearchResult]],
+    responses=VECTOR_SEARCH_RESPONSES
+)
 async def vector_search_movies(
     q: str = Query(..., description="Search query to find similar movies by plot"),
     limit: int = Query(default=10, ge=1, le=50, description="Number of results to return")
@@ -441,10 +458,13 @@ async def vector_search_movies(
         SuccessResponse[List[str]]: A response object containing the list of unique genres, sorted alphabetically.
 """
 
-@router.get("/genres",
-            response_model=SuccessResponse[List[str]],
-            status_code=200,
-            summary="Retrieve all distinct genres from the movies collection.")
+@router.get(
+    "/genres",
+    response_model=SuccessResponse[List[str]],
+    status_code=200,
+    summary="Retrieve all distinct genres from the movies collection.",
+    responses=DATABASE_OPERATION_RESPONSES
+)
 async def get_distinct_genres():
     movies_collection = get_collection("movies")
 
@@ -475,10 +495,13 @@ async def get_distinct_genres():
         SuccessResponse[Movie]: A response object containing the movie data.
 """
 
-@router.get("/{id}",
-            response_model=SuccessResponse[Movie],
-            status_code = 200,
-            summary="Retrieve a single movie by its ID.")
+@router.get(
+    "/{id}",
+    response_model=SuccessResponse[Movie],
+    status_code = 200,
+    summary="Retrieve a single movie by its ID.",
+    responses=OBJECTID_VALIDATION_RESPONSES
+)
 async def get_movie_by_id(id: str):
     # Validate ObjectId format
     try:
@@ -529,10 +552,13 @@ async def get_movie_by_id(id: str):
         SuccessResponse[List[Movie]]: A response object containing the list of movies and metadata.
 """
 
-@router.get("/",
-            response_model=SuccessResponse[List[Movie]],
-            status_code = 200,
-            summary="Retrieve a list of movies with optional filtering, sorting, and pagination.")
+@router.get(
+    "/",
+    response_model=SuccessResponse[List[Movie]],
+    status_code = 200,
+    summary="Retrieve a list of movies with optional filtering, sorting, and pagination.",
+    responses=DATABASE_OPERATION_RESPONSES
+)
 # Validate the query parameters using FastAPI's Query functionality.
 async def get_all_movies(
     q:str = Query(default=None),
@@ -608,10 +634,13 @@ async def get_all_movies(
         SuccessResponse[Movie]: A response object containing the created movie data.
 """
 
-@router.post("/",
-            response_model=SuccessResponse[Movie],
-            status_code = 201,
-            summary="Creates a new movie in the database.")
+@router.post(
+    "/",
+    response_model=SuccessResponse[Movie],
+    status_code = 201,
+    summary="Creates a new movie in the database.",
+    responses=CRUD_OPERATION_RESPONSES
+)
 async def create_movie(movie: CreateMovieRequest):
     # Pydantic automatically validates the structure
     movie_data = movie.model_dump(by_alias=True, exclude_none=True)
@@ -678,11 +707,12 @@ Request Body:
 """
 
 @router.post(
-        "/batch",
-        response_model=SuccessResponse[dict],
-        status_code = 201,
-        summary = "Create multiple movies in a single request."
-        )
+    "/batch",
+    response_model=SuccessResponse[dict],
+    status_code = 201,
+    summary = "Create multiple movies in a single request.",
+    responses=CRUD_OPERATION_RESPONSES
+)
 async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessResponse[dict]:
     movies_collection = get_collection("movies")
 
@@ -730,10 +760,12 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
         SuccessResponse: The updated movie document, the number of fields modified and a success message.
 """
 @router.patch(
-        "/{id}",
-        response_model=SuccessResponse[Movie],
-        status_code = 200,
-        summary="Update a single movie by its ID.")
+    "/{id}",
+    response_model=SuccessResponse[Movie],
+    status_code = 200,
+    summary="Update a single movie by its ID.",
+    responses=CRUD_WITH_OBJECTID_RESPONSES
+)
 async def update_movie(
     movie_data: UpdateMovieRequest,
     movie_id: str = Path(..., alias="id")
@@ -793,11 +825,13 @@ async def update_movie(
         SuccessResponse: A response object containing the number of matched and modified movies and a success message.
 """
 
-@router.patch("/",
-        response_model=SuccessResponse[dict],
-        status_code = 200,
-        summary="Batch update movies matching the given filter."
-        )
+@router.patch(
+    "/",
+    response_model=SuccessResponse[dict],
+    status_code = 200,
+    summary="Batch update movies matching the given filter.",
+    responses=CRUD_OPERATION_RESPONSES
+)
 async def update_movies_batch(
     request_body: dict = Body(...)
 ) -> SuccessResponse[dict]:
@@ -849,10 +883,13 @@ async def update_movies_batch(
         SuccessResponse[dict]: A response object containing deletion details.
 """
 
-@router.delete("/{id}",
-                response_model=SuccessResponse[dict],
-                status_code = 200,
-                summary="Delete a single movie by its ID.")
+@router.delete(
+    "/{id}",
+    response_model=SuccessResponse[dict],
+    status_code = 200,
+    summary="Delete a single movie by its ID.",
+    responses=OBJECTID_VALIDATION_RESPONSES
+)
 async def delete_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
@@ -896,10 +933,11 @@ async def delete_movie_by_id(id: str):
 """
 
 @router.delete(
-        "/",
-        response_model=SuccessResponse[dict],
-        status_code = 200,
-        summary="Delete multiple movies matching the given filter."
+    "/",
+    response_model=SuccessResponse[dict],
+    status_code = 200,
+    summary="Delete multiple movies matching the given filter.",
+    responses=CRUD_OPERATION_RESPONSES
 )
 async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse[dict]:
 
@@ -949,10 +987,13 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
         SuccessResponse[Movie]: A response object containing the deleted movie data.
 """
 
-@router.delete("/{id}/find-and-delete",
-                response_model=SuccessResponse[Movie],
-                status_code = 200,
-                summary="Find and delete a movie in a single operation.")
+@router.delete(
+    "/{id}/find-and-delete",
+    response_model=SuccessResponse[Movie],
+    status_code = 200,
+    summary="Find and delete a movie in a single operation.",
+    responses=OBJECTID_VALIDATION_RESPONSES
+)
 async def find_and_delete_movie(id: str):
     try:
         object_id = ObjectId(id)
@@ -994,10 +1035,13 @@ async def find_and_delete_movie(id: str):
         SuccessResponse[List[dict]]: A response object containing movies with their most recent comments.
 """
 
-@router.get("/aggregations/reportingByComments",
-            response_model=SuccessResponse[List[dict]],
-            status_code = 200,
-            summary="Aggregate movies with their most recent comments.")
+@router.get(
+    "/aggregations/reportingByComments",
+    response_model=SuccessResponse[List[dict]],
+    status_code = 200,
+    summary="Aggregate movies with their most recent comments.",
+    responses=DATABASE_OPERATION_RESPONSES
+)
 async def aggregate_movies_recent_commented(
     limit: int = Query(default=10, ge=1, le=50),
     movie_id: str = Query(default=None)
@@ -1142,10 +1186,13 @@ async def aggregate_movies_recent_commented(
         SuccessResponse[List[dict]]: A response object containing yearly movie statistics.
 """
 
-@router.get("/aggregations/reportingByYear",
-            response_model=SuccessResponse[List[dict]],
-            status_code = 200,
-            summary="Aggregate movies by year with average rating and movie count.")
+@router.get(
+    "/aggregations/reportingByYear",
+    response_model=SuccessResponse[List[dict]],
+    status_code = 200,
+    summary="Aggregate movies by year with average rating and movie count.",
+    responses=DATABASE_OPERATION_RESPONSES
+)
 async def aggregate_movies_by_year():
     # Define aggregation pipeline to group movies by year with statistics
     # This pipeline demonstrates grouping, statistical calculations, and data cleaning
@@ -1266,10 +1313,13 @@ async def aggregate_movies_by_year():
         SuccessResponse[List[dict]]: A response object containing director statistics.
 """
 
-@router.get("/aggregations/reportingByDirectors",
-            response_model=SuccessResponse[List[dict]],
-            status_code = 200,
-            summary="Aggregate directors with the most movies and their statistics.")
+@router.get(
+    "/aggregations/reportingByDirectors",
+    response_model=SuccessResponse[List[dict]],
+    status_code = 200,
+    summary="Aggregate directors with the most movies and their statistics.",
+    responses=DATABASE_OPERATION_RESPONSES
+)
 async def aggregate_directors_most_movies(
     limit: int = Query(default=20, ge=1, le=100)
 ):
