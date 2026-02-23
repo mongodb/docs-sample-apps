@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Path, Body, HTTPException
+from fastapi import APIRouter, Query, Path, Body
 from fastapi.responses import JSONResponse
 from src.database.mongo_client import get_collection, voyage_ai_available
 from src.models.models import VectorSearchResult, CreateMovieRequest, Movie, SuccessResponse, UpdateMovieRequest, SearchMoviesResponse
@@ -9,7 +9,6 @@ from src.utils.response_docs import (
     VECTOR_SEARCH_RESPONSES, 
     OBJECTID_VALIDATION_RESPONSES, 
     SEARCH_ENDPOINT_RESPONSES,
-    FASTAPI_400_MISSING_SEARCH_PARAMS,
     DATABASE_OPERATION_RESPONSES,
     CRUD_OPERATION_RESPONSES,
     CRUD_WITH_OBJECTID_RESPONSES
@@ -124,10 +123,7 @@ router = APIRouter()
     response_model=SuccessResponse[SearchMoviesResponse],
     status_code = 200,
     summary="Search movies using MongoDB Search.",
-    responses={
-        **SEARCH_ENDPOINT_RESPONSES,
-        400: FASTAPI_400_MISSING_SEARCH_PARAMS
-    }
+    responses=SEARCH_ENDPOINT_RESPONSES
 )
 async def search_movies(
     plot: Optional[str] = None,
@@ -146,9 +142,12 @@ async def search_movies(
     valid_operators = {"must", "should", "mustNot", "filter"}
 
     if search_operator not in valid_operators:
-        raise HTTPException(
-            status_code = 400,
-            detail=f"Invalid search operator '{search_operator}'. The search operator must be one of {valid_operators}."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message=f"Invalid search operator '{search_operator}'. The search operator must be one of {valid_operators}.",
+                code="INVALID_SEARCH_OPERATOR"
+            )
         )
 
     # Build the search_phrases list based on which fields were provided by the user.
@@ -220,9 +219,12 @@ async def search_movies(
         })
 
     if not search_phrases:
-        raise HTTPException(
-            status_code = 400,
-            detail="At least one search parameter must be provided."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="At least one search parameter must be provided.",
+                code="MISSING_SEARCH_PARAMS"
+            )
         )
 
     # Build the aggregation pipeline for MongoDB Search.
@@ -275,9 +277,12 @@ async def search_movies(
     try:
         results = await execute_aggregation(aggregation_pipeline)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred while performing the search: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"An error occurred while performing the search: {str(e)}",
+                code="SEARCH_ERROR"
+            )
         )
         
 
@@ -359,7 +364,7 @@ async def vector_search_movies(
     # Check if Voyage AI API key is configured
     if not voyage_ai_available():
         return JSONResponse(
-            status_code=400,
+            status_code=503,
             content=create_error_response(
                 message="Vector search unavailable: VOYAGE_API_KEY not configured. Please add your API key to the .env file",
                 code="SERVICE_UNAVAILABLE"
@@ -443,9 +448,12 @@ async def vector_search_movies(
         print(f"Vector search error: {str(e)}")
 
         # Handle generic errors
-        raise HTTPException(
+        return JSONResponse(
             status_code=500,
-            detail=f"Error performing vector search: {str(e)}"
+            content=create_error_response(
+                message=f"Error performing vector search: {str(e)}",
+                code="VECTOR_SEARCH_ERROR"
+            )
         )
 
 """
@@ -473,9 +481,12 @@ async def get_distinct_genres():
         # MongoDB automatically flattens array fields when using distinct()
         genres = await movies_collection.distinct("genres")
     except Exception as e:
-        raise HTTPException(
+        return JSONResponse(
             status_code=500,
-            detail=f"Database error occurred: {str(e)}"
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     # Filter out null/empty values and sort alphabetically
@@ -507,25 +518,34 @@ async def get_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
     except errors.InvalidId:
-        raise HTTPException(
-            status_code = 400,
-            detail=f"The provided ID '{id}' is not a valid ObjectId"
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message=f"The provided ID '{id}' is not a valid ObjectId",
+                code="INVALID_OBJECT_ID"
+            )
         )
 
     movies_collection = get_collection("movies")
     try:
         movie = await movies_collection.find_one({"_id": object_id})
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
         
 
     if movie is None:
-        raise HTTPException(
-            status_code = 404,
-            detail=f"No movie found with ID: {id}"
+        return JSONResponse(
+            status_code=404,
+            content=create_error_response(
+                message=f"No movie found with ID: {id}",
+                code="MOVIE_NOT_FOUND"
+            )
         )
 
     movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
@@ -600,9 +620,12 @@ async def get_all_movies(
     try:
         result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred while fetching movies. {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"An error occurred while fetching movies. {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     movies = []
@@ -649,31 +672,43 @@ async def create_movie(movie: CreateMovieRequest):
     try:
         result = await movies_collection.insert_one(movie_data)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     # Verify that the document was created before querying it
     if not result.acknowledged:
-        raise HTTPException(
-            status_code = 500,
-            detail="Failed to create movie: The database did not acknowledge the insert operation"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message="Failed to create movie: The database did not acknowledge the insert operation",
+                code="DATABASE_ERROR"
+            )
         )
 
     try:
         # Retrieve the created document to return complete data
         created_movie = await movies_collection.find_one({"_id": result.inserted_id})
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     if created_movie is None:
-        raise HTTPException(
-            status_code = 500,
-            detail="Movie was created but could not be retrieved for verification"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message="Movie was created but could not be retrieved for verification",
+                code="DATABASE_ERROR"
+            )
         )
 
     created_movie["_id"] = str(created_movie["_id"]) # Convert ObjectId to string
@@ -718,9 +753,12 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
 
     #Verify that the movies list is not empty
     if not movies:
-        raise HTTPException(
-            status_code = 400,
-            detail="Request body must be a non-empty list of movies."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="Request body must be a non-empty list of movies.",
+                code="EMPTY_REQUEST"
+            )
         )
 
     movies_dicts = []
@@ -740,9 +778,12 @@ async def create_movies_batch(movies: List[CreateMovieRequest]) ->SuccessRespons
             f"Successfully created {len(result.inserted_ids)} movies."
         )
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
 """
@@ -777,18 +818,24 @@ async def update_movie(
     try:
         movie_id = ObjectId(movie_id)
     except Exception :
-        raise HTTPException(
-            status_code = 400,
-            detail=f"Invalid movie_id format: {movie_id}"
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message=f"Invalid movie_id format: {movie_id}",
+                code="INVALID_OBJECT_ID"
+            )
         )
 
     update_dict = movie_data.model_dump(exclude_unset=True, exclude_none=True)
 
     # Validate that the dict is not empty
     if not update_dict:
-        raise HTTPException(
-            status_code = 400,
-            detail="No valid fields provided for update."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="No valid fields provided for update.",
+                code="NO_UPDATE_DATA"
+            )
         )
 
     try:
@@ -797,15 +844,21 @@ async def update_movie(
             {"$set":update_dict}
         )
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred while updating the movie: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"An error occurred while updating the movie: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     if result.matched_count == 0:
-        raise HTTPException(
-            status_code = 404,
-            detail=f"No movie with that _id was found: {movie_id}"
+        return JSONResponse(
+            status_code=404,
+            content=create_error_response(
+                message=f"No movie with that _id was found: {movie_id}",
+                code="MOVIE_NOT_FOUND"
+            )
         )
 
     updatedMovie = await movies_collection.find_one({"_id": movie_id})
@@ -842,9 +895,12 @@ async def update_movies_batch(
     update_data = request_body.get("update", {})
 
     if not filter_data or not update_data:
-        raise HTTPException(
-            status_code = 400,
-            detail="Both filter and update objects are required"
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="Both filter and update objects are required",
+                code="MISSING_FILTER"
+            )
         )
 
     # Convert string IDs to ObjectIds if _id filter is present
@@ -854,17 +910,23 @@ async def update_movies_batch(
             try:
                 filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
             except Exception:
-                raise HTTPException(
-                    status_code = 400,
-                    detail="Invalid ObjectId format in filter",
+                return JSONResponse(
+                    status_code=400,
+                    content=create_error_response(
+                        message="Invalid ObjectId format in filter",
+                        code="INVALID_OBJECT_ID"
+                    )
                 )
 
     try:
         result = await movies_collection.update_many(filter_data, {"$set": update_data})
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred while updating movies: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"An error occurred while updating movies: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     return create_success_response({
@@ -894,9 +956,12 @@ async def delete_movie_by_id(id: str):
     try:
         object_id = ObjectId(id)
     except errors.InvalidId:
-        raise HTTPException(
-            status_code = 400,
-            detail=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId"
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId",
+                code="INVALID_OBJECT_ID"
+            )
         )
 
     movies_collection = get_collection("movies")
@@ -904,15 +969,21 @@ async def delete_movie_by_id(id: str):
         # Use deleteOne() to remove a single document
         result = await movies_collection.delete_one({"_id": object_id})
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     if result.deleted_count == 0:
-        raise HTTPException(
-            status_code = 404,
-            detail=f"No movie found with ID: {id}"
+        return JSONResponse(
+            status_code=404,
+            content=create_error_response(
+                message=f"No movie found with ID: {id}",
+                code="MOVIE_NOT_FOUND"
+            )
         )
 
     return create_success_response(
@@ -947,9 +1018,12 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
     filter_data = request_body.get("filter", {})
 
     if not filter_data:
-        raise HTTPException(
-            status_code = 400,
-            detail="Filter object is required and cannot be empty."
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message="Filter object is required and cannot be empty.",
+                code="MISSING_FILTER"
+            )
         )
 
     # Convert string IDs to ObjectIds if _id filter is present
@@ -959,17 +1033,23 @@ async def delete_movies_batch(request_body: dict = Body(...)) -> SuccessResponse
             try:
                 filter_data["_id"]["$in"] = [ObjectId(id_str) for id_str in filter_data["_id"]["$in"]]
             except Exception:
-                raise HTTPException(
-                    status_code = 400,
-                    detail="Invalid ObjectId format in filter."
+                return JSONResponse(
+                    status_code=400,
+                    content=create_error_response(
+                        message="Invalid ObjectId format in filter.",
+                        code="INVALID_OBJECT_ID"
+                    )
                 )
 
     try:
         result = await movies_collection.delete_many(filter_data)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"An error occurred while deleting movies: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"An error occurred while deleting movies: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     return create_success_response(
@@ -998,9 +1078,12 @@ async def find_and_delete_movie(id: str):
     try:
         object_id = ObjectId(id)
     except errors.InvalidId:
-        raise HTTPException(
-            status_code = 400,
-            detail=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId"
+        return JSONResponse(
+            status_code=400,
+            content=create_error_response(
+                message=f"Invalid movie ID format: The provided ID '{id}' is not a valid ObjectId",
+                code="INVALID_OBJECT_ID"
+            )
         )
 
     movies_collection = get_collection("movies")
@@ -1010,15 +1093,21 @@ async def find_and_delete_movie(id: str):
     try:
         deleted_movie = await movies_collection.find_one_and_delete({"_id": object_id})
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     if deleted_movie is None:
-        raise HTTPException(
-            status_code = 404,
-            detail=f"No movie found with ID: {id}"
+        return JSONResponse(
+            status_code=404,
+            content=create_error_response(
+                message=f"No movie found with ID: {id}",
+                code="MOVIE_NOT_FOUND"
+            )
         )
     deleted_movie["_id"] = str(deleted_movie["_id"]) # Convert ObjectId to string
 
@@ -1071,9 +1160,12 @@ async def aggregate_movies_recent_commented(
             object_id = ObjectId(movie_id)
             pipeline[0]["$match"]["_id"] = object_id
         except Exception:
-            raise HTTPException(
-                status_code = 400,
-                detail="The provided movie_id is not a valid ObjectId"
+            return JSONResponse(
+                status_code=400,
+                content=create_error_response(
+                    message="The provided movie_id is not a valid ObjectId",
+                    code="INVALID_OBJECT_ID"
+                )
             )
 
     # Add remaining pipeline stages
@@ -1160,9 +1252,12 @@ async def aggregate_movies_recent_commented(
     try:
         results = await execute_aggregation(pipeline)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred during aggregation: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred during aggregation: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     # Convert ObjectId to string for response
@@ -1293,9 +1388,12 @@ async def aggregate_movies_by_year():
     try:
         results = await execute_aggregation(pipeline)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred during aggregation: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred during aggregation: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     return create_success_response(
@@ -1394,9 +1492,12 @@ async def aggregate_directors_most_movies(
     try:
         results = await execute_aggregation(pipeline)
     except Exception as e:
-        raise HTTPException(
-            status_code = 500,
-            detail=f"Database error occurred during aggregation: {str(e)}"
+        return JSONResponse(
+            status_code=500,
+            content=create_error_response(
+                message=f"Database error occurred during aggregation: {str(e)}",
+                code="DATABASE_ERROR"
+            )
         )
 
     return create_success_response(
