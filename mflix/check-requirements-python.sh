@@ -8,7 +8,8 @@
 # the mflix sample application with the Python/FastAPI backend.
 #
 # Usage:
-#   ./check-requirements-python.sh           # Check all requirements
+#   ./check-requirements-python.sh           # Check all requirements (post-setup)
+#   ./check-requirements-python.sh --pre     # Check only runtime requirements (pre-setup)
 #   ./check-requirements-python.sh --setup   # Check and auto-setup missing items
 #   ./check-requirements-python.sh --help    # Show help message
 #
@@ -92,18 +93,51 @@ show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
+    echo "  --pre      Check only runtime requirements (use before setup)"
     echo "  --setup    Attempt to automatically set up missing requirements"
     echo "  --help     Show this help message"
     echo ""
     echo "This script checks that all necessary requirements are installed"
     echo "to run the mflix sample application with the Python/FastAPI backend."
+    echo ""
+    echo "Use --pre before starting setup to verify you have the required runtime."
+    echo "Use without flags after completing setup to verify everything is ready."
     exit 0
 }
 
+# =============================================================================
+# Check Runtime Requirements (Pre-Setup)
+# =============================================================================
 
+check_runtime_requirements() {
+    print_section "Runtime Requirements"
+
+    # Check Python version
+    if command_exists python3; then
+        local python_version
+        python_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+        if version_gte "$python_version" "$PYTHON_MIN_VERSION"; then
+            check_pass "Python $python_version installed (>= $PYTHON_MIN_VERSION required)"
+        else
+            check_fail "Python $python_version installed but >= $PYTHON_MIN_VERSION required"
+            check_info "Install Python $PYTHON_MIN_VERSION+ from https://www.python.org/downloads/"
+        fi
+    else
+        check_fail "Python 3 not installed"
+        check_info "Install Python $PYTHON_MIN_VERSION+ from https://www.python.org/downloads/"
+    fi
+
+    # Check pip
+    if command_exists pip3 || python3 -m pip --version &>/dev/null; then
+        check_pass "pip installed"
+    else
+        check_fail "pip not installed"
+        check_info "Install pip: python3 -m ensurepip --upgrade"
+    fi
+}
 
 # =============================================================================
-# Check Python/FastAPI Backend Requirements
+# Check Python/FastAPI Backend Requirements (Full)
 # =============================================================================
 
 check_backend_requirements() {
@@ -388,10 +422,15 @@ cd "$SCRIPT_DIR"
 
 # Default options
 SETUP_MODE=false
+PRE_CHECK_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --pre)
+            PRE_CHECK_MODE=true
+            shift
+            ;;
         --setup)
             SETUP_MODE=true
             shift
@@ -414,14 +453,20 @@ echo -e "${BLUE}║  mflix Sample Application - Requirements Check              
 echo -e "${BLUE}║  Python/FastAPI Backend                                      ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 
-if [[ "$SETUP_MODE" == true ]]; then
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    echo -e "${YELLOW}Pre-setup check - verifying runtime requirements only${NC}"
+elif [[ "$SETUP_MODE" == true ]]; then
     echo -e "${YELLOW}Running in setup mode - will attempt to fix issues${NC}"
 fi
 
-# Run all checks
-check_backend_requirements
-check_env_configuration
-check_frontend_requirements
+# Run checks based on mode
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    check_runtime_requirements
+else
+    check_backend_requirements
+    check_env_configuration
+    check_frontend_requirements
+fi
 
 # Print summary
 print_summary

@@ -8,7 +8,8 @@
 # the mflix sample application with the JavaScript/Express backend.
 #
 # Usage:
-#   ./check-requirements-js.sh           # Check all requirements
+#   ./check-requirements-js.sh           # Check all requirements (post-setup)
+#   ./check-requirements-js.sh --pre     # Check only runtime requirements (pre-setup)
 #   ./check-requirements-js.sh --setup   # Check and auto-setup missing items
 #   ./check-requirements-js.sh --help    # Show help message
 #
@@ -91,18 +92,55 @@ show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
+    echo "  --pre      Check only runtime requirements (use before setup)"
     echo "  --setup    Attempt to automatically set up missing requirements"
     echo "  --help     Show this help message"
     echo ""
     echo "This script checks that all necessary requirements are installed"
     echo "to run the mflix sample application with the JavaScript/Express backend."
+    echo ""
+    echo "Use --pre before starting setup to verify you have the required runtime."
+    echo "Use without flags after completing setup to verify everything is ready."
     exit 0
 }
 
+# =============================================================================
+# Check Runtime Requirements (Pre-Setup)
+# =============================================================================
 
+check_runtime_requirements() {
+    print_section "Runtime Requirements"
+
+    # Check Node.js version
+    if command_exists node; then
+        local node_version
+        node_version=$(node --version | sed 's/v//')
+        local node_major
+        node_major=$(echo "$node_version" | cut -d. -f1)
+        if version_gte "$node_major" "$NODE_MIN_VERSION"; then
+            check_pass "Node.js $node_version installed (>= $NODE_MIN_VERSION required)"
+        else
+            check_fail "Node.js $node_version installed but >= $NODE_MIN_VERSION required"
+            check_info "Install Node.js $NODE_MIN_VERSION+: https://nodejs.org/"
+        fi
+    else
+        check_fail "Node.js not installed"
+        check_info "Install Node.js $NODE_MIN_VERSION+: https://nodejs.org/"
+    fi
+
+    # Check npm
+    if command_exists npm; then
+        local npm_version
+        npm_version=$(npm --version)
+        check_pass "npm installed (version $npm_version)"
+    else
+        check_fail "npm not installed"
+        check_info "npm should come with Node.js installation"
+    fi
+}
 
 # =============================================================================
-# Check JavaScript/Express Backend Requirements
+# Check JavaScript/Express Backend Requirements (Full)
 # =============================================================================
 
 check_backend_requirements() {
@@ -382,10 +420,15 @@ cd "$SCRIPT_DIR"
 
 # Default options
 SETUP_MODE=false
+PRE_CHECK_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --pre)
+            PRE_CHECK_MODE=true
+            shift
+            ;;
         --setup)
             SETUP_MODE=true
             shift
@@ -408,14 +451,20 @@ echo -e "${BLUE}║  mflix Sample Application - Requirements Check              
 echo -e "${BLUE}║  JavaScript/Express Backend                                  ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 
-if [[ "$SETUP_MODE" == true ]]; then
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    echo -e "${YELLOW}Pre-setup check - verifying runtime requirements only${NC}"
+elif [[ "$SETUP_MODE" == true ]]; then
     echo -e "${YELLOW}Running in setup mode - will attempt to fix issues${NC}"
 fi
 
-# Run all checks
-check_backend_requirements
-check_env_configuration
-check_frontend_requirements
+# Run checks based on mode
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    check_runtime_requirements
+else
+    check_backend_requirements
+    check_env_configuration
+    check_frontend_requirements
+fi
 
 # Print summary
 print_summary

@@ -8,7 +8,8 @@
 # the mflix sample application with the Java/Spring Boot backend.
 #
 # Usage:
-#   ./check-requirements-java.sh           # Check all requirements
+#   ./check-requirements-java.sh           # Check all requirements (post-setup)
+#   ./check-requirements-java.sh --pre     # Check only runtime requirements (pre-setup)
 #   ./check-requirements-java.sh --setup   # Check and auto-setup missing items
 #   ./check-requirements-java.sh --help    # Show help message
 #
@@ -92,18 +93,51 @@ show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
+    echo "  --pre      Check only runtime requirements (use before setup)"
     echo "  --setup    Attempt to automatically set up missing requirements"
     echo "  --help     Show this help message"
     echo ""
     echo "This script checks that all necessary requirements are installed"
     echo "to run the mflix sample application with the Java/Spring Boot backend."
+    echo ""
+    echo "Use --pre before starting setup to verify you have the required runtime."
+    echo "Use without flags after completing setup to verify everything is ready."
     exit 0
 }
 
+# =============================================================================
+# Check Runtime Requirements (Pre-Setup)
+# =============================================================================
 
+check_runtime_requirements() {
+    print_section "Runtime Requirements"
+
+    # Check Java version
+    if command_exists java; then
+        local java_version
+        java_version=$(java -version 2>&1 | head -1 | grep -oE '"[0-9]+' | tr -d '"')
+        if version_gte "$java_version" "$JAVA_MIN_VERSION"; then
+            check_pass "Java $java_version installed (>= $JAVA_MIN_VERSION required)"
+        else
+            check_fail "Java $java_version installed but >= $JAVA_MIN_VERSION required"
+            check_info "Install Java $JAVA_MIN_VERSION+: https://adoptium.net/"
+        fi
+    else
+        check_fail "Java not installed"
+        check_info "Install Java $JAVA_MIN_VERSION+: https://adoptium.net/"
+    fi
+
+    # Check JAVA_HOME
+    if [[ -n "$JAVA_HOME" ]]; then
+        check_pass "JAVA_HOME is set: $JAVA_HOME"
+    else
+        check_warn "JAVA_HOME is not set"
+        check_info "Set JAVA_HOME to your Java installation directory"
+    fi
+}
 
 # =============================================================================
-# Check Java/Spring Boot Backend Requirements
+# Check Java/Spring Boot Backend Requirements (Full)
 # =============================================================================
 
 check_backend_requirements() {
@@ -391,10 +425,15 @@ cd "$SCRIPT_DIR"
 
 # Default options
 SETUP_MODE=false
+PRE_CHECK_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --pre)
+            PRE_CHECK_MODE=true
+            shift
+            ;;
         --setup)
             SETUP_MODE=true
             shift
@@ -417,14 +456,20 @@ echo -e "${BLUE}║  mflix Sample Application - Requirements Check              
 echo -e "${BLUE}║  Java/Spring Boot Backend                                    ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 
-if [[ "$SETUP_MODE" == true ]]; then
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    echo -e "${YELLOW}Pre-setup check - verifying runtime requirements only${NC}"
+elif [[ "$SETUP_MODE" == true ]]; then
     echo -e "${YELLOW}Running in setup mode - will attempt to fix issues${NC}"
 fi
 
-# Run all checks
-check_backend_requirements
-check_env_configuration
-check_frontend_requirements
+# Run checks based on mode
+if [[ "$PRE_CHECK_MODE" == true ]]; then
+    check_runtime_requirements
+else
+    check_backend_requirements
+    check_env_configuration
+    check_frontend_requirements
+fi
 
 # Print summary
 print_summary

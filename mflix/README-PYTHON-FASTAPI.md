@@ -33,13 +33,13 @@ The `sample_mflix` dataset contains movies released up to **2016**. Searching fo
 
 ## Verify Requirements
 
-Before getting started, you can run the verification script to check if you have all the necessary requirements:
+Before getting started, run the verification script to check if you have the required runtime:
 
 ```bash
-./check-requirements.sh
+./check-requirements-python.sh --pre
 ```
 
-This script checks for required tools (Python, pip, Node.js), validates your environment configuration, and verifies dependencies. Run with `--help` for more options.
+This checks that Python and pip are installed with the correct versions. Run with `--help` for more options.
 
 ## Getting Started
 
@@ -205,6 +205,16 @@ To check code quality:
 cd client
 npm run lint
 ```
+
+## Verify Setup
+
+After completing the setup, run the full verification to ensure everything is configured correctly:
+
+```bash
+./check-requirements-python.sh
+```
+
+This checks your Python environment, dependencies, `.env` configuration, and frontend setup.
 
 ## Issues
 
