@@ -14,7 +14,7 @@ The sample app provides a Next.js frontend in the `client` directory, with the
 choice of three backend stacks in the `server` directory:
 
 - Java: Spring Boot
-- JavaScript: Express.js
+- Node.js: Express.js
 - Python: FastAPI
 
 ```
@@ -34,7 +34,7 @@ choice of three backend stacks in the `server` directory:
 This repository serves as the source for the following artifact repositories:
 
 - Java: [mongodb/sample-app-java-mflix](https://github.com/mongodb/sample-app-java-mflix)
-- JavaScript: [mongodb/sample-app-nodejs-mflix](https://github.com/mongodb/sample-app-nodejs-mflix)
+- Node.js: [mongodb/sample-app-nodejs-mflix](https://github.com/mongodb/sample-app-nodejs-mflix)
 - Python: [mongodb/sample-app-python-mflix](https://github.com/mongodb/sample-app-python-mflix)
 
 ## Development
@@ -46,9 +46,9 @@ to a target repository for each sample app. For configuration details, refer to
 ### Branching Model
 
 For development, work from the `development` branch. Make incremental PRs
-containing new features and bug fixes to `development`, *not* `main`.
+containing new features and bug fixes to `development`, _not_ `main`.
 
-When all development work is complete, *then* create a release PR from
+When all development work is complete, _then_ create a release PR from
 `development` to `main`. Upon merging to `main,` the copier tool runs
 automatically. It creates a new PR in the target repository, which must be
 tested and merged manually.
@@ -91,7 +91,7 @@ To test and verify the PR, navigate to the target repository - see
   - [ ] Run the tests
   - [ ] Run the application and verify that it functions as expected.
 - [ ] Review the `deprecated_examples.json` file for any files that need to be
-  deleted. If files are deleted:
+      deleted. If files are deleted:
   - [ ] Add a commit to the copier PR to delete the files from the target repository.
 - [ ] Merge the PR.
 
@@ -100,7 +100,7 @@ To test and verify the PR, navigate to the target repository - see
 If you are a developer having issues with the sample app, feel free to open an
 issue in this repository. Please include the following information:
 
-- [ ] The sample app you are using (Java, JavaScript, or Python)
+- [ ] The sample app you are using (Java, Node.js, or Python)
 - [ ] The version of the MongoDB database you are using
 - [ ] The version of the MongoDB driver you are using
 - [ ] What type of deployment you're using (local, Atlas, etc.)
