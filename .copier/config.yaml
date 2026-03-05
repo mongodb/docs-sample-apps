@@ -67,7 +67,7 @@ workflows:
     transformations:
       - move: { from: "mflix/client", to: "client" }
       - move: { from: "mflix/server/js-express", to: "server" }
-      - copy: { from: "mflix/README-JAVASCRIPT-EXPRESS.md", to: "README.md" }
+      - copy: { from: "mflix/README-NODE-EXPRESS.md", to: "README.md" }
       - copy: { from: "mflix/.gitignore-js", to: ".gitignore" }
     commit_strategy:
       pr_title: "Update MFlix application from docs-sample-apps"

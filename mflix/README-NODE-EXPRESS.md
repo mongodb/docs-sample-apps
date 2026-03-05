@@ -1,4 +1,4 @@
-# JavaScript Express.js MongoDB Sample MFlix Application
+# Node Express.js MongoDB Sample MFlix Application
 
 This is a full-stack movie browsing application built with Express.js and Next.js, demonstrating MongoDB operations using the `sample_mflix` dataset. The application showcases CRUD operations, aggregations, and MongoDB Search using the native MongoDB Node.js driver.
 
@@ -89,7 +89,6 @@ From the `server` directory, run:
 npm run dev
 ```
 
-
 Or for production mode, run:
 
 ```bash
@@ -98,6 +97,7 @@ npm start
 ```
 
 The server will start on `http://localhost:3001`. You can verify it's running by visiting:
+
 - API root: http://localhost:3001/
 - API documentation (Swagger UI): http://localhost:3001/api-docs
 
@@ -126,6 +126,7 @@ The Next.js application will start on `http://localhost:3000`.
 ### 5. Access the Application
 
 Open your browser and navigate to:
+
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:3001
 - **API Documentation:** http://localhost:3001/api-docs
@@ -147,6 +148,7 @@ Open your browser and navigate to:
 ### Backend Development
 
 The Express.js backend uses:
+
 - **Express.js 5** for REST API
 - **MongoDB Node.js Driver** for database operations
 - **TypeScript** for type safety
@@ -170,6 +172,7 @@ npm run test:coverage
 ### Frontend Development
 
 The Next.js frontend uses:
+
 - **React 19** with TypeScript
 - **Next.js 16** with App Router
 - **Turbopack** for fast development builds
@@ -196,6 +199,7 @@ npm start      # Starts production server
 ```
 
 The production build:
+
 - Minifies and optimizes JavaScript and CSS
 - Optimizes images and assets
 - Generates static pages where possible

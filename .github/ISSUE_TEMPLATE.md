@@ -5,30 +5,38 @@
 ## Sample App Information
 
 **Which sample app are you using?**
+
 <!-- Check one -->
+
 - [ ] Java (Spring Boot)
-- [ ] JavaScript (Express.js)
+- [ ] Node (Express.js)
 - [ ] Python (FastAPI)
 
 ## Environment Details
 
 **MongoDB Database Version:**
+
 <!-- e.g., 7.0, 8.0, etc. -->
 
 **MongoDB Driver Version:**
+
 <!-- e.g., Java Driver 5.2.0, Node.js Driver 6.10.0, PyMongo 4.10.1, etc. -->
 
 **Deployment Type:**
+
 <!-- Check one -->
+
 - [ ] Local MongoDB instance
 - [ ] MongoDB Atlas (cloud)
 - [ ] Docker container
 - [ ] Other (please specify):
 
 **Operating System:**
+
 <!-- e.g., macOS 14.5, Ubuntu 22.04, Windows 11, etc. -->
 
 **Runtime Version:**
+
 <!-- e.g., Java 17, Node.js 20.11.0, Python 3.11, etc. -->
 
 ## Steps to Reproduce
@@ -73,4 +81,3 @@ Before submitting this issue, please confirm:
 - [ ] I have verified my MongoDB connection string is correct
 - [ ] I have installed all required dependencies
 - [ ] I have searched existing issues to avoid duplicates
-
