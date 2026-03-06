@@ -27,6 +27,16 @@ The `sample_mflix` dataset contains movies released up to **2016**. Searching fo
 - **Voyage AI API key** (For MongoDB Vector Search)
   - [Get a Voyage AI API key](https://www.voyageai.com/)
 
+## Verify Requirements
+
+Before getting started, run the verification script to check if you have the required runtime:
+
+```bash
+./check-requirements-js.sh --pre
+```
+
+This checks that Node.js and npm are installed with the correct versions. Run with `--help` for more options.
+
 ## Getting Started
 
 ### 1. Configure the Backend
@@ -61,7 +71,7 @@ NODE_ENV=development
 # CORS Configuration
 # Allowed origin for cross-origin requests (frontend URL)
 # For multiple origins, separate with commas
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000
 
 # Optional: Enable MongoDB Search tests
 # Uncomment the following line to enable Search tests
@@ -213,6 +223,16 @@ To check code quality:
 cd client
 npm run lint
 ```
+
+## Verify Setup
+
+After completing the setup, run the full verification to ensure everything is configured correctly:
+
+```bash
+./check-requirements-js.sh
+```
+
+This checks your Node.js environment, npm dependencies, `.env` configuration, and frontend setup.
 
 ## Issues
 

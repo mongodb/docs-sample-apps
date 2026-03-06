@@ -43,6 +43,7 @@ workflows:
       - move: { from: "mflix/client", to: "client" }
       - move: { from: "mflix/server/java-spring", to: "server" }
       - copy: { from: "mflix/README-JAVA-SPRING.md", to: "README.md" }
+      - copy: { from: "mflix/check-requirements-java.sh", to: "check-requirements.sh" }
       - copy: { from: "mflix/.gitignore-java", to: ".gitignore" }
     commit_strategy:
       pr_title: "Update MFlix application from docs-sample-apps"
@@ -68,6 +69,7 @@ workflows:
       - move: { from: "mflix/client", to: "client" }
       - move: { from: "mflix/server/js-express", to: "server" }
       - copy: { from: "mflix/README-NODE-EXPRESS.md", to: "README.md" }
+      - copy: { from: "mflix/check-requirements-js.sh", to: "check-requirements.sh" }
       - copy: { from: "mflix/.gitignore-js", to: ".gitignore" }
     commit_strategy:
       pr_title: "Update MFlix application from docs-sample-apps"
@@ -93,6 +95,7 @@ workflows:
       - move: { from: "mflix/client", to: "client" }
       - move: { from: "mflix/server/python-fastapi", to: "server" }
       - copy: { from: "mflix/README-PYTHON-FASTAPI.md", to: "README.md" }
+      - copy: { from: "mflix/check-requirements-python.sh", to: "check-requirements.sh" }
       - copy: { from: "mflix/.gitignore-python", to: ".gitignore" }
     commit_strategy:
       pr_title: "Update MFlix application from docs-sample-apps"
