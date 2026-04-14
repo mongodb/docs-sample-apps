@@ -42,7 +42,7 @@ export MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/sample_m
 Or use a `.env` file in the `server/java-spring` directory:
 
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/sample_mflix?retryWrites=true&w=majority
+MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/sample_mflix?retryWrites=true&w=majority"
 ```
 
 ### Run the Tests
