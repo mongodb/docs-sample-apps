@@ -2,10 +2,7 @@ package com.mongodb.samplemflix.model.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Error response wrapper for API error responses.
@@ -23,56 +20,62 @@ import lombok.NoArgsConstructor;
  *   timestamp: string
  * }</pre>
  */
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ErrorResponse implements ApiResponse {
+public record ErrorResponse (
 
     /**
      * Always false for error responses.
      */
-    @Builder.Default
-    private boolean success = false;
+    boolean success,
 
     /**
      * High-level error message.
      */
-    private String message;
+    String message,
 
     /**
      * Detailed error information.
      */
-    private ErrorDetails error;
+    ErrorDetails error,
 
     /**
      * ISO 8601 timestamp when the error occurred.
      */
-    @Builder.Default
-    private String timestamp = Instant.now().toString();
+    String timestamp) implements ApiResponse {
+
+    public ErrorResponse {
+        success = false;
+        timestamp = Instant.now().toString();
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return success;
+    }
+
+    @Override
+    public String getTimestamp() {
+        return timestamp;
+    }
 
     /**
      * Nested class for detailed error information.
      */
-    @Data
     @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ErrorDetails {
+    public record ErrorDetails (
         /**
          * Detailed error message.
          */
-        private String message;
+        String message,
 
         /**
          * Error code (e.g., "VALIDATION_ERROR", "NOT_FOUND").
          */
-        private String code;
+        String code,
 
         /**
          * Additional error details (optional).
          */
-        private Object details;
-    }
+        Object details) {}
 }

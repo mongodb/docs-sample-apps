@@ -163,7 +163,7 @@ public class MovieControllerImpl {
         
         SuccessResponse<Movie> response = SuccessResponse.<Movie>builder()
                 .success(true)
-                .message("Movie '" + request.getTitle() + "' created successfully")
+                .message("Movie '" + request.title() + "' created successfully")
                 .data(movie)
                 .timestamp(Instant.now().toString())
                 .build();
@@ -183,7 +183,7 @@ public class MovieControllerImpl {
 
         SuccessResponse<BatchInsertResponse> response = SuccessResponse.<BatchInsertResponse>builder()
                 .success(true)
-                .message("Successfully created " + result.getInsertedCount() + " movies")
+                .message("Successfully created " + result.insertedCount() + " movies")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
@@ -236,8 +236,8 @@ public class MovieControllerImpl {
 
         SuccessResponse<BatchUpdateResponse> response = SuccessResponse.<BatchUpdateResponse>builder()
                 .success(true)
-                .message("Update operation completed. Matched " + result.getMatchedCount() +
-                        " documents, modified " + result.getModifiedCount() + " documents.")
+                .message("Update operation completed. Matched " + result.matchedCount() +
+                        " documents, modified " + result.modifiedCount() + " documents.")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
@@ -302,7 +302,7 @@ public class MovieControllerImpl {
 
         SuccessResponse<DeleteResponse> response = SuccessResponse.<DeleteResponse>builder()
                 .success(true)
-                .message("Delete operation completed. Removed " + result.getDeletedCount() + " documents.")
+                .message("Delete operation completed. Removed " + result.deletedCount() + " documents.")
                 .data(result)
                 .timestamp(Instant.now().toString())
                 .build();
@@ -328,7 +328,7 @@ public class MovieControllerImpl {
 
         // Calculate total comments across all movies
         int totalComments = results.stream()
-                .mapToInt(result -> result.getTotalComments() != null ? result.getTotalComments() : 0)
+                .mapToInt(result -> result.totalComments() != null ? result.totalComments() : 0)
                 .sum();
 
         String message = movieId != null
