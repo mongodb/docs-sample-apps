@@ -191,6 +191,8 @@ public class Movie {
     @Getter
     @Setter
     @Builder
+    @AllArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
+    @NoArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
     public static class Awards {
         /**
          * Number of awards won.
@@ -214,6 +216,8 @@ public class Movie {
     @Getter
     @Setter
     @Builder
+    @AllArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
+    @NoArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
     public static class Imdb {
         /**
          * IMDB rating (0.0 to 10.0).
@@ -237,6 +241,8 @@ public class Movie {
     @Getter
     @Setter
     @Builder
+    @AllArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
+    @NoArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
     public static class Tomatoes {
         /**
          * Viewer ratings information.
@@ -274,6 +280,8 @@ public class Movie {
         @Getter
         @Setter
         @Builder
+        @AllArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
+        @NoArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
         public static class Viewer {
             /**
              * Viewer rating (0.0 to 5.0).
@@ -297,6 +305,8 @@ public class Movie {
         @Getter
         @Setter
         @Builder
+        @AllArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
+        @NoArgsConstructor(access = AccessLevel.PROTECTED) // needed for Spring Data and MongoDB mapping
         public static class Critic {
             /**
              * Critic rating (0.0 to 5.0).

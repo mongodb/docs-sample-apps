@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.model.dto;
 
+import java.util.List;
 import lombok.Builder;
 
 /**
@@ -10,47 +11,47 @@ import lombok.Builder;
  */
 @Builder
 public record VectorSearchResult (
-    
+
     /**
      * Movie ObjectId as a string.
      */
     String id,
-    
+
     /**
      * Movie title.
      */
     String title,
-    
+
     /**
      * Movie plot summary.
      */
     String plot,
-    
+
     /**
      * Movie poster URL.
      */
     String poster,
-    
+
     /**
      * Movie release year.
      */
     Integer year,
-    
+
     /**
      * Movie genres.
      */
-    java.util.List<String> genres,
-    
+    List<String> genres,
+
     /**
      * Movie directors.
      */
-    java.util.List<String> directors,
-    
+    List<String> directors,
+
     /**
      * Movie cast members.
      */
-    java.util.List<String> cast,
-    
+    List<String> cast,
+
     /**
      * Vector search similarity score (0.0 to 1.0, higher = more similar).
      */

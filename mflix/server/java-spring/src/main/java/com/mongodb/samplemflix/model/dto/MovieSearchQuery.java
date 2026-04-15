@@ -9,7 +9,7 @@ import lombok.Builder;
  * It supports full-text search, filtering by genre/year/rating, sorting, and pagination.
  */
 @Builder
-public record MovieSearchQuery(
+public record MovieSearchQuery (
     
     /**
      * Full-text search query.
