@@ -2,6 +2,7 @@ package com.mongodb.samplemflix.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
+import lombok.With;
 
 /**
  * DTO for director statistics aggregation result.
@@ -25,5 +26,6 @@ public record DirectorStatisticsResult (
     /**
      * Average IMDB rating of this director's movies.
      */
+    @With
     Double averageRating) {}
 

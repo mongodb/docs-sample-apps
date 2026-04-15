@@ -44,9 +44,10 @@ public record ErrorResponse (
      */
     String timestamp) implements ApiResponse {
 
-    public ErrorResponse {
-        success = false;
-        timestamp = Instant.now().toString();
+    // Partial builder declaration to provide defaults for records (like @Builder.Default for classes)
+    public static class ErrorResponseBuilder {
+        private boolean success = false;
+        private String timestamp = Instant.now().toString();
     }
 
     @Override

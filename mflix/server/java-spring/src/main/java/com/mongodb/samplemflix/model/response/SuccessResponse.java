@@ -47,9 +47,10 @@ public record SuccessResponse<T> (
      */
     Pagination pagination) implements ApiResponse {
 
-    public SuccessResponse {
-        success = true;
-        timestamp = Instant.now().toString();
+    // Partial builder declaration to provide defaults for records (like @Builder.Default for classes)
+    public static class SuccessResponseBuilder<T> {
+        private boolean success = true;
+        private String timestamp = Instant.now().toString();
     }
 
     @Override

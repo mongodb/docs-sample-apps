@@ -548,11 +548,7 @@ public class MovieServiceImpl implements MovieService {
         return results.getMappedResults().stream()
                 .map(result -> {
                     if (result.averageRating() != null) {
-                        return new DirectorStatisticsResult(
-                                result.director(),
-                                result.movieCount(),
-                                Math.round(result.averageRating() * 100.0) / 100.0
-                        );
+                        return result.withAverageRating(Math.round(result.averageRating() * 100.0) / 100.0);
                     }
                     return result;
                 })
