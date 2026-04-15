@@ -1,7 +1,8 @@
 package com.mongodb.samplemflix.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -111,9 +112,14 @@ public class Movie {
     private String fullplot;
 
     /**
-     * Release date.
+     * Release date as a calendar date (no time-of-day or time zone).
+     *
+     * <p>A movie release date is a "date only" concept (e.g. "1999-03-31"), not a specific
+     * moment in time. We use {@link LocalDate} because it represents exactly that: a date
+     * without time-of-day or time zone information. Spring Data MongoDB maps this via the
+     * Jsr310 {@code LocalDateCodec}.
      */
-    private Date released;
+    private LocalDate released;
 
     /**
      * Runtime in minutes.
@@ -270,9 +276,12 @@ public class Movie {
         private String production;
 
         /**
-         * Last updated date.
+         * Timestamp of the last update to Tomatoes ratings.
+         *
+         * <p>Stored as BSON DateTime in MongoDB. Uses {@link Instant} for an immutable,
+         * UTC-only representation of this point-in-time event.
          */
-        private Date lastUpdated;
+        private Instant lastUpdated;
 
         /**
          * Nested class for viewer ratings.
