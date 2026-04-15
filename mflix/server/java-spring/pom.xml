@@ -58,7 +58,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Force version for Commons Lang used by SpringDoc (CVE-2025-48924) -->
@@ -118,11 +118,18 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven Compiler Plugin - Suppress annotation processing warnings -->
+            <!-- Maven Compiler Plugin - Process Lombok and suppress annotation processing warnings -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                     <compilerArgs>
                         <arg>-Xlint:-options</arg>
                     </compilerArgs>
