@@ -53,16 +53,6 @@ public record SuccessResponse<T> (
         private String timestamp = Instant.now().toString();
     }
 
-    @Override
-    public boolean isSuccess() {
-        return success;
-    }
-
-    @Override
-    public String getTimestamp() {
-        return timestamp;
-    }
-
     /**
      * Nested class for pagination metadata.
      */

@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -19,11 +20,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
  * for awards, IMDB ratings, and Tomatoes ratings.
  *
  * <p>Note: We use Lombok annotations to reduce boilerplate code:
- * - @Getter @Setter @EqualsAndHashCode: Generates getters, setters, equals, and hashCode
+ * - @Getter @Setter @ToString @EqualsAndHashCode: Generates getters, setters, toString, equals, and hashCode
  * - @Builder: Provides a fluent builder pattern for object construction
  */
 @Getter
 @Setter
+@ToString(onlyExplicitlyIncluded = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @Document(collection = "movies")
@@ -77,17 +79,20 @@ public class Movie {
      */
     @JsonProperty("_id")
     @Id
+    @ToString.Include
     @EqualsAndHashCode.Include
     private ObjectId id;
 
     /**
      * Movie title (required field).
      */
+    @ToString.Include
     private String title;
 
     /**
      * Release year.
      */
+    @ToString.Include
     private Integer year;
 
     /**
