@@ -14,9 +14,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.TimeZone;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.BsonDateTime;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -32,22 +32,19 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * Integration tests for MongoDB Search functionality.
  *
- * <p>These tests verify the MongoDB Search endpoints work correctly with a real MongoDB Atlas instance.
- * The tests require:
- * <ul>
- *   <li>A MongoDB Atlas cluster (not local MongoDB)</li>
- *   <li>MONGODB_URI environment variable pointing to Atlas</li>
- *   <li>MongoDB Search index creation and polling for readiness</li>
- * </ul>
+ * <p>These tests verify the MongoDB Search endpoints work correctly with a real
+ * MongoDB instance. By default, a MongoDBAtlasLocalContainer (Docker) is started
+ * automatically, providing a local Atlas environment with Search support.
  *
- * <p>Note: These tests are disabled by default and should only be run against a test Atlas cluster.
- * To enable, set the environment variable ENABLE_SEARCH_TESTS=true
+ * <p>To run against an external MongoDB Atlas cluster instead, set the
+ * {@code MONGODB_URI} environment variable. When set, no container is started.
  */
-@SpringBootTest
+@SpringBootTest(classes = MongoDBTestContainersConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @DisplayName("MongoDB Search Integration Tests")
-class MongoDBSearchIntegrationTest {
+@Slf4j
+class   MongoDBSearchIntegrationTest {
 
     @Autowired
     private MovieService movieService;
@@ -64,13 +61,7 @@ class MongoDBSearchIntegrationTest {
 
     @BeforeAll
     void setUp() throws Exception {
-        // Skip tests if not running against Atlas
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping MongoDB Search tests - ENABLE_SEARCH_TESTS not set");
-            return;
-        }
-
-        System.out.println("Setting up MongoDB Search integration tests...");
+        log.info("Setting up MongoDB Search integration tests...");
 
         // Create test data
         createTestMovies();
@@ -83,23 +74,19 @@ class MongoDBSearchIntegrationTest {
 
         // Wait a bit for the newly created documents to be indexed
         // MongoDB Search indexes documents asynchronously
-        System.out.println("Waiting for test documents to be indexed...");
+        log.info("Waiting for test documents to be indexed...");
         try {
             Thread.sleep(10000); // Wait 10 seconds for indexing
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
 
-        System.out.println("MongoDB Search index is ready for testing");
+        log.info("MongoDB Search index is ready for testing");
     }
 
     @AfterAll
     void tearDown() {
-        if (!isSearchEnabled()) {
-            return;
-        }
-
-        System.out.println("Cleaning up MongoDB Search test data...");
+        log.info("Cleaning up MongoDB Search test data...");
 
         // Clean up test movies
         if (!testMovieIds.isEmpty()) {
@@ -116,11 +103,6 @@ class MongoDBSearchIntegrationTest {
     @Test
     @DisplayName("Should search movies by plot using MongoDB Search")
     void testSearchMoviesByPlot_Success() {
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping test - Search not enabled");
-            return;
-        }
-
         // Act
         com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
             com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
@@ -145,11 +127,6 @@ class MongoDBSearchIntegrationTest {
     @Test
     @DisplayName("Should return empty list when no movies match search query")
     void testSearchMoviesByPlot_NoResults() {
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping test - Search not enabled");
-            return;
-        }
-
         // Act - search for something that definitely doesn't exist
         com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
             com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
@@ -168,11 +145,6 @@ class MongoDBSearchIntegrationTest {
     @Test
     @DisplayName("Should respect limit parameter in search")
     void testSearchMoviesByPlot_WithLimit() {
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping test - Search not enabled");
-            return;
-        }
-
         // Act
         com.mongodb.samplemflix.model.dto.MovieSearchRequest searchRequest =
             com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
@@ -191,11 +163,6 @@ class MongoDBSearchIntegrationTest {
     @Test
     @DisplayName("Should support pagination with skip parameter")
     void testSearchMoviesByPlot_WithPagination() {
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping test - Search not enabled");
-            return;
-        }
-
         // Act - Get first page
         com.mongodb.samplemflix.model.dto.MovieSearchRequest firstPageRequest =
             com.mongodb.samplemflix.model.dto.MovieSearchRequest.builder()
@@ -235,11 +202,6 @@ class MongoDBSearchIntegrationTest {
     @Test
     @DisplayName("Should read BSON DateTime at midnight UTC as the correct LocalDate without date shift")
     void testReleasedFieldRoundTrip_NoDateShift() {
-        if (!isSearchEnabled()) {
-            System.out.println("Skipping test - Search not enabled");
-            return;
-        }
-
         // The test movies were inserted with known BSON DateTime values at midnight UTC:
         //   "Test Space Adventure"  -> 2024-01-01T00:00:00Z (1704067200000)
         //   "Test Mystery Movie"    -> 2024-03-31T00:00:00Z (1711843200000)
@@ -284,13 +246,9 @@ class MongoDBSearchIntegrationTest {
 
     // ==================== HELPER METHODS ====================
 
-    private boolean isSearchEnabled() {
-        String enabled = System.getenv("ENABLE_SEARCH_TESTS");
-        return "true".equalsIgnoreCase(enabled);
-    }
 
     private void createTestMovies() {
-        System.out.println("Creating test movies...");
+        log.info("Creating test movies...");
 
         MongoCollection<Document> collection = mongoTemplate.getCollection("movies");
 
@@ -320,11 +278,11 @@ class MongoDBSearchIntegrationTest {
             testMovieIds.add(movie.getObjectId("_id").toHexString());
         });
 
-        System.out.println("Created " + testMovieIds.size() + " test movies");
+        log.info("Created {} test movies", testMovieIds.size());
     }
 
     private void createSearchIndex() throws Exception {
-        System.out.println("Creating Search index...");
+        log.info("Creating Search index...");
 
         MongoCollection<Document> collection = mongoTemplate.getCollection("movies");
 
@@ -336,7 +294,7 @@ class MongoDBSearchIntegrationTest {
                 .anyMatch(idx -> SEARCH_INDEX_NAME.equals(idx.getString("name")));
 
         if (indexExists) {
-            System.out.println("Search index already exists");
+            log.info("Search index already exists");
             return;
         }
 
@@ -371,15 +329,15 @@ class MongoDBSearchIntegrationTest {
 
         try {
             mongoTemplate.getDb().runCommand(createIndexCommand);
-            System.out.println("Search index creation initiated");
+            log.info("Search index creation initiated");
         } catch (Exception e) {
-            System.err.println("Error creating search index: " + e.getMessage());
+            log.error("Error creating search index: {}", e.getMessage());
             throw e;
         }
     }
 
     private void waitForSearchIndexReady() throws Exception {
-        System.out.println("Waiting for search index to be ready...");
+        log.info("Waiting for search index to be ready...");
 
         MongoCollection<Document> collection = mongoTemplate.getCollection("movies");
         long startTime = System.currentTimeMillis();
@@ -396,10 +354,10 @@ class MongoDBSearchIntegrationTest {
 
             if (searchIndex != null) {
                 String status = searchIndex.getString("status");
-                System.out.println("Index status: " + status);
+                log.info("Index status: {}", status);
 
                 if ("READY".equals(status)) {
-                    System.out.println("Search index is ready!");
+                    log.info("Search index is ready!");
                     return;
                 }
             }
