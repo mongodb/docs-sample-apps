@@ -1,5 +1,6 @@
 package com.mongodb.samplemflix.integration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,11 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.samplemflix.model.Movie;
 import com.mongodb.samplemflix.service.MovieService;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.TimeZone;
+import org.bson.BsonDateTime;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +25,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
@@ -223,6 +230,58 @@ class MongoDBSearchIntegrationTest {
         }
     }
 
+    // ==================== RELEASED FIELD ROUND-TRIP TESTS ====================
+
+    @Test
+    @DisplayName("Should read BSON DateTime at midnight UTC as the correct LocalDate without date shift")
+    void testReleasedFieldRoundTrip_NoDateShift() {
+        if (!isSearchEnabled()) {
+            System.out.println("Skipping test - Search not enabled");
+            return;
+        }
+
+        // The test movies were inserted with known BSON DateTime values at midnight UTC:
+        //   "Test Space Adventure"  -> 2024-01-01T00:00:00Z (1704067200000)
+        //   "Test Mystery Movie"    -> 2024-03-31T00:00:00Z (1711843200000)
+        //   "Test Adventure Quest"  -> 2024-12-31T00:00:00Z (1735603200000)
+        // A JVM timezone west of UTC could shift these dates backward by one day
+        // (e.g. 2024-01-01 -> 2023-12-31). Cycle through multiple timezones to
+        // verify the native LocalDateCodec always interprets BSON DateTime in UTC.
+
+        List<String> timezones = List.of(
+                "America/New_York",
+                "America/Los_Angeles",
+                "Asia/Tokyo",
+                "Europe/London",
+                "Pacific/Auckland"
+        );
+
+        TimeZone originalTz = TimeZone.getDefault();
+        try {
+            for (String zoneId : timezones) {
+                TimeZone.setDefault(TimeZone.getTimeZone(zoneId));
+
+                Movie spaceAdventure = findTestMovieByTitle("Test Space Adventure");
+                assertEquals(LocalDate.of(2024, 1, 1), spaceAdventure.getReleased(),
+                        "2024-01-01T00:00:00Z shifted in " + zoneId);
+
+                Movie mystery = findTestMovieByTitle("Test Mystery Movie");
+                assertEquals(LocalDate.of(2024, 3, 31), mystery.getReleased(),
+                        "2024-03-31T00:00:00Z shifted in " + zoneId);
+
+                Movie adventureQuest = findTestMovieByTitle("Test Adventure Quest");
+                assertEquals(LocalDate.of(2024, 12, 31), adventureQuest.getReleased(),
+                        "2024-12-31T00:00:00Z shifted in " + zoneId);
+            }
+        } finally {
+            TimeZone.setDefault(originalTz);
+        }
+    }
+
+    private Movie findTestMovieByTitle(String title) {
+        return mongoTemplate.findOne(new Query(Criteria.where("title").is(title)), Movie.class);
+    }
+
     // ==================== HELPER METHODS ====================
 
     private boolean isSearchEnabled() {
@@ -239,16 +298,19 @@ class MongoDBSearchIntegrationTest {
                 new Document()
                         .append("title", "Test Space Adventure")
                         .append("year", 2024)
+                        .append("released", new BsonDateTime(1704067200000L)) // 1st of Jan 2024 in UTC
                         .append("plot", "An epic space adventure across the galaxy")
                         .append("genres", Arrays.asList("Sci-Fi", "Adventure")),
                 new Document()
                         .append("title", "Test Mystery Movie")
                         .append("year", 2024)
+                        .append("released", new BsonDateTime(1711843200000L)) // 31 of March 2024 in UTC
                         .append("plot", "A detective solves a mysterious crime")
                         .append("genres", Arrays.asList("Mystery", "Thriller")),
                 new Document()
                         .append("title", "Test Adventure Quest")
                         .append("year", 2024)
+                        .append("released", new BsonDateTime(1735603200000L)) // 31 December 2024 in UTC
                         .append("plot", "Heroes embark on a dangerous adventure")
                         .append("genres", Arrays.asList("Adventure", "Fantasy"))
         );
