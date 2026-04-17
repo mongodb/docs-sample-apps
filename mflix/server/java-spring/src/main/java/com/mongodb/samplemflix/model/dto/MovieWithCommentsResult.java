@@ -1,7 +1,7 @@
 package com.mongodb.samplemflix.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import lombok.Builder;
 
@@ -61,9 +61,12 @@ public record MovieWithCommentsResult (
     Integer totalComments,
 
     /**
-     * Date of the most recent comment.
+     * Timestamp of the most recent comment as a UTC instant.
+     *
+     * <p>Uses {@link Instant} for an immutable, unambiguous UTC representation.
+     * BSON DateTime values are converted via {@code Date.toInstant()}.
      */
-    Date mostRecentCommentDate) {
+    Instant mostRecentCommentDate) {
 
     /**
      * Nested record for comment information.
@@ -91,8 +94,11 @@ public record MovieWithCommentsResult (
         String text,
 
         /**
-         * Comment date.
+         * Comment timestamp as a UTC instant.
+         *
+         * <p>Stored as BSON DateTime in MongoDB. Uses {@link Instant} for immutability
+         * and unambiguous UTC semantics.
          */
-        Date date) {}
+        Instant date) {}
 }
 

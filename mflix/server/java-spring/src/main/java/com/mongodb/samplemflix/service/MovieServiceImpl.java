@@ -574,7 +574,7 @@ public class MovieServiceImpl implements MovieService {
                             .name(commentDoc.getString("name"))
                             .email(commentDoc.getString("email"))
                             .text(commentDoc.getString("text"))
-                            .date(commentDoc.getDate("date"))
+                            .date(commentDoc.get("date") != null ? commentDoc.getDate("date").toInstant() : null)
                             .build())
                     .collect(Collectors.toList());
         }
@@ -598,7 +598,7 @@ public class MovieServiceImpl implements MovieService {
                 .imdbRating(imdbRating)
                 .recentComments(recentComments)
                 .totalComments(doc.getInteger("totalComments"))
-                .mostRecentCommentDate(doc.getDate("mostRecentCommentDate"))
+                .mostRecentCommentDate(doc.getDate("mostRecentCommentDate") != null ? doc.getDate("mostRecentCommentDate").toInstant() : null)
                 .build();
     }
 
