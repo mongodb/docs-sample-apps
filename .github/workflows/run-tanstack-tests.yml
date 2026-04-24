@@ -1,0 +1,83 @@
+name: Run TanStack Tests
+
+on:
+  pull_request:
+    branches:
+      - development
+      - frameworks-tanstack
+    paths:
+      - 'frameworks/javascript/tanstack/**'
+  push:
+    branches:
+      - development
+      - frameworks-tanstack
+    paths:
+      - 'frameworks/javascript/tanstack/**'
+
+jobs:
+  test:
+    name: Run TanStack Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Atlas CLI
+        run: |
+          curl https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_1.47.0_linux_x86_64.deb --output atlas-cli.deb
+          sudo apt install ./atlas-cli.deb
+
+      - name: Set up a local deployment using Atlas CLI
+        run: |
+          atlas deployments setup myLocalRs1 --type local --port 27017 --force
+
+      - name: Install MongoDB Database Tools to load sample data
+        run: |
+          curl https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.13.0.deb --output mdb-db-tools.deb
+          sudo apt install ./mdb-db-tools.deb
+
+      - name: Download sample data
+        run: curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+
+      - name: Add sample data to database
+        run: mongorestore --archive=sampledata.archive --port=27017
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: frameworks/javascript/tanstack/app
+        run: npm install
+
+      - name: Run unit tests
+        working-directory: frameworks/javascript/tanstack/app
+        run: npm run test:unit -- --reporter=json --outputFile=test-results-unit.json
+        env:
+          MONGODB_URI: mongodb://localhost:27017/sample_restaurants?directConnection=true
+
+      - name: Run integration tests
+        working-directory: frameworks/javascript/tanstack/app
+        run: npm run test:integration -- --reporter=json --outputFile=test-results-integration.json
+        env:
+          MONGODB_URI: mongodb://localhost:27017/sample_restaurants?directConnection=true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            frameworks/javascript/tanstack/app/test-results-unit.json
+            frameworks/javascript/tanstack/app/test-results-integration.json
+          retention-days: 30
+
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          chmod +x .github/scripts/generate-test-summary-vitest.sh
+          .github/scripts/generate-test-summary-vitest.sh \
+            frameworks/javascript/tanstack/app/test-results-unit.json \
+            frameworks/javascript/tanstack/app/test-results-integration.json
