@@ -1,111 +1,175 @@
-# Docs Sample Apps
+# MongoDB Sample Applications & Framework Examples
 
-A repository of sample applications for the MongoDB documentation. This README
-describes internal details for the repository maintainers. If you are a developer
-having issues with the sample app, please refer to the `Issues` section below.
+Runnable, tested code examples for learning MongoDB with various languages and frameworks.
 
-## Sample Apps
+## 📂 Repository Contents
 
-This repository currently contains a single sample app using the `mflix` dataset.
+This repository contains two types of learning resources:
 
-### MFlix Sample App
+### 1. **Sample Applications** (`mflix/`)
 
-The sample app provides a Next.js frontend in the `client` directory, with the
-choice of three backend stacks in the `server` directory:
+Full-stack movie browsing applications demonstrating MongoDB with different backend languages.
 
-- Java: Spring Boot
-- Node.js: Express.js
-- Python: FastAPI
+**MFlix Sample App** - A Next.js frontend with your choice of three backend stacks:
+
+- **Java:** Spring Boot
+- **Node.js:** Express.js
+- **Python:** FastAPI
 
 ```
-├── mflix/
-│   ├── client/               # Next.js frontend - source for all `mflix` sample app backend repos
-│   └── server/
-│       ├── express/          # Express.js backend - source for sample-app-nodejs-mflix
-│       ├── java-spring/      # Java/Spring backend - source for sample-app-java-mflix
-│       └── python/           # Python/FastAPI backend - source for sample-app-python-mflix
-├── README.md
-├── copier-config.yaml
-└── deprecated_examples.json
+mflix/
+├── client/               # Next.js frontend
+└── server/
+    ├── express/          # Express.js backend
+    ├── java-spring/      # Java/Spring backend
+    └── python/           # Python/FastAPI backend
 ```
 
-## Artifact Repositories
+**Learn more:** See the [mflix README](mflix/README.md) for setup and usage.
 
-This repository serves as the source for the following artifact repositories:
+---
+
+### 2. **Framework Examples** (`frameworks/`)
+
+Modern full-stack applications demonstrating MongoDB integration with popular JavaScript frameworks. These serve as the complete, tested source code for MongoDB framework tutorials.
+
+**Current Examples:**
+- **TanStack Start** - Restaurant browsing app with server-side data fetching ([Tutorial](https://www.mongodb.com/docs/drivers/node-frameworks/tanstack/))
+
+```
+frameworks/
+└── javascript/
+    └── tanstack/
+        ├── app/              # Full working application
+        ├── tests/            # Comprehensive test suite
+        └── testedSnippets/   # Auto-generated code snippets for docs
+```
+
+**Learn more:** See the [frameworks README](frameworks/README.md) for available examples and usage.
+
+---
+
+## 🚀 Quick Start
+
+### Running MFlix Sample Apps
+
+```bash
+# Choose your backend language
+cd mflix/server/express  # or java-spring, or python
+
+# Follow the README in that directory
+```
+
+### Running Framework Examples
+
+```bash
+# Example: TanStack Start app
+cd frameworks/javascript/tanstack/app
+npm install
+cp .env.example .env
+# Add your MongoDB connection string to .env
+npm run dev
+```
+
+---
+
+## 🧪 Testing
+
+### Framework Examples
+All framework examples include comprehensive test suites:
+
+```bash
+cd frameworks/javascript/tanstack/app
+npm test                    # Run all tests
+npm run test:unit          # Unit tests only (no MongoDB required)
+npm run test:integration   # Integration tests (requires MongoDB)
+```
+
+### MFlix Sample Apps
+See individual backend README files for testing instructions.
+
+---
+
+## 📚 For MongoDB Docs Team
+
+### Artifact Repositories (MFlix Only)
+
+This repository serves as the source for the following MFlix artifact repositories:
 
 - Java: [mongodb/sample-app-java-mflix](https://github.com/mongodb/sample-app-java-mflix)
 - Node.js: [mongodb/sample-app-nodejs-mflix](https://github.com/mongodb/sample-app-nodejs-mflix)
 - Python: [mongodb/sample-app-python-mflix](https://github.com/mongodb/sample-app-python-mflix)
 
-## Development
+**Note:** Framework examples are maintained directly in this repository and do not use the copier tool.
+
+### Development Workflow
+
+#### MFlix Sample Apps
 
 When you merge to `main`, a copier tool copies the source from this repository
 to a target repository for each sample app. For configuration details, refer to
 `copier-config.yaml`.
 
-### Branching Model
-
-For development, work from the `development` branch. Make incremental PRs
+**Branching Model:** Work from the `development` branch. Make incremental PRs
 containing new features and bug fixes to `development`, _not_ `main`.
 
-When all development work is complete, _then_ create a release PR from
-`development` to `main`. Upon merging to `main,` the copier tool runs
-automatically. It creates a new PR in the target repository, which must be
-tested and merged manually.
+When all development work is complete, create a release PR from
+`development` to `main`. Upon merging to `main`, the copier tool runs
+automatically and creates a new PR in the target repository.
 
-### Deleting Files
+#### Framework Examples
 
-If a PR from `development` to `main` deletes any files, this creates a new
-entry in the `deprecated_examples.json` file. This entry resembles:
+Framework examples follow a simpler workflow:
+1. Make changes directly in `frameworks/`
+2. Add/update Bluehawk annotations for code snippets
+3. Run `npm run snip` to extract snippets
+4. Commit both source code and extracted snippets
+5. Create PR to `main`
 
-```json
-{
-  "filename": "go/gcloud24march_v2.go",
-  "repo": "docs-code-examples-test-target",
-  "branch": "v2.2",
-  "deleted_on": "2025-03-24T18:16:30Z"
-},
-```
+No copier tool is used - snippets are committed directly to this repository.
 
-The copier tool does not delete files from the target repository. You must
-manually delete files from the target repository that are listed in
-`deprecated_examples.json`. This is an intentional step to avoid accidentally
-deleting files that are referred to in documentation. Review documentation
-references before deleting files.
-
-## Release Process
+### MFlix Release Process
 
 When you merge a release PR from `development` to `main`, the copier tool
 creates a new PR in the target repository. This PR must be tested and merged
-manually. This is an intentional design choice to ensure:
+manually.
 
-- The sample app still functions as expected after copying.
-- Any documentation references are updated as part of the release process.
+**Deleting Files:** If a PR deletes any files, this creates a new entry in the
+`deprecated_examples.json` file. The copier tool does not delete files from the
+target repository. You must manually delete files from the target repository
+that are listed in `deprecated_examples.json` to avoid accidentally deleting
+files that are referred to in documentation.
 
-To test and verify the PR, navigate to the target repository - see
-`Artifact Repositories` above. Perform the following checks:
+**Testing the Release:** Navigate to the target repository and:
+- [ ] Verify that the PR contains the expected changes
+- [ ] Check out the PR locally and test
+- [ ] Review `deprecated_examples.json` for any files that need deletion
+- [ ] Merge the PR
 
-- [ ] Verify that the PR contains the expected changes.
-- [ ] Check out the PR locally.
-  - [ ] Build and test the changes.
-  - [ ] Run the tests
-  - [ ] Run the application and verify that it functions as expected.
-- [ ] Review the `deprecated_examples.json` file for any files that need to be
-      deleted. If files are deleted:
-  - [ ] Add a commit to the copier PR to delete the files from the target repository.
-- [ ] Merge the PR.
+---
 
-## Issues
+## 🐛 Issues
 
-If you are a developer having issues with the sample app, feel free to open an
-issue in this repository. Please include the following information:
+If you're having issues with any of the sample apps or framework examples, please open an issue in this repository. Include:
 
-- [ ] The sample app you are using (Java, Node.js, or Python)
-- [ ] The version of the MongoDB database you are using
-- [ ] The version of the MongoDB driver you are using
-- [ ] What type of deployment you're using (local, Atlas, etc.)
-- [ ] Any other relevant information that might help us reproduce the issue
+- **Which app** you're using (MFlix Java/Node.js/Python, or TanStack, etc.)
+- **MongoDB version** and deployment type (local, Atlas, etc.)
+- **Driver version** you're using
+- **Steps to reproduce** the issue
+- **Error messages** or unexpected behavior
+- **Any other relevant information**
 
-## Contributions
+---
 
-We are not currently accepting public contributions to this repository.
+## 🤝 Contributions
+
+We are not currently accepting public contributions to this repository. However, if you find issues or have suggestions, please open an issue!
+
+---
+
+## 📖 Additional Resources
+
+- [MongoDB Documentation](https://www.mongodb.com/docs/)
+- [MongoDB Drivers](https://www.mongodb.com/docs/drivers/)
+- [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- [MongoDB Community Forums](https://www.mongodb.com/community/forums/)

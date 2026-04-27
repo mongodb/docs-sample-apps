@@ -1,4 +1,3 @@
-// :snippet-start: vite-config
 import { defineConfig } from 'vite'
 import { devtools } from '@tanstack/devtools-vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
@@ -14,9 +13,8 @@ const config = defineConfig({
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
     tanstackStart(),
-    viteReact(),
-  ],
+    viteReact()
+  ]
 })
 
 export default config
-// :snippet-end:

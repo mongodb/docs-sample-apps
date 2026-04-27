@@ -1,3 +1,4 @@
+// :snippet-start: server-functions
 import { createServerFn } from "@tanstack/react-start"
 import { connectToDatabase } from "../lib/db"
 
@@ -26,12 +27,12 @@ export const getAllRestaurants = createServerFn({ method: 'GET'})
             .collection<Restaurant>("restaurants")
             .find({})
             .limit(100)
-            .toArray() 
+            .toArray()
         return restaurants.map((restaurant) => ({
             ...restaurant,
             _id: restaurant._id.toString(),
     }))
-})  
+})
 
 // Gets a list of restaurants in Queens with "Moon" in the name
 export const getRestaurantsByBorough = createServerFn({ method:  'GET'})
@@ -39,15 +40,16 @@ export const getRestaurantsByBorough = createServerFn({ method:  'GET'})
     const db = await connectToDatabase()
     const restaurants = await db
         .collection<Restaurant>("restaurants")
-        .find({ 
+        .find({
             borough: 'Queens',
             name: {$regex: 'Moon', $options: 'i'} // case-insensitive match
         })
         .limit(100)
         .toArray()
-    // Convert ObjectId to string for client-side serialization     
+    // Convert ObjectId to string for client-side serialization
     return restaurants.map((restaurant) => ({
         ...restaurant,
         _id: restaurant._id.toString(),
     }))
     })
+// :snippet-end:

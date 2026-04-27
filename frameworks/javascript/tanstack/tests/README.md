@@ -12,12 +12,20 @@ Comprehensive test suite for the TanStack Start + MongoDB sample application, fo
 
 ## 🚀 Running Tests
 
-```bash
-# Run all tests
-npm test
+**⚠️ Important:** All test commands must be run from the `app/` directory:
 
-# Run unit tests only (no MongoDB required)
-npm run test:unit
+```bash
+cd frameworks/javascript/tanstack/app
+```
+
+Then run the tests:
+
+```bash
+# Run all tests (unit + integration, requires MongoDB)
+npm run test:all
+
+# Run unit tests only (no MongoDB required, default)
+npm test
 
 # Run integration tests only (requires MongoDB)
 npm run test:integration
@@ -234,6 +242,47 @@ Following **mflix testing patterns**:
 ### Unit Tests Hang
 
 **Solution:** Ensure you're mocking `mongodb` to prevent loading the real driver.
+
+---
+
+## 🎨 Component Testing
+
+**Status:** Not currently implemented
+
+### Why?
+
+TanStack Start is currently in **beta** and does not have official testing guidance for React components. Component testing with TanStack Start presents unique challenges:
+
+1. **Router Context Required:** Components use `<Link>` from `@tanstack/react-router` which requires router context to render
+2. **No Official Documentation:** TanStack Start doesn't yet provide component testing examples or best practices
+3. **Known Issues:** There are open GitHub issues regarding Vitest compatibility with TanStack Start
+
+### What IS Tested?
+
+Our test suite provides comprehensive coverage through:
+
+✅ **Unit Tests (10 tests)**
+- Database connection functions (`connectToDatabase`)
+- Server functions (`getAllRestaurants`, `getRestaurantsByBorough`)
+- Pure TypeScript logic isolated from framework
+
+✅ **Integration Tests (7 tests)**
+- Full application stack (client + server + database)
+- Real MongoDB queries and data fetching
+- End-to-end verification that components receive and display data correctly
+
+**Total: 17 passing tests** providing confidence that the application works correctly.
+
+### When Will Component Tests Be Added?
+
+We plan to add dedicated component tests when:
+- TanStack Start reaches stable release (v1.0+)
+- Official testing documentation and examples are available
+- The framework provides clear patterns for component testing
+
+For now, our integration tests verify that the UI renders correctly with real data, providing practical confidence in the application's behavior.
+
+---
 
 ## 📚 Additional Resources
 

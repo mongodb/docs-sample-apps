@@ -1,6 +1,7 @@
+// :snippet-start: root-route
 import { HeadContent, Scripts, createRootRoute, Outlet } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import '../styles.css'  
+import '../styles.css'
 import {Header} from '../components/Header'
 
 //Configure TanStack Query Client with cache and retry options
@@ -41,3 +42,4 @@ export const Route = createRootRoute({
         )
     }
 })
+// :snippet-end:

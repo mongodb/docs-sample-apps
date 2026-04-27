@@ -1,3 +1,4 @@
+// :snippet-start: restaurant-list-component
 import type {Restaurant} from "../server/restaurants"
 
 type Props = {
@@ -25,6 +26,7 @@ export function RestaurantList({restaurants}: Props) {
                     ))}
                 </tbody>
             </table>
-        </div>   
+        </div>
     )
 }
+// :snippet-end:

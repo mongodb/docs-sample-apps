@@ -54,11 +54,11 @@ npm run start
 This project uses [Vitest](https://vitest.dev/) with comprehensive test coverage.
 
 ```bash
-# Run all tests
-npm test
+# Run all tests (unit + integration, requires MongoDB)
+npm run test:all
 
-# Run unit tests only (no MongoDB required)
-npm run test:unit
+# Run unit tests only (no MongoDB required, default)
+npm test
 
 # Run integration tests only (requires MongoDB)
 npm run test:integration

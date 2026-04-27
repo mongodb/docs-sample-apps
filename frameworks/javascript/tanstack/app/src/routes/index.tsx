@@ -1,3 +1,4 @@
+// :snippet-start: index-route
 import { createFileRoute } from "@tanstack/react-router";
 import {useSuspenseQuery} from '@tanstack/react-query'
 import { RestaurantList } from "../components/RestaurantList";
@@ -31,3 +32,4 @@ function Home() {
         </div>
     )
 }
+// :snippet-end:

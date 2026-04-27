@@ -1,3 +1,4 @@
+// :snippet-start: browse-route
 import { createFileRoute } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { RestaurantList } from '../components/RestaurantList'
@@ -34,3 +35,4 @@ function BrowsePage() {
         </div>
     )
 }
+// :snippet-end:

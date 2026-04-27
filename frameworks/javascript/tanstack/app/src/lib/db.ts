@@ -1,3 +1,4 @@
+// :snippet-start: db-connection
 import { MongoClient } from "mongodb"
 
 let connected = false
@@ -22,3 +23,4 @@ export async function connectToDatabase() {
     }
     return client.db("sample_restaurants")
 }
+// :snippet-end:
