@@ -1,16 +1,19 @@
 /// <reference types="vitest" />
 
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { connectToDatabase } from '#/lib/db';
+import { describe, it, expect } from 'vitest';
+import { getAllRestaurants, getRestaurantsByBorough } from '#/server/restaurants';
 import { describeIntegration } from './setup';
 
 /**
  * Restaurant API Integration Tests
  *
- * These tests verify the full functionality of restaurant database queries
+ * These tests verify the full functionality of the restaurant server functions
  * with a real MongoDB connection (no mocks).
  *
- * Following mflix pattern: test database operations directly, not through HTTP endpoints.
+ * The vitest integration config aliases @tanstack/react-start to a mock that
+ * makes createServerFn().handler(fn) return fn directly, so server functions
+ * can be called in a plain Node/Vitest environment without a TanStack Start
+ * server context.
  *
  * Requirements:
  * - MONGODB_URI environment variable must be set
@@ -18,96 +21,32 @@ import { describeIntegration } from './setup';
  * - sample_restaurants database with restaurants collection
  */
 
-describeIntegration('Restaurant Database Operations Integration Tests', () => {
-  let testRestaurantIds: string[] = [];
-
-  beforeAll(async () => {
-    // Clean up any orphaned test data from previous failed runs
-    // This ensures tests are idempotent
-    const db = await connectToDatabase();
-    const restaurantsCollection = db.collection('restaurants');
-    
-    await restaurantsCollection.deleteMany({
-      $or: [
-        { name: { $regex: /^Integration Test Restaurant/ } },
-        { name: { $regex: /^Test Restaurant/ } },
-      ],
-    });
-  });
-
-  afterEach(async () => {
-    // Clean up test data after each test
-    if (testRestaurantIds.length > 0) {
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
-      
-      await restaurantsCollection.deleteMany({
-        restaurant_id: { $in: testRestaurantIds },
-      });
-      
-      testRestaurantIds = [];
-    }
-  });
-
-  describe('Get All Restaurants Query', () => {
+describeIntegration('Restaurant Server Functions Integration Tests', () => {
+  describe('getAllRestaurants()', () => {
     it('should retrieve restaurants from database', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getAllRestaurants();
 
-      // Act - Execute the same query as getAllRestaurants()
-      const result = await restaurantsCollection
-        .find({})
-        .limit(100)
-        .toArray();
-
-      // Assert - verify we got real data
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
       expect(result.length).toBeLessThanOrEqual(100);
-
-      // Verify structure
-      const restaurant = result[0];
-      expect(restaurant).toHaveProperty('_id');
-      expect(restaurant).toHaveProperty('name');
-      expect(restaurant).toHaveProperty('borough');
-      expect(restaurant).toHaveProperty('cuisine');
-      expect(restaurant).toHaveProperty('address');
     });
 
     it('should respect limit of 100 restaurants', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getAllRestaurants();
 
-      // Act
-      const result = await restaurantsCollection
-        .find({})
-        .limit(100)
-        .toArray();
-
-      // Assert
       expect(result.length).toBeLessThanOrEqual(100);
     });
 
-    it('should return valid restaurant objects', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+    it('should return valid restaurant objects with required fields', async () => {
+      const result = await getAllRestaurants();
 
-      // Act
-      const result = await restaurantsCollection
-        .find({})
-        .limit(1)
-        .toArray();
-
-      // Assert
       expect(result.length).toBeGreaterThan(0);
       const restaurant = result[0];
 
-      // Check required fields exist
+      // _id should be serialized to a string
       expect(restaurant._id).toBeDefined();
+      expect(typeof restaurant._id).toBe('string');
       expect(restaurant.name).toBeDefined();
       expect(restaurant.borough).toBeDefined();
       expect(restaurant.cuisine).toBeDefined();
@@ -122,26 +61,14 @@ describeIntegration('Restaurant Database Operations Integration Tests', () => {
     });
   });
 
-  describe('Filtered Query - Queens + Moon', () => {
+  describe('getRestaurantsByBorough()', () => {
     it('should retrieve restaurants from Queens with "Moon" in name', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getRestaurantsByBorough();
 
-      // Act - Execute the same query as getRestaurantsByBorough()
-      const result = await restaurantsCollection
-        .find({
-          borough: 'Queens',
-          name: { $regex: 'Moon', $options: 'i' }
-        })
-        .limit(100)
-        .toArray();
-
-      // Assert
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
 
-      // Verify all results match our filters
+      // Verify all results match the filters
       result.forEach((restaurant) => {
         expect(restaurant.borough).toBe('Queens');
         expect(restaurant.name.toLowerCase()).toContain('moon');
@@ -149,60 +76,24 @@ describeIntegration('Restaurant Database Operations Integration Tests', () => {
     });
 
     it('should apply case-insensitive name filter', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getRestaurantsByBorough();
 
-      // Act
-      const result = await restaurantsCollection
-        .find({
-          borough: 'Queens',
-          name: { $regex: 'Moon', $options: 'i' }
-        })
-        .limit(100)
-        .toArray();
-
-      // Assert - Should match "Moon", "moon", "MOON", etc.
       result.forEach((restaurant) => {
         expect(restaurant.name.toLowerCase()).toContain('moon');
       });
     });
 
     it('should only return Queens borough restaurants', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getRestaurantsByBorough();
 
-      // Act
-      const result = await restaurantsCollection
-        .find({
-          borough: 'Queens',
-          name: { $regex: 'Moon', $options: 'i' }
-        })
-        .limit(100)
-        .toArray();
-
-      // Assert
       result.forEach((restaurant) => {
         expect(restaurant.borough).toBe('Queens');
       });
     });
 
     it('should respect limit of 100 restaurants', async () => {
-      // Arrange
-      const db = await connectToDatabase();
-      const restaurantsCollection = db.collection('restaurants');
+      const result = await getRestaurantsByBorough();
 
-      // Act
-      const result = await restaurantsCollection
-        .find({
-          borough: 'Queens',
-          name: { $regex: 'Moon', $options: 'i' }
-        })
-        .limit(100)
-        .toArray();
-
-      // Assert
       expect(result.length).toBeLessThanOrEqual(100);
     });
   });

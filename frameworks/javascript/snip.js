@@ -3,7 +3,7 @@ import { exec, execSync, spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readdir } from 'fs/promises';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 // ------ CONFIGURATION: Load from config file ----------
@@ -42,20 +42,26 @@ if (!START_DIRECTORY || !OUTPUT_DIRECTORY) {
   process.exit(1);
 }
 
-// Check if Bluehawk is installed
-function isBluehawkInstalled() {
-  const errorString =
-    'This script requires Bluehawk. Please run "npm install -g bluehawk" in the terminal, and then re-run this script.';
+// Resolve the Bluehawk binary path, preferring the local node_modules install
+function resolveBluehawkPath() {
+  // First, try to resolve Bluehawk from the local node_modules of the config directory
+  // (e.g. frameworks/javascript/tanstack/node_modules/.bin/bluehawk after npm install)
+  const localBluehawk = path.resolve(CONFIG_DIRECTORY, 'node_modules', '.bin', 'bluehawk');
 
-  const result = spawnSync('which', ['bluehawk'], { encoding: 'utf-8' });
-
-  // If the spawnSync operation returns an exit code of 1, there was an error
-  // running 'which bluehawk' and we can assume Bluehawk isn't installed
-  if (result.status == 1) {
-    console.error(errorString);
-    return false;
+  if (existsSync(localBluehawk)) {
+    return localBluehawk;
   }
-  return true;
+
+  // Fall back to a globally installed Bluehawk
+  const result = spawnSync('which', ['bluehawk'], { encoding: 'utf-8' });
+  if (result.status === 0 && result.stdout.trim()) {
+    return 'bluehawk';
+  }
+
+  console.error(
+    'This script requires Bluehawk. Please run "npm install" in the frameworks/javascript/tanstack directory, or run "npm install -g bluehawk" to install it globally.'
+  );
+  return null;
 }
 
 // Resolves relative paths to absolute paths based on the Git repository root.
@@ -154,14 +160,14 @@ async function runFormatter(directory) {
 
 // Snip code example files, and then run the formatting tool on the output
 async function main() {
-  // First, confirm the user has Bluehawk installed. If not, exit early.
-  const bluehawkInstalled = isBluehawkInstalled();
+  // First, resolve the Bluehawk binary path. Exit early if not found.
+  const bluehawkPath = resolveBluehawkPath();
 
-  if (!bluehawkInstalled) {
+  if (!bluehawkPath) {
     process.exit(1);
   }
 
-  // If the user does have Bluehawk installed, process the code example files.
+  // If Bluehawk is found, process the code example files.
   try {
     // Resolve paths relative to the config file directory
     const resolvedStartDir = path.resolve(CONFIG_DIRECTORY, START_DIRECTORY);
@@ -171,7 +177,7 @@ async function main() {
     console.log(`Output directory: ${resolvedOutputDir}`);
 
     // Snip the code example files to the output directory
-    await processFiles(resolvedStartDir, resolvedOutputDir, IGNORE_PATTERNS);
+    await processFiles(resolvedStartDir, resolvedOutputDir, IGNORE_PATTERNS, bluehawkPath);
 
     // If the person running the script has Prettier installed, use it to run the
     // formatting script on the resolved output directory.

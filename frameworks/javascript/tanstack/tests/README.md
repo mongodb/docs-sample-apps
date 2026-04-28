@@ -2,17 +2,17 @@
 
 Comprehensive test suite for the TanStack Start + MongoDB sample application, following the mflix testing patterns.
 
-## 📊 Test Overview
+## Test Overview
 
 | Type | Files | Tests | Duration | Database |
 |------|-------|-------|----------|----------|
-| **Unit** | 2 | 10 | ~400ms | ❌ Mocked |
-| **Integration** | 1 | 7 | ~2s | ✅ Real MongoDB |
+| **Unit** | 2 | 10 | ~400ms | Mocked |
+| **Integration** | 1 | 7 | ~2s | Real MongoDB |
 | **Total** | 3 | **17** | ~2.4s | - |
 
-## 🚀 Running Tests
+## Running Tests
 
-**⚠️ Important:** All test commands must be run from the `app/` directory:
+**Important:** All test commands must be run from the `app/` directory:
 
 ```bash
 cd frameworks/javascript/tanstack/app
@@ -34,7 +34,7 @@ npm run test:integration
 npm run test:watch
 ```
 
-## 📁 Test Structure
+## Test Structure
 
 ```
 tests/
@@ -52,43 +52,43 @@ tests/
 └── README.md                    # This file
 ```
 
-## 🧪 Unit Tests
+## Unit Tests
 
 Unit tests mock all external dependencies (database, MongoDB driver) to test business logic in isolation.
 
 ### What We Test
 
 #### `db.test.ts` (1 test)
-- ✅ Module exports `connectToDatabase` function
+- Module exports `connectToDatabase` function
 
 #### `restaurants.test.ts` (9 tests)
-- ✅ `getAllRestaurants()` - 4 tests
+- `getAllRestaurants()` - 4 tests
   - Query construction
   - Empty results handling
   - Database error handling
   - ObjectId conversion
-  
-- ✅ `getRestaurantsByBorough()` - 4 tests
+
+- `getRestaurantsByBorough()` - 4 tests
   - Filtered query (borough + name)
   - Case-insensitive regex
   - Empty filtered results
   - Database errors
 
-- ✅ Database Connection - 1 test
+- Database Connection - 1 test
   - Connection reuse verification
 
 ### Mocking Strategy
 
-Following the **mflix pattern**, we mock at the **application boundary** (not the MongoDB driver):
+We mock at the **application boundary** (not the MongoDB driver):
 
 ```typescript
-// ✅ Mock the database module
+// Mock the database module
 const mockConnectToDatabase = vi.fn().mockResolvedValue(mockDb);
 vi.mock('#/lib/db', () => ({
   connectToDatabase: mockConnectToDatabase
 }));
 
-// ✅ Also prevent mongodb from loading
+// Also prevent mongodb from loading
 vi.mock('mongodb', () => ({
   MongoClient: vi.fn(),
   ObjectId: class ObjectId { ... }
@@ -113,7 +113,7 @@ it('should query database for all restaurants', async () => {
 });
 ```
 
-## 🔗 Integration Tests
+## Integration Tests
 
 Integration tests use a real MongoDB connection to verify end-to-end database operations.
 
@@ -122,15 +122,15 @@ Integration tests use a real MongoDB connection to verify end-to-end database op
 #### `restaurants.integration.test.ts` (7 tests)
 
 **Get All Restaurants Query** - 3 tests
-- ✅ Retrieve restaurants from database
-- ✅ Respect limit of 100
-- ✅ Return valid restaurant objects
+- Retrieve restaurants from database
+- Respect limit of 100
+- Return valid restaurant objects
 
 **Filtered Query (Queens + Moon)** - 4 tests
-- ✅ Filter by borough and name regex
-- ✅ Case-insensitive name matching
-- ✅ Only return matching borough
-- ✅ Respect query limit
+- Filter by borough and name regex
+- Case-insensitive name matching
+- Only return matching borough
+- Respect query limit
 
 ### Prerequisites
 
@@ -175,7 +175,7 @@ it('should retrieve restaurants from database', async () => {
 });
 ```
 
-## 🛠️ Test Utilities
+## Test Utilities
 
 See [`utils/README.md`](./utils/README.md) for detailed documentation on:
 - Sample data constants
@@ -194,7 +194,7 @@ const mockCollection = createMockCollection(SAMPLE_RESTAURANTS);
 const mockDb = createMockDatabase(mockCollection);
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Vitest Configs
 
@@ -215,17 +215,17 @@ const mockDb = createMockDatabase(mockCollection);
 - Points `typeRoots` to `../app/node_modules`
 - Supports path aliases (`#/*` → `../app/src/*`)
 
-## 🎯 Testing Principles
+## Testing Principles
 
 Following **mflix testing patterns**:
 
-- ✅ **Idempotent Tests** - Can run multiple times without side effects
-- ✅ **Isolated Tests** - Each test is independent
-- ✅ **Conditional Integration** - Skip if MongoDB unavailable
-- ✅ **Fast Unit Tests** - No database calls (~400ms)
-- ✅ **Comprehensive Coverage** - Happy path, errors, edge cases
+- **Idempotent Tests** - Can run multiple times without side effects
+- **Isolated Tests** - Each test is independent
+- **Conditional Integration** - Skip if MongoDB unavailable
+- **Fast Unit Tests** - No database calls (~400ms)
+- **Comprehensive Coverage** - Happy path, errors, edge cases
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Integration Tests Skipped
 
@@ -239,13 +239,9 @@ Following **mflix testing patterns**:
 
 **Solution:** Restart TypeScript server (`Cmd+Shift+P` → "TypeScript: Restart TS Server")
 
-### Unit Tests Hang
-
-**Solution:** Ensure you're mocking `mongodb` to prevent loading the real driver.
-
 ---
 
-## 🎨 Component Testing
+## Component Testing
 
 **Status:** Not currently implemented
 
@@ -256,22 +252,6 @@ TanStack Start is currently in **beta** and does not have official testing guida
 1. **Router Context Required:** Components use `<Link>` from `@tanstack/react-router` which requires router context to render
 2. **No Official Documentation:** TanStack Start doesn't yet provide component testing examples or best practices
 3. **Known Issues:** There are open GitHub issues regarding Vitest compatibility with TanStack Start
-
-### What IS Tested?
-
-Our test suite provides comprehensive coverage through:
-
-✅ **Unit Tests (10 tests)**
-- Database connection functions (`connectToDatabase`)
-- Server functions (`getAllRestaurants`, `getRestaurantsByBorough`)
-- Pure TypeScript logic isolated from framework
-
-✅ **Integration Tests (7 tests)**
-- Full application stack (client + server + database)
-- Real MongoDB queries and data fetching
-- End-to-end verification that components receive and display data correctly
-
-**Total: 17 passing tests** providing confidence that the application works correctly.
 
 ### When Will Component Tests Be Added?
 
@@ -284,17 +264,8 @@ For now, our integration tests verify that the UI renders correctly with real da
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Vitest Documentation](https://vitest.dev/)
-- [MongoDB Node.js Driver Testing](https://www.mongodb.com/docs/drivers/node/current/fundamentals/testing/)
 - [mflix Sample App](../../mflix/) - Reference implementation
 
-## 🎊 Summary
-
-This test suite provides:
-- ✅ 17 comprehensive tests (10 unit + 7 integration)
-- ✅ mflix-quality patterns
-- ✅ Fast execution (~2.4s total)
-- ✅ Environment-aware (skips gracefully without DB)
-- ✅ Ready for CI/CD integration

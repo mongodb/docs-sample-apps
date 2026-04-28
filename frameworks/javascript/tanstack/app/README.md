@@ -2,7 +2,7 @@
 
 A full-stack restaurant directory application built with TanStack Start and MongoDB, demonstrating modern React Server Components with database integration.
 
-## 📋 Overview
+## Overview
 
 This sample application showcases:
 - **TanStack Start** for server-side rendering and server functions
@@ -11,7 +11,7 @@ This sample application showcases:
 - **Tailwind CSS** for styling
 - **Vitest** for comprehensive testing (unit + integration)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -49,7 +49,7 @@ npm run build
 npm run start
 ```
 
-## 🧪 Testing
+## Testing
 
 This project uses [Vitest](https://vitest.dev/) with comprehensive test coverage.
 
@@ -73,7 +73,7 @@ npm run test:watch
 
 See [`../tests/README.md`](../tests/README.md) for detailed testing documentation.
 
-## 🎨 Styling
+## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
@@ -86,7 +86,7 @@ If you prefer not to use Tailwind CSS:
 3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
 4. Uninstall the packages: `npm uninstall @tailwindcss/vite tailwindcss`
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 app/
@@ -109,7 +109,7 @@ app/
 
 ```
 
-## 🗄️ Database Schema
+## Database Schema
 
 This app uses the MongoDB `sample_restaurants` database with the following structure:
 
@@ -134,7 +134,7 @@ interface Restaurant {
 }
 ```
 
-## 🔧 Environment Variables
+## Environment Variables
 
 Create a `.env` file in the `app/` directory:
 
@@ -142,7 +142,7 @@ Create a `.env` file in the `app/` directory:
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/sample_restaurants
 ```
 
-## 📡 API Endpoints / Server Functions
+## API Endpoints / Server Functions
 
 ### `getAllRestaurants()`
 - Returns all restaurants (limit 100)
@@ -153,7 +153,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/sample_restauran
 - Case-insensitive regex search
 - Used on `/queens` page
 
-## 🎯 Routing
+## Routing
 
 This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
 
@@ -178,7 +178,7 @@ import { Link } from "@tanstack/react-router";
 <Link to="/about">About</Link>
 ```
 
-## 💡 Key Concepts
+## Key Concepts
 
 ### Server Functions
 
@@ -221,7 +221,7 @@ function RestaurantList() {
   );
 }
 ```
-## 🧹 Development Notes
+## Development Notes
 
 ### MongoDB Connection Pooling
 
@@ -243,14 +243,14 @@ export async function connectToDatabase() {
 
 This ensures a single connection is reused across all requests.
 
-## 📚 Learn More
+## Learn More
 
 - [TanStack Start Documentation](https://tanstack.com/start)
 - [TanStack Router Documentation](https://tanstack.com/router)
 - [MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/)
 - [Vitest Documentation](https://vitest.dev/)
 
-## 🤝 Related Sample Apps
+## Related Sample Apps
 
 This app follows the same patterns as other MongoDB sample apps:
 - **mflix** (Python FastAPI + JavaScript Express) - Movie database with full CRUD

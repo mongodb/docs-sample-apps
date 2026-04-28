@@ -68,8 +68,9 @@ async function ensureDirectoryExists(directory) {
  * @param {string} filePath - Path of the file to process.
  * @param {string} startDirectory - Root directory being processed.
  * @param {string} outputDirectory - Directory to write processed files to.
+ * @param {string} bluehawkPath - Resolved path to the Bluehawk binary.
  */
-async function snip(filePath, startDirectory, outputDirectory) {
+async function snip(filePath, startDirectory, outputDirectory, bluehawkPath) {
   const fileExt = path.extname(filePath);
   if (!fileExt) {
     throw new Error(`File has no extension type. Please check file path: ${filePath}`);
@@ -92,7 +93,7 @@ async function snip(filePath, startDirectory, outputDirectory) {
     return; // Skip files without annotations
   }
 
-  const snipCommand = `bluehawk snip --output "${outputDir}" "${filePath}"`;
+  const snipCommand = `"${bluehawkPath}" snip --output "${outputDir}" "${filePath}"`;
 
   try {
     const { stdout, stderr } = await exec(snipCommand);
@@ -138,8 +139,9 @@ async function handleOutput(stdoutLines) {
  * @param {string} startDirectory - Root directory containing files to process.
  * @param {string} outputDirectory - Directory where processed files should be written.
  * @param {Set<string>} ignorePatterns - Set of folder/file names to ignore during processing.
+ * @param {string} bluehawkPath - Resolved path to the Bluehawk binary.
  */
-export async function processFiles(startDirectory, outputDirectory, ignorePatterns = new Set()) {
+export async function processFiles(startDirectory, outputDirectory, ignorePatterns = new Set(), bluehawkPath = 'bluehawk') {
   startDirectory = resolvePathFromGitRoot(startDirectory);
   outputDirectory = resolvePathFromGitRoot(outputDirectory);
 
@@ -148,7 +150,7 @@ export async function processFiles(startDirectory, outputDirectory, ignorePatter
   const files = getAllFiles(startDirectory, [], ignorePatterns);
 
   for (const file of files) {
-    await snip(file, startDirectory, outputDirectory);
+    await snip(file, startDirectory, outputDirectory, bluehawkPath);
   }
 
   console.log(`Processed ${numFilesProcessedAndWritten[0]} file(s)`);

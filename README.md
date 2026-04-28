@@ -2,7 +2,7 @@
 
 Runnable, tested code examples for learning MongoDB with various languages and frameworks.
 
-## 📂 Repository Contents
+## Repository Contents
 
 This repository contains two types of learning resources:
 
@@ -49,7 +49,7 @@ frameworks/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Running MFlix Sample Apps
 
@@ -63,34 +63,25 @@ cd mflix/server/express  # or java-spring, or python
 ### Running Framework Examples
 
 ```bash
-# Example: TanStack Start app
-cd frameworks/javascript/tanstack/app
-npm install
-cp .env.example .env
-# Add your MongoDB connection string to .env
-npm run dev
+# Choose your framework example
+cd frameworks/javascript/tanstack/app  # or other framework example
+
+# Follow the README in the framework directory
 ```
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Framework Examples
-All framework examples include comprehensive test suites:
-
-```bash
-cd frameworks/javascript/tanstack/app
-npm test                    # Run all tests
-npm run test:unit          # Unit tests only (no MongoDB required)
-npm run test:integration   # Integration tests (requires MongoDB)
-```
+See individual framework README files for testing instructions.
 
 ### MFlix Sample Apps
 See individual backend README files for testing instructions.
 
 ---
 
-## 📚 For MongoDB Docs Team
+## For MongoDB Docs Team
 
 ### Artifact Repositories (MFlix Only)
 
@@ -148,7 +139,7 @@ files that are referred to in documentation.
 
 ---
 
-## 🐛 Issues
+## Issues
 
 If you're having issues with any of the sample apps or framework examples, please open an issue in this repository. Include:
 
@@ -161,13 +152,13 @@ If you're having issues with any of the sample apps or framework examples, pleas
 
 ---
 
-## 🤝 Contributions
+## Contributions
 
 We are not currently accepting public contributions to this repository. However, if you find issues or have suggestions, please open an issue!
 
 ---
 
-## 📖 Additional Resources
+## Additional Resources
 
 - [MongoDB Documentation](https://www.mongodb.com/docs/)
 - [MongoDB Drivers](https://www.mongodb.com/docs/drivers/)

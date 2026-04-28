@@ -65,6 +65,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '#': resolve(__dirname, './src'),
+      // Replace TanStack's createServerFn with a passthrough so server
+      // functions can be called directly in integration tests.
+      '@tanstack/react-start': resolve(__dirname, '../tests/integration/tanstack-react-start.mock.ts'),
     },
   },
 });

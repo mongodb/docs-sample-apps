@@ -2,13 +2,13 @@
 
 Full-stack, runnable applications demonstrating MongoDB integration with modern JavaScript frameworks. These apps serve as the complete, tested source code for MongoDB framework tutorials.
 
-## 📚 Available Examples
+## Available Examples
 
 ### **TanStack Start** - `javascript/tanstack/`
 
 A restaurant browsing application built with TanStack Start, MongoDB, and TanStack Query.
 
-**📖 Tutorial:** [MongoDB with TanStack Start](https://www.mongodb.com/docs/drivers/node-frameworks/tanstack/)
+**Tutorial:** [MongoDB with TanStack Start](https://www.mongodb.com/docs/drivers/node-frameworks/tanstack/)
 
 **Features:**
 - Server-side data fetching with MongoDB
@@ -29,18 +29,18 @@ Visit `http://localhost:3000` to see the app!
 
 ---
 
-## 🎯 What You'll Learn
+## What You'll Learn
 
 Each example demonstrates:
-- ✅ **MongoDB Connection** - Connecting to MongoDB Atlas or local instance
-- ✅ **CRUD Operations** - Creating, reading, updating, and deleting data
-- ✅ **Query Patterns** - Filtering, sorting, and pagination
-- ✅ **Best Practices** - Error handling, connection management, type safety
-- ✅ **Testing** - Unit and integration tests for database operations
+- **MongoDB Connection** - Connecting to MongoDB Atlas or local instance
+- **CRUD Operations** - Creating, reading, updating, and deleting data
+- **Query Patterns** - Filtering, sorting, and pagination
+- **Best Practices** - Error handling, connection management, type safety
+- **Testing** - Unit and integration tests for database operations
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 Each framework example follows this pattern:
 
@@ -56,7 +56,7 @@ javascript/{framework-name}/
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 All examples include comprehensive test suites. Tests run from the `app/` directory:
 
@@ -75,12 +75,12 @@ npm run test:integration
 
 **Requirements for integration tests:**
 - MongoDB instance (local or Atlas)
-- `sample_restaurants` database loaded (see tutorial)
+- `sample_restaurants` database loaded (see [tutorial](https://www.mongodb.com/docs/drivers/node-frameworks/tanstack/) for information on loading sample data into your MongoDB instance)
 - Valid `MONGODB_URI` in `.env` file
 
 ---
 
-## 🎨 Code Annotations (Can Be Ignored)
+## Code Annotations (Can Be Ignored)
 
 You may notice special comments in the code:
 
@@ -91,14 +91,14 @@ const client = new MongoClient(uri)
 ```
 
 These are **Bluehawk annotations** used to extract code snippets for documentation. They:
-- ✅ Are standard TypeScript/JavaScript comments
-- ✅ Don't affect code execution or compilation
-- ✅ Can be safely ignored when learning from the code
-- ✅ Ensure tutorial snippets stay in sync with working code
+- Are standard TypeScript/JavaScript comments
+- Don't affect code execution or compilation
+- Can be safely ignored when learning from the code
+- Ensure tutorial snippets stay in sync with working code
 
 ---
 
-## 🔧 For MongoDB Docs Maintainers
+## For MongoDB Docs Maintainers
 
 ### Extracting Code Snippets
 
@@ -106,7 +106,7 @@ To generate documentation snippets from the source code:
 
 ```bash
 cd frameworks/javascript/tanstack
-npm install  # Install Bluehawk + Prettier
+npm install # Install Bluehawk and Prettier
 npm run snip # Extract and format snippets
 ```
 
@@ -148,12 +148,12 @@ Learn more: [Bluehawk Documentation](https://mongodb-university.github.io/Blueha
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 When adding or updating framework examples:
 
-1. ✅ Ensure the app runs independently and matches the tutorial
-2. ✅ Add comprehensive tests 
-3. ✅ Add Bluehawk annotations to code sections used in tutorials
-4. ✅ Extract snippets and verify formatting
-5. ✅ Update this README with the new framework
+1. Ensure the app runs independently and matches the tutorial
+2. Add comprehensive tests
+3. Add Bluehawk annotations to code sections used in tutorials
+4. Extract snippets and verify formatting
+5. Update this README with the new framework
