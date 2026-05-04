@@ -1,0 +1,25 @@
+{
+  "START_DIRECTORY": "app",
+  "OUTPUT_DIRECTORY": "testedSnippets",
+  "IGNORE_PATTERNS": [
+    "node_modules",
+    ".tanstack",
+    "dist",
+    ".vinxi",
+    ".vite",
+    ".vscode",
+    "public",
+    "*.test.ts",
+    "*.test.tsx",
+    ".env",
+    ".env.local",
+    ".env.example",
+    ".gitignore",
+    ".npmrc",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "tsconfig.app.json"
+  ],
+  "PRETTIER_CONFIG": ".prettierrc"
+}
