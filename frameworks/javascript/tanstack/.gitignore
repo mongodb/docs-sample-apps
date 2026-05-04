@@ -1,0 +1,5 @@
+# Node modules for snippet extraction tools (Bluehawk, Prettier)
+node_modules
+
+# macOS
+.DS_Store

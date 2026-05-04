@@ -1,0 +1,48 @@
+{
+  "extends": "../app/tsconfig.json",
+  "compilerOptions": {
+    // Point to node_modules in app directory for type resolution
+    "typeRoots": [
+      "../app/node_modules/@types",
+      "../app/node_modules"
+    ],
+
+    // Add Vitest and Node.js type declarations
+    "types": ["vitest/globals", "node"],
+
+    // ESM module configuration
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+
+    // Silence TypeScript 6.0 deprecation warnings for baseUrl/paths
+    // These still work but will be removed in TypeScript 7.0
+    "ignoreDeprecations": "6.0",
+
+    // Path aliases - reference app source code
+    "baseUrl": ".",
+    "paths": {
+      "#/*": ["../app/src/*"]
+    },
+
+    // Test-specific compiler options
+    // Remove "lib" to inherit from parent (includes DOM for console, etc.)
+    // "lib": ["ES2022", "DOM", "DOM.Iterable"],  // Inherits from parent
+    "target": "ES2022",
+
+    // Allow accessing global test functions without imports
+    "skipLibCheck": true
+  },
+  "include": [
+    "./**/*.ts",           // All test files
+    "../app/src/**/*.ts"   // App source files (for type checking)
+  ],
+  "exclude": [
+    "node_modules",
+    "../app/node_modules",
+    "../app/dist",
+    "../app/.tanstack",
+    "../app/.vinxi"
+  ]
+}
