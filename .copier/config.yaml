@@ -108,3 +108,24 @@ workflows:
     exclude:
       - "mflix/client/**/.gitignore"
       - "mflix/server/python-fastapi/**/.gitignore"
+
+  # --------------------------------------------------------------------------
+  # TanStack Framework 
+  # --------------------------------------------------------------------------
+  - name: "tanstack-framework"
+    destination:
+      repo: "10gen/docs-mongodb-internal"
+      branch: "main"
+    transformations:
+      - move: { from: "frameworks/javascript/tanstack/testedSnippets/src", to: "code-examples/javascript/tanstack" }
+    commit_strategy:
+      pr_title: "Update TanStack code examples from docs-sample-apps"
+      pr_body: |
+        Automated update of TanStack framework example snippets
+
+        **Source:** ${source_repo} (${source_branch})
+        **PR:** #${pr_number} | **Commit:** ${commit_sha}
+        **Changes:** ${file_count} files updated
+    exclude:
+      - "**/*.test.ts"
+      - "**/*.test.tsx"
