@@ -117,7 +117,6 @@ workflows:
       repo: "10gen/docs-mongodb-internal"
       branch: "main"
     transformations:
-      - move: { from: "frameworks/javascript/tanstack/testedSnippets/src", to: "code-examples/javascript/tanstack" }
       - move: { from: "frameworks/javascript/tanstack/testedSnippets", to: "code-examples/javascript/tanstack" }
     commit_strategy:
       pr_title: "Update TanStack code examples from docs-sample-apps"
