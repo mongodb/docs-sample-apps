@@ -109,6 +109,7 @@ workflows:
       - "mflix/client/**/.gitignore"
       - "mflix/server/python-fastapi/**/.gitignore"
 
+
   # --------------------------------------------------------------------------
   # TanStack Framework 
   # --------------------------------------------------------------------------
@@ -129,5 +130,3 @@ workflows:
     exclude:
       - "**/*.test.ts"
       - "**/*.test.tsx"
-
-    

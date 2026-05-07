@@ -1,0 +1,56 @@
+{
+  "name": "src",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --config vitest.unit.config.ts",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest --config vitest.unit.config.ts",
+    "test:coverage": "vitest run --coverage --config vitest.unit.config.ts"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.2.2",
+    "@tanstack/react-devtools": "0.10.0",
+    "@tanstack/react-query": "5.95.2",
+    "@tanstack/react-router": "1.168.7",
+    "@tanstack/react-router-devtools": "1.166.11",
+    "@tanstack/react-router-ssr-query": "1.166.10",
+    "@tanstack/react-start": "1.167.12",
+    "@tanstack/router-plugin": "1.167.8",
+    "lucide-react": "0.545.0",
+    "mongodb": "7.1.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "4.2.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "0.5.19",
+    "@tanstack/devtools-vite": "0.6.0",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.2.0",
+    "dotenv": "17.4.2",
+    "jsdom": "28.1.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "tanstack-bluehawk",
+  "version": "1.0.0",
+  "description": "Bluehawk snippet extraction for TanStack sample app",
+  "type": "module",
+  "scripts": {
+    "snip": "node ../snip.js snip.config.json",
+    "format": "prettier --write testedSnippets/"
+  },
+  "devDependencies": {
+    "bluehawk": "1.6.0",
+    "prettier": "3.8.3"
+  }
+}
