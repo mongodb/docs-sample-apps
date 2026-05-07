@@ -1,0 +1,66 @@
+name: Audit TanStack Dependencies
+
+on:
+  pull_request:
+    branches:
+      - development
+      - frameworks-tanstack
+    paths:
+      - 'frameworks/javascript/tanstack/**'
+
+jobs:
+  audit:
+    name: npm audit (TanStack)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (app)
+        working-directory: frameworks/javascript/tanstack/app
+        run: npm install
+
+      - name: Audit app dependencies
+        working-directory: frameworks/javascript/tanstack/app
+        run: npm audit --json > audit-results-app.json || true
+
+      - name: Install dependencies (bluehawk)
+        working-directory: frameworks/javascript/tanstack
+        run: npm install
+
+      - name: Audit bluehawk dependencies
+        working-directory: frameworks/javascript/tanstack
+        run: npm audit --json > audit-results-bluehawk.json || true
+
+      - name: Generate audit summary (app)
+        if: always()
+        run: |
+          chmod +x .github/scripts/generate-audit-summary-npm.sh
+          .github/scripts/generate-audit-summary-npm.sh \
+            frameworks/javascript/tanstack/app/audit-results-app.json \
+            "TanStack App"
+
+      - name: Generate audit summary (bluehawk)
+        if: always()
+        run: |
+          chmod +x .github/scripts/generate-audit-summary-npm.sh
+          .github/scripts/generate-audit-summary-npm.sh \
+            frameworks/javascript/tanstack/audit-results-bluehawk.json \
+            "TanStack Bluehawk"
+
+      - name: Check for high+ vulnerabilities
+        run: |
+          app_high=$(jq -r '[(.metadata.vulnerabilities.high // 0), (.metadata.vulnerabilities.critical // 0)] | add' frameworks/javascript/tanstack/app/audit-results-app.json)
+          bh_high=$(jq -r '[(.metadata.vulnerabilities.high // 0), (.metadata.vulnerabilities.critical // 0)] | add' frameworks/javascript/tanstack/audit-results-bluehawk.json)
+          total=$((app_high + bh_high))
+          if [ "$total" -gt 0 ]; then
+            echo "❌ Found $total high/critical vulnerabilities"
+            exit 1
+          fi
+          echo "✅ No high/critical vulnerabilities found"

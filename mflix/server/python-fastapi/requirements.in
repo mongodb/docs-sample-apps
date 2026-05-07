@@ -15,7 +15,7 @@ watchfiles~=1.1.1       # For hot-reloading in development
 # ------------------------------------------------------------------------------
 pydantic~=2.12.5        # Data validation and settings management
 python-dotenv>=1.2.2    # For loading configuration from .env files (CVE-2026-28684)
-python-multipart>=0.0.22 # For parsing form data and file uploads
+python-multipart>=0.0.27 # For parsing form data and file uploads (CVE-2026-42561)
 PyYAML~=6.0.3           # For handling YAML configuration or data
 
 # ==============================================================================
