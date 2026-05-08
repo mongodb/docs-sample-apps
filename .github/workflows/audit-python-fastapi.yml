@@ -1,0 +1,46 @@
+name: Audit Python FastAPI Dependencies
+
+on:
+  pull_request:
+    branches:
+      - development
+    paths:
+      - 'mflix/server/python-fastapi/**'
+
+jobs:
+  audit:
+    name: pip-audit (Python FastAPI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies
+        working-directory: mflix/server/python-fastapi
+        run: pip-audit -r requirements.txt --format json -o audit-results.json || true
+
+      - name: Generate audit summary
+        if: always()
+        run: |
+          chmod +x .github/scripts/generate-audit-summary-pip.sh
+          .github/scripts/generate-audit-summary-pip.sh \
+            mflix/server/python-fastapi/audit-results.json \
+            "Python FastAPI"
+
+      - name: Check for vulnerabilities
+        run: |
+          vuln_count=$(jq '[.dependencies[].vulns | length] | add // 0' mflix/server/python-fastapi/audit-results.json)
+          if [ "$vuln_count" -gt 0 ]; then
+            echo "❌ Found $vuln_count vulnerabilities"
+            exit 1
+          fi
+          echo "✅ No vulnerabilities found"
