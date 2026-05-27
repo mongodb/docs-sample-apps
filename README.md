@@ -119,6 +119,28 @@ Framework examples follow a simpler workflow:
 
 No copier tool is used - snippets are committed directly to this repository.
 
+### Security Audits
+
+Dependency security audits run automatically on PRs to `development`:
+
+- **`audit-tanstack.yml`** — runs `npm audit` on TanStack app and Bluehawk dependencies
+- **`audit-python-fastapi.yml`** — runs `pip-audit` on Python FastAPI dependencies
+
+**To test locally:**
+
+```bash
+# npm (TanStack)
+cd frameworks/javascript/tanstack/app
+npm audit --audit-level=high
+
+# pip (Python FastAPI)
+cd mflix/server/python-fastapi
+pip install pip-audit
+pip-audit -r requirements.txt
+```
+
+If an audit fails on your PR, check the workflow summary for details on which packages need updating.
+
 ### MFlix Release Process
 
 When you merge a release PR from `development` to `main`, the copier tool
