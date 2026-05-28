@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.13</version>
+        <version>4.0.6</version>
         <relativePath/>
     </parent>
 
@@ -20,12 +20,11 @@
 
     <properties>
         <java.version>21</java.version>
-        <springdoc.version>2.8.13</springdoc.version>
+        <springdoc.version>3.0.3</springdoc.version>
         <dotenv.version>5.1.0</dotenv.version>
-        <commons.lang3.version>3.20.0</commons.lang3.version>
         <impsort.plugin.version>1.13.0</impsort.plugin.version>
         <byte-buddy.version>1.17.8</byte-buddy.version>
-        <langchain4j.version>1.11.0-beta19</langchain4j.version>
+        <langchain4j.version>1.15.0-beta25</langchain4j.version>
     </properties>
 
     <dependencies>
@@ -50,7 +49,7 @@
         <!-- Spring Dotenv - Load .env files -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
-            <artifactId>springboot3-dotenv</artifactId>
+            <artifactId>springboot4-dotenv</artifactId>
             <version>${dotenv.version}</version>
         </dependency>
 
@@ -61,24 +60,11 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Force version for Commons Lang used by SpringDoc (CVE-2025-48924) -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>${commons.lang3.version}</version>
-        </dependency>
-
         <!-- SpringDoc OpenAPI (Swagger UI) -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.commons</groupId>
-                    <artifactId>commons-lang3</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- Spring Boot Test Starter -->
@@ -88,24 +74,31 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Spring Boot WebMVC Test Starter (provides @WebMvcTest in SB4+) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Testcontainers JUnit Jupiter integration -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
         <!-- MongoDB Atlas Local container for Testcontainers -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>mongodb</artifactId>
+            <artifactId>testcontainers-mongodb</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Jackson Databind for JSON serialization/deserialization -->
+        <!-- Jackson 2 auto-configuration (SB4 defaults to Jackson 3; this opts back into Jackson 2) -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
         </dependency>
 
         <!-- LangChain4j Voyage AI for vector embeddings -->
