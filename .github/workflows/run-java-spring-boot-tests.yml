@@ -12,6 +12,10 @@ on:
     paths:
       - 'mflix/server/java-spring/**'
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   test:
     name: Run Java Spring Boot Tests

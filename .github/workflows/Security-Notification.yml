@@ -7,6 +7,9 @@ on:
   # Allows you to test manually
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check-alerts:
     runs-on: ubuntu-latest

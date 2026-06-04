@@ -8,6 +8,9 @@ on:
     paths:
       - 'frameworks/javascript/tanstack/**'
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     name: npm audit (TanStack)
