@@ -162,7 +162,6 @@ async def voyage_api_error_handler(request: Request, exc: VoyageAPIError):
         content=create_error_response(
             message="Vector search service unavailable",
             code="VOYAGE_API_ERROR",
-            details=exc.message
         )
     )
 
