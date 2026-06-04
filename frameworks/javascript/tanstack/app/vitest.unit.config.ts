@@ -52,6 +52,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '#': resolve(__dirname, './src'),
+      // Replace TanStack's createServerFn with a passthrough so server
+      // functions can be called directly in unit tests without Start context.
+      '@tanstack/react-start': resolve(
+        __dirname,
+        '../tests/integration/tanstack-react-start.mock.ts'
+      ),
     },
   },
 });
