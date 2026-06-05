@@ -26,6 +26,12 @@ import {
 } from "../utils/errorHandler";
 import logger from "../utils/logger";
 import {
+  escapeRegexLiteral,
+  InvalidMongoQueryError,
+  sanitizeBatchFilter,
+  sanitizeUpdateFields,
+} from "../utils/mongoQuery";
+import {
   CreateMovieRequest,
   UpdateMovieRequest,
   RawSearchQuery,
@@ -82,9 +88,11 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
     filter.$text = { $search: q };
   }
 
-  // Genre filtering
+  // Genre filtering (case-insensitive literal match; escape user input for regex safety)
   if (genre) {
-    filter.genres = { $regex: new RegExp(genre, "i") };
+    filter.genres = {
+      $regex: new RegExp(escapeRegexLiteral(genre.trim()), "i"),
+    };
   }
 
   // Year filtering
@@ -325,11 +333,26 @@ export async function updateMovie(req: Request, res: Response): Promise<void> {
 
   const moviesCollection = getCollection("movies");
 
+  let sanitizedUpdate: UpdateMovieRequest;
+  try {
+    sanitizedUpdate = sanitizeUpdateFields(
+      updateData as Record<string, unknown>
+    );
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_UPDATE"));
+      return;
+    }
+    throw error;
+  }
+
   // Use updateOne() to update a single document
   // $set operator replaces the value of fields with specified values
   const result = await moviesCollection.updateOne(
     { _id: new ObjectId(id) },
-    { $set: updateData }
+    { $set: sanitizedUpdate }
   );
 
   if (result.matchedCount === 0) {
@@ -388,23 +411,45 @@ export async function updateMoviesBatch(
 
   const moviesCollection = getCollection("movies");
 
+  let sanitizedFilter: Document;
+  let sanitizedUpdate: UpdateMovieRequest;
+  try {
+    sanitizedFilter = sanitizeBatchFilter(filter);
+    sanitizedUpdate = sanitizeUpdateFields(update);
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_FILTER"));
+      return;
+    }
+    throw error;
+  }
+
   // Handle ObjectId conversion for _id fields in $in queries
-  let processedFilter = { ...filter };
-  if (filter._id && filter._id.$in && Array.isArray(filter._id.$in)) {
-    // Convert string IDs to ObjectId instances
+  let processedFilter: Document = { ...sanitizedFilter };
+  if (
+    processedFilter._id &&
+    typeof processedFilter._id === "object" &&
+    processedFilter._id !== null &&
+    "$in" in processedFilter._id &&
+    Array.isArray(processedFilter._id.$in)
+  ) {
     processedFilter._id = {
-      $in: filter._id.$in.map((id: string) => {
+      $in: processedFilter._id.$in.map((id: string) => {
         if (ObjectId.isValid(id)) {
           return new ObjectId(id);
         }
         throw new Error(`Invalid ObjectId: ${id}`);
-      })
+      }),
     };
   }
 
   // Use updateMany() to update multiple documents
   // This is useful for bulk operations like updating all movies from a certain year
-  const result = await moviesCollection.updateMany(processedFilter, { $set: update });
+  const result = await moviesCollection.updateMany(processedFilter, {
+    $set: sanitizedUpdate,
+  });
 
   res.json(
     createSuccessResponse(
@@ -483,17 +528,35 @@ export async function deleteMoviesBatch(
 
   const moviesCollection = getCollection("movies");
 
+  let sanitizedFilter: Document;
+  try {
+    sanitizedFilter = sanitizeBatchFilter(filter);
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_FILTER"));
+      return;
+    }
+    throw error;
+  }
+
   // Handle ObjectId conversion for _id fields in $in queries
-  let processedFilter = { ...filter };
-  if (filter._id && filter._id.$in && Array.isArray(filter._id.$in)) {
-    // Convert string IDs to ObjectId instances
+  let processedFilter: Document = { ...sanitizedFilter };
+  if (
+    processedFilter._id &&
+    typeof processedFilter._id === "object" &&
+    processedFilter._id !== null &&
+    "$in" in processedFilter._id &&
+    Array.isArray(processedFilter._id.$in)
+  ) {
     processedFilter._id = {
-      $in: filter._id.$in.map((id: string) => {
+      $in: processedFilter._id.$in.map((id: string) => {
         if (ObjectId.isValid(id)) {
           return new ObjectId(id);
         }
         throw new Error(`Invalid ObjectId: ${id}`);
-      })
+      }),
     };
   }
 

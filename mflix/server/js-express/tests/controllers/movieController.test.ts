@@ -480,7 +480,7 @@ describe("Movie Controller Tests", () => {
   describe("updateMoviesBatch", () => {
     it("should successfully update multiple movies", async () => {
       const filter = { year: 2023 };
-      const update = { genre: "Updated Genre" };
+      const update = { rated: "PG-13" };
       const updateResult = { matchedCount: 5, modifiedCount: 3 };
 
       mockRequest.body = { filter, update };
