@@ -608,27 +608,27 @@ async def get_all_movies(
 
     try:
         result = movies_collection.find(filter_dict).sort(sort).skip(skip).limit(limit)
+
+        movies = []
+
+        async for movie in result:
+            if "title" in movie:
+                movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
+                # Ensure that the year field contains int value.
+                if "year" in movie and not isinstance(movie["year"], int):
+                    cleaned_year = re.sub(r"\D", "", str(movie["year"]))
+                    try:
+                        movie["year"] = int(cleaned_year) if cleaned_year else None
+                    except ValueError:
+                        movie["year"] = None
+
+                movies.append(movie)
     except Exception:
         return server_error_response(
             "An error occurred while fetching movies.",
             "DATABASE_ERROR",
             log_context="get_all_movies",
         )
-
-    movies = []
-
-    async for movie in result:
-        if "title" in movie:
-            movie["_id"] = str(movie["_id"]) # Convert ObjectId to string
-            # Ensure that the year field contains int value.
-            if "year" in movie and not isinstance(movie["year"], int):
-                cleaned_year = re.sub(r"\D", "", str(movie["year"]))
-                try:
-                    movie["year"] = int(cleaned_year) if cleaned_year else None
-                except ValueError:
-                    movie["year"] = None
-            
-            movies.append(movie)
 
     # Return the results wrapped in a SuccessResponse
     message = f"Found {len(movies)} movies."
