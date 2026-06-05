@@ -1,4 +1,4 @@
-import { Document } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import { UpdateMovieRequest } from "../types";
 
 const ALLOWED_FILTER_FIELDS = new Set([
@@ -111,6 +111,10 @@ export function sanitizeBatchFilter(filter: Record<string, unknown>): Document {
 export function sanitizeUpdateFields(
   update: Record<string, unknown>
 ): UpdateMovieRequest {
+  if (!update || typeof update !== "object" || Array.isArray(update)) {
+    throw new InvalidMongoQueryError("Update must be a non-array object");
+  }
+
   const sanitized: UpdateMovieRequest = {};
 
   for (const key of Object.keys(update)) {
@@ -126,4 +130,30 @@ export function sanitizeUpdateFields(
   }
 
   return sanitized;
+}
+
+export function convertFilterObjectIds(filter: Document): Document {
+  const processedFilter: Document = { ...filter };
+
+  if (
+    processedFilter._id &&
+    typeof processedFilter._id === "object" &&
+    processedFilter._id !== null &&
+    "$in" in processedFilter._id &&
+    Array.isArray(processedFilter._id.$in)
+  ) {
+    processedFilter._id = {
+      $in: processedFilter._id.$in.map((id: unknown) => {
+        const idStr = String(id);
+        if (ObjectId.isValid(idStr)) {
+          return new ObjectId(idStr);
+        }
+        throw new InvalidMongoQueryError(
+          `Invalid ObjectId format in filter: ${idStr}`
+        );
+      }),
+    };
+  }
+
+  return processedFilter;
 }

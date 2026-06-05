@@ -525,6 +525,40 @@ describe("Movie Controller Tests", () => {
         "EMPTY_UPDATE"
       );
     });
+
+    it("should return 400 when update contains MongoDB operators", async () => {
+      mockRequest.body = {
+        filter: { year: 2023 },
+        update: { $set: { title: "Injected" } },
+      };
+
+      await updateMoviesBatch(mockRequest as Request, mockResponse as Response);
+
+      expectErrorResponse(
+        mockStatus,
+        mockJson,
+        400,
+        "Update operator '$set' is not allowed",
+        "INVALID_UPDATE"
+      );
+    });
+
+    it("should return 400 when update contains disallowed fields", async () => {
+      mockRequest.body = {
+        filter: { year: 2023 },
+        update: { genre: "Updated Genre" },
+      };
+
+      await updateMoviesBatch(mockRequest as Request, mockResponse as Response);
+
+      expectErrorResponse(
+        mockStatus,
+        mockJson,
+        400,
+        "Update field 'genre' is not allowed",
+        "INVALID_UPDATE"
+      );
+    });
   });
 
   describe("deleteMoviesBatch", () => {

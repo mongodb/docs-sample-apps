@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import { createErrorResponse } from "../utils/errorHandler";
 
 /**
  * Rate limiter for movie API routes that access the database.
@@ -9,12 +10,12 @@ export const moviesRateLimiter = rateLimit({
   max: process.env.NODE_ENV === "test" ? 10_000 : 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many requests. Please try again later.",
-    error: {
-      message: "Too many requests. Please try again later.",
-      code: "RATE_LIMIT_EXCEEDED",
-    },
+  handler: (_req, res) => {
+    res.status(429).json(
+      createErrorResponse(
+        "Too many requests. Please try again later.",
+        "RATE_LIMIT_EXCEEDED"
+      )
+    );
   },
 });

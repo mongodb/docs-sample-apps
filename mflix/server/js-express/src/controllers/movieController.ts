@@ -26,6 +26,7 @@ import {
 } from "../utils/errorHandler";
 import logger from "../utils/logger";
 import {
+  convertFilterObjectIds,
   escapeRegexLiteral,
   InvalidMongoQueryError,
   sanitizeBatchFilter,
@@ -89,9 +90,10 @@ export async function getAllMovies(req: Request, res: Response): Promise<void> {
   }
 
   // Genre filtering (case-insensitive literal match; escape user input for regex safety)
-  if (genre) {
+  const trimmedGenre = typeof genre === "string" ? genre.trim() : "";
+  if (trimmedGenre) {
     filter.genres = {
-      $regex: new RegExp(escapeRegexLiteral(genre.trim()), "i"),
+      $regex: new RegExp(escapeRegexLiteral(trimmedGenre), "i"),
     };
   }
 
@@ -413,9 +415,10 @@ export async function updateMoviesBatch(
 
   let sanitizedFilter: Document;
   let sanitizedUpdate: UpdateMovieRequest;
+  let processedFilter: Document;
+
   try {
     sanitizedFilter = sanitizeBatchFilter(filter);
-    sanitizedUpdate = sanitizeUpdateFields(update);
   } catch (error) {
     if (error instanceof InvalidMongoQueryError) {
       res
@@ -426,23 +429,28 @@ export async function updateMoviesBatch(
     throw error;
   }
 
-  // Handle ObjectId conversion for _id fields in $in queries
-  let processedFilter: Document = { ...sanitizedFilter };
-  if (
-    processedFilter._id &&
-    typeof processedFilter._id === "object" &&
-    processedFilter._id !== null &&
-    "$in" in processedFilter._id &&
-    Array.isArray(processedFilter._id.$in)
-  ) {
-    processedFilter._id = {
-      $in: processedFilter._id.$in.map((id: string) => {
-        if (ObjectId.isValid(id)) {
-          return new ObjectId(id);
-        }
-        throw new Error(`Invalid ObjectId: ${id}`);
-      }),
-    };
+  try {
+    sanitizedUpdate = sanitizeUpdateFields(update);
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_UPDATE"));
+      return;
+    }
+    throw error;
+  }
+
+  try {
+    processedFilter = convertFilterObjectIds(sanitizedFilter);
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_OBJECT_ID"));
+      return;
+    }
+    throw error;
   }
 
   // Use updateMany() to update multiple documents
@@ -529,6 +537,8 @@ export async function deleteMoviesBatch(
   const moviesCollection = getCollection("movies");
 
   let sanitizedFilter: Document;
+  let processedFilter: Document;
+
   try {
     sanitizedFilter = sanitizeBatchFilter(filter);
   } catch (error) {
@@ -541,23 +551,16 @@ export async function deleteMoviesBatch(
     throw error;
   }
 
-  // Handle ObjectId conversion for _id fields in $in queries
-  let processedFilter: Document = { ...sanitizedFilter };
-  if (
-    processedFilter._id &&
-    typeof processedFilter._id === "object" &&
-    processedFilter._id !== null &&
-    "$in" in processedFilter._id &&
-    Array.isArray(processedFilter._id.$in)
-  ) {
-    processedFilter._id = {
-      $in: processedFilter._id.$in.map((id: string) => {
-        if (ObjectId.isValid(id)) {
-          return new ObjectId(id);
-        }
-        throw new Error(`Invalid ObjectId: ${id}`);
-      }),
-    };
+  try {
+    processedFilter = convertFilterObjectIds(sanitizedFilter);
+  } catch (error) {
+    if (error instanceof InvalidMongoQueryError) {
+      res
+        .status(400)
+        .json(createErrorResponse(error.message, "INVALID_OBJECT_ID"));
+      return;
+    }
+    throw error;
   }
 
   // Use deleteMany() to remove multiple documents
