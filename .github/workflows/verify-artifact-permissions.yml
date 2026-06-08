@@ -1,0 +1,30 @@
+# Temporary workflow to verify upload-artifact@v4 works with contents: read only.
+# Delete after PR #116 merges and artifact upload is confirmed.
+name: Verify Artifact Upload Permissions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - chore/workflow-permissions
+
+permissions:
+  contents: read
+
+jobs:
+  verify-upload:
+    name: Upload artifact with contents read only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create test artifact
+        run: echo "artifact upload permissions check" > permissions-check.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: permissions-check
+          path: permissions-check.txt
+          retention-days: 1
