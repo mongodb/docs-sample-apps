@@ -538,7 +538,7 @@ describe("Movie Controller Tests", () => {
         mockStatus,
         mockJson,
         400,
-        "Update operator '$set' is not allowed",
+        "Update contains an unsupported field or operator",
         "INVALID_UPDATE"
       );
     });
@@ -555,7 +555,7 @@ describe("Movie Controller Tests", () => {
         mockStatus,
         mockJson,
         400,
-        "Update field 'genre' is not allowed",
+        "Update contains an unsupported field or operator",
         "INVALID_UPDATE"
       );
     });

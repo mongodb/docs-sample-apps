@@ -1,8 +1,7 @@
 import { Document, ObjectId } from "mongodb";
 import { UpdateMovieRequest } from "../types";
 
-const ALLOWED_FILTER_FIELDS = new Set([
-  "_id",
+const MOVIE_FIELDS = [
   "title",
   "year",
   "plot",
@@ -16,7 +15,9 @@ const ALLOWED_FILTER_FIELDS = new Set([
   "rated",
   "runtime",
   "poster",
-]);
+] as const;
+
+const ALLOWED_FILTER_FIELDS = new Set([...MOVIE_FIELDS, "_id"]);
 
 const ALLOWED_OPERATORS = new Set([
   "$in",
@@ -29,21 +30,12 @@ const ALLOWED_OPERATORS = new Set([
   "$exists",
 ]);
 
-const UPDATE_FIELDS: (keyof UpdateMovieRequest)[] = [
-  "title",
-  "year",
-  "plot",
-  "fullplot",
-  "genres",
-  "directors",
-  "writers",
-  "cast",
-  "countries",
-  "languages",
-  "rated",
-  "runtime",
-  "poster",
-];
+const UPDATE_FIELDS = [...MOVIE_FIELDS] as (keyof UpdateMovieRequest)[];
+
+const UNSUPPORTED_FILTER_MESSAGE =
+  "Filter contains an unsupported field or operator";
+const UNSUPPORTED_UPDATE_MESSAGE =
+  "Update contains an unsupported field or operator";
 
 export function escapeRegexLiteral(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -65,15 +57,8 @@ function sanitizeOperatorValue(value: unknown): unknown {
   const sanitized: Record<string, unknown> = {};
 
   for (const [operator, operatorValue] of Object.entries(operatorMap)) {
-    if (!operator.startsWith("$")) {
-      throw new InvalidMongoQueryError(
-        `Unsupported filter operator key '${operator}'`
-      );
-    }
-    if (!ALLOWED_OPERATORS.has(operator)) {
-      throw new InvalidMongoQueryError(
-        `Unsupported MongoDB operator '${operator}'`
-      );
+    if (!operator.startsWith("$") || !ALLOWED_OPERATORS.has(operator)) {
+      throw new InvalidMongoQueryError(UNSUPPORTED_FILTER_MESSAGE);
     }
     sanitized[operator] = operatorValue;
   }
@@ -89,13 +74,8 @@ export function sanitizeBatchFilter(filter: Record<string, unknown>): Document {
   const sanitized: Document = {};
 
   for (const [key, value] of Object.entries(filter)) {
-    if (key.startsWith("$")) {
-      throw new InvalidMongoQueryError(
-        `Top-level operator '${key}' is not allowed`
-      );
-    }
-    if (!ALLOWED_FILTER_FIELDS.has(key)) {
-      throw new InvalidMongoQueryError(`Filter field '${key}' is not allowed`);
+    if (key.startsWith("$") || !ALLOWED_FILTER_FIELDS.has(key)) {
+      throw new InvalidMongoQueryError(UNSUPPORTED_FILTER_MESSAGE);
     }
 
     if (value !== null && typeof value === "object" && !Array.isArray(value)) {
@@ -118,15 +98,13 @@ export function sanitizeUpdateFields(
   const sanitized: UpdateMovieRequest = {};
 
   for (const key of Object.keys(update)) {
-    if (key.startsWith("$")) {
-      throw new InvalidMongoQueryError(
-        `Update operator '${key}' is not allowed`
-      );
+    if (
+      key.startsWith("$") ||
+      !UPDATE_FIELDS.includes(key as keyof UpdateMovieRequest)
+    ) {
+      throw new InvalidMongoQueryError(UNSUPPORTED_UPDATE_MESSAGE);
     }
-    if (!UPDATE_FIELDS.includes(key as keyof UpdateMovieRequest)) {
-      throw new InvalidMongoQueryError(`Update field '${key}' is not allowed`);
-    }
-    sanitized[key as keyof UpdateMovieRequest] = update[key] as never;
+    (sanitized as Record<string, unknown>)[key] = update[key];
   }
 
   return sanitized;
@@ -148,9 +126,7 @@ export function convertFilterObjectIds(filter: Document): Document {
         if (ObjectId.isValid(idStr)) {
           return new ObjectId(idStr);
         }
-        throw new InvalidMongoQueryError(
-          `Invalid ObjectId format in filter: ${idStr}`
-        );
+        throw new InvalidMongoQueryError(UNSUPPORTED_FILTER_MESSAGE);
       }),
     };
   }

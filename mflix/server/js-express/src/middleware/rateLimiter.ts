@@ -3,11 +3,13 @@ import { createErrorResponse } from "../utils/errorHandler";
 
 /**
  * Rate limiter for movie API routes that access the database.
- * Uses a higher limit in test environments so integration tests are unaffected.
+ * Override via RATE_LIMIT_MAX env var (e.g. in test setup).
  */
 export const moviesRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 10_000 : 300,
+  max: process.env.RATE_LIMIT_MAX
+    ? parseInt(process.env.RATE_LIMIT_MAX, 10)
+    : 300,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
