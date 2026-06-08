@@ -1551,6 +1551,7 @@ def get_embedding(data, input_type = "document", client=None):
         return embeddings[0]
     except voyage_error.AuthenticationError:
         # Handle authentication errors (401) from Voyage AI SDK
+        logger.exception("Voyage AI authentication failed")
         raise VoyageAuthError("Invalid Voyage AI API key. Please check your VOYAGE_API_KEY in the .env file")
     except voyage_error.InvalidRequestError:
         logger.exception("Voyage AI invalid request")
