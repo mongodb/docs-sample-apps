@@ -12,6 +12,9 @@ on:
     paths:
       - 'mflix/server/js-express/**'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Express Tests

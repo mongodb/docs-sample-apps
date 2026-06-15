@@ -7,6 +7,9 @@ on:
     paths:
       - 'mflix/server/python-fastapi/**'
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     name: pip-audit (Python FastAPI)

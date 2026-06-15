@@ -12,6 +12,9 @@ on:
     paths:
       - 'mflix/server/python-fastapi/**'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Python Tests
