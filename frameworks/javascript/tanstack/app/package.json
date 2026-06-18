@@ -43,7 +43,7 @@
     "dotenv": "17.4.2",
     "jsdom": "28.1.0",
     "typescript": "5.9.3",
-    "vite": "7.3.2",
+    "vite": "7.3.5",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "4.1.8"
   },
@@ -54,11 +54,13 @@
     ]
   },
   "overrides": {
+    "@babel/core": "^7.29.6",
     "@tanstack/react-router": "1.170.8",
     "@tanstack/router-core": "1.171.6",
     "esbuild": ">=0.28.1",
     "h3": ">=2.0.1-rc.18",
     "postcss": ">=8.5.10",
+    "launch-editor": ">=2.14.1",
     "shell-quote": ">=1.8.4",
     "ws": ">=8.20.1"
   }
