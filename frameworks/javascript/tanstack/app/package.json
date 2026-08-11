@@ -59,7 +59,7 @@
     "@tanstack/router-core": "1.171.6",
     "esbuild": ">=0.28.1",
     "h3": ">=2.0.1-rc.18",
-    "postcss": ">=8.5.18",
+    "postcss": ">=8.5.23",
     "launch-editor": ">=2.14.1",
     "shell-quote": ">=1.9.0",
     "js-yaml": ">=5.2.2",
