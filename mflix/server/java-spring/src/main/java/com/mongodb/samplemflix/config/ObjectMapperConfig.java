@@ -19,9 +19,6 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
  *
  * <p>It also registers a JavaTimeModule to handle Java 8 date and time types.
  *
- * <p>Customizing via {@link Jackson2ObjectMapperBuilderCustomizer} (rather than defining a
- * competing {@code ObjectMapper} bean) ensures these settings are applied to the ObjectMapper
- * Spring Boot actually uses for HTTP message conversion.
  */
 
 @Configuration
