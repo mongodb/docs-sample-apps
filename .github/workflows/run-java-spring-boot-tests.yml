@@ -48,7 +48,10 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '21'
-          distribution: 'temurin'
+          # Corretto rather than Temurin: Temurin 21.0.13 is below the fix
+          # for CVE-2026-114938 (Java4Shell). Corretto ships 21.0.13.1.
+          # See INFOSEC-127761.
+          distribution: 'corretto'
           cache: 'maven'
 
       - name: Make mvnw executable
