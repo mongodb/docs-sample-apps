@@ -4,13 +4,17 @@ on:
   pull_request:
     branches:
       - development
+      - main
     paths:
       - 'mflix/server/java-spring/**'
+      - '.github/workflows/run-java-spring-boot-tests.yml'
   push:
     branches:
       - development
+      - main
     paths:
       - 'mflix/server/java-spring/**'
+      - '.github/workflows/run-java-spring-boot-tests.yml'
 
 permissions:
   contents: read
